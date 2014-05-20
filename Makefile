@@ -4,7 +4,7 @@
 INCFLAGS = -I ssreflect -I .
 SUBDIRS  = ssreflect
 
-COQFILES = 
+COQFILES = freeg.v
 
 -include Makefile.common
 
