@@ -252,6 +252,8 @@ Reserved Notation "[ 'multinom' 'of' s ]"
 Reserved Notation "[ 'multinom' F | i < n ]"
   (at level 0, i at level 0,
      format "[ '[hv' 'multinom'  F '/'   |  i  <  n ] ']'").
+Reserved Notation "'U_(' n )"
+  (at level 0, n at level 2, no associativity).
 Reserved Notation "{ 'mpoly' T [ n ] }"
   (at level 0, T, n at level 2, format "{ 'mpoly'  T [ n ] }").
 Reserved Notation "[ 'mpoly' D ]"
@@ -343,71 +345,108 @@ Section MultinomTheory.
     by apply/val_eqP/eqP/eq_from_tnth => i /=; rewrite -!multinomE.
   Qed.
 
-  Notation "1" := [multinom of nseq n 0%N] : multi_scope.
+  Notation "0" := [multinom of nseq n 0%N] : multi_scope.
 
-  Lemma mpow1 i: 1%MM i = 0%N.
+  Lemma mnm0 i: 0%MM i = 0%N.
   Proof. by rewrite multinomE (tnth_nth 0%N) nth_nseq if_same. Qed.
 
-  Definition mnm_mul m1 m2 :=
+  Definition mnm_add m1 m2 :=
     [multinom (m1 i + m2 i)%N | i < n].
 
-  Local Notation "m1 * m2" := (mnm_mul m1 m2) : multi_scope.
+  Definition mnm_sub m1 m2 :=
+    [multinom (m1 i - m2 i)%N | i < n].
 
-  Lemma mpowD i m1 m2: (m1 * m2)%MM i = (m1 i + m2 i)%N.
+  Definition mnmd (c : 'I_n) :=
+    [multinom ((c == i) : nat) | i < n].
+
+  Local Notation "m1 + m2" := (mnm_add m1 m2) : multi_scope.
+  Local Notation "m1 - m2" := (mnm_sub m1 m2) : multi_scope.
+
+  Lemma mnmD i m1 m2: (m1 + m2)%MM i = (m1 i + m2 i)%N.
   Proof. by rewrite multinomE tnth_map tnth_ord_tuple. Qed.
 
-  Lemma mnm_mulC: commutative mnm_mul.
+  Lemma mnmB i m1 m2: (m1 - m2)%MM i = (m1 i - m2 i)%N.
+  Proof. by rewrite multinomE tnth_map tnth_ord_tuple. Qed.
+
+  Lemma mnm1 i j: (mnmd i) j = (i == j)%N.
+  Proof. by rewrite multinomE tnth_map tnth_ord_tuple. Qed.
+
+  Lemma mnm_addC: commutative mnm_add.
   Proof. by move=> m1 m2; apply/mnmP=> i; rewrite !mnmE addnC. Qed.
 
-  Lemma mnm_mulA: associative mnm_mul.
+  Lemma mnm_addA: associative mnm_add.
   Proof. by move=> m1 m2 m3; apply/mnmP=> i; rewrite !mnmE addnA. Qed.
 
-  Lemma mnm_mul0m: left_id 1%MM mnm_mul.
+  Lemma mnm_add0m: left_id 0%MM mnm_add.
   Proof.
     move=> m; apply/mnmP=> i; rewrite !mnmE multinomE.
     by rewrite (tnth_nth 0%N) /= nth_nseq if_same add0n.
   Qed.
 
-  Lemma mnm_mulm0: right_id 1%MM mnm_mul.
-  Proof. by move=> m; rewrite mnm_mulC mnm_mul0m. Qed.
+  Lemma mnm_addm0: right_id 0%MM mnm_add.
+  Proof. by move=> m; rewrite mnm_addC mnm_add0m. Qed.
 
-  Canonical mnm_monoid := Monoid.Law mnm_mulA mnm_mul0m mnm_mulm0.
-  Canonical mnm_comoid := Monoid.ComLaw mnm_mulC.
+  Canonical mnm_monoid := Monoid.Law mnm_addA mnm_add0m mnm_addm0.
+  Canonical mnm_comoid := Monoid.ComLaw mnm_addC.
 
-  Lemma eqm_mul2l m n1 n2:
-    ((m * n1)%MM == (m * n2)%MM) = (n1 == n2).
+  Lemma eqm_add2l m n1 n2:
+    ((m + n1)%MM == (m + n2)%MM) = (n1 == n2).
   Proof.
     apply/eqP/eqP=> [|->//] /mnmP h; apply/mnmP.
-    by move=> i; move: (h i); rewrite !mpowD => /addnI.
+    by move=> i; move: (h i); rewrite !mnmD => /addnI.
   Qed.
+
+  Lemma addmK m: cancel (mnm_add^~ m) (mnm_sub^~ m).
+  Proof. by move=> m' /=; apply/mnmP=> i; rewrite !(mnmD, mnmB) addnK. Qed.
+
+  Lemma submK m m': (forall i, m i <= m' i) -> (m' - m + m = m')%MM.
+  Proof. by move=> h; apply/mnmP=> i; rewrite !(mnmD, mnmB) subnK. Qed.
+
+  Lemma submDA m1 m2 m3: (m1 - m2 - m3)%MM = (m1 - (m2 + m3))%MM.
+  Proof. by apply/mnmP=> i; rewrite !(mnmB, mnmD) subnDA. Qed.
 
   Definition mdeg m := (\sum_(i <- m) i)%N.
 
   Lemma mdegE m: mdeg m = (\sum_i (m i))%N.
   Proof. by rewrite /mdeg big_tuple. Qed.
 
-  Lemma mdeg1: mdeg 1%MM = 0%N.
+  Lemma mdeg0: mdeg 0%MM = 0%N.
   Proof.
     rewrite /mdeg big_seq big1 // => i /tnthP.
-    by case=> j ->; rewrite -multinomE mpow1.
+    by case=> j ->; rewrite -multinomE mnm0.
   Qed.
 
-  Lemma mdegM m1 m2: mdeg (m1 * m2) = (mdeg m1 + mdeg m2)%N.
+  Lemma mdeg1 i: mdeg (mnmd i) = 1%N.
+  Proof.
+    rewrite !mdegE (bigD1 i) //= big1; last first.
+      by move=> j ne_ji; rewrite mnm1 eq_sym (negbTE ne_ji).
+    by rewrite mnm1 eqxx addn0.
+  Qed.
+
+  Lemma mdegD m1 m2: mdeg (m1 + m2) = (mdeg m1 + mdeg m2)%N.
   Proof.
     case: m1 m2 => [m1] [m2]; rewrite !mdegE -big_split /=.
-    by apply: eq_bigr=> i _; rewrite [(_*_)%MM _]multinomE tnth_mktuple.
+    by apply: eq_bigr=> i _; rewrite [(_+_)%MM _]multinomE tnth_mktuple.
   Qed.
 
-  Lemma mdeg_eq0 m: (mdeg m == 0%N) = (m == 1%MM).
+  Lemma mdeg_eq0 m: (mdeg m == 0%N) = (m == 0%MM).
   Proof.
-    apply/idP/eqP=> [|->]; last by rewrite mdeg1.
-    move=> h; apply/mnmP=> i; move: h; rewrite mdegE mpow1.
+    apply/idP/eqP=> [|->]; last by rewrite mdeg0.
+    move=> h; apply/mnmP=> i; move: h; rewrite mdegE mnm0.
     by rewrite (bigD1 i) //= addn_eq0 => /andP [/eqP-> _].
   Qed.
+
+  Lemma mnmD_eq0 m1 m2: (m1 + m2 == 0)%MM = (m1 == 0%MM) && (m2 == 0%MM).
+  Proof. by rewrite -!mdeg_eq0 mdegD addn_eq0. Qed.
+
+  Lemma mnm1_eq0 i: (mnmd i == 0%MM) = false.
+  Proof. by rewrite -mdeg_eq0 mdeg1. Qed.
 End MultinomTheory.
 
-Local Notation "1" := [multinom of nseq _ 0%N] : multi_scope.
-Local Notation "m1 * m2" := (mnm_mul m1 m2) : multi_scope.
+Notation "0"         := [multinom of nseq _ 0%N] : multi_scope.
+Notation "'U_(' n )" := (mnmd n) : multi_scope.
+Notation "m1 + m2"   := (mnm_add m1 m2) : multi_scope.
+Notation "m1 - m2"   := (mnm_sub m1 m2) : multi_scope.
 
 (* -------------------------------------------------------------------- *)
 Section DegBoundMultinom.
@@ -431,8 +470,8 @@ Section DegBoundMultinom.
   Lemma bmdeg (m : bmultinom): mdeg m < bound.
   Proof. by case: m. Qed.
 
-  Lemma bm0_proof: mdeg (1%MM : 'X_{1..n}) < bound.+1.
-  Proof. by rewrite mdeg1. Qed.
+  Lemma bm0_proof: mdeg (0%MM : 'X_{1..n}) < bound.+1.
+  Proof. by rewrite mdeg0. Qed.
 End DegBoundMultinom.
 
 Definition bm0 n b := BMultinom (bm0_proof n b).
@@ -511,14 +550,14 @@ Section MPolyTheory.
   Qed.
 
   Definition mpolyC (c : R) : {mpoly R[n]} :=
-    [mpoly << c *g 1%MM >>].
+    [mpoly << c *g 0%MM >>].
 
   Local Notation "c %:MP" := (mpolyC c) : ring_scope.
 
   Lemma mpolyC_eq (c1 c2 : R): (c1%:MP == c2%:MP) = (c1 == c2).
   Proof.
     apply/eqP/eqP=> [|->//] /eqP/freeg_eqP.
-    by move/(_ 1%MM); rewrite !coeffU eqxx !simpm.
+    by move/(_ 0%MM); rewrite !coeffU eqxx !simpm.
   Qed.
 
   Definition mcoeff (m : 'X_{1..n}) p : R :=
@@ -529,10 +568,10 @@ Section MPolyTheory.
 
   Local Notation "p @_ i" := (mcoeff i p) : ring_scope.
 
-  Lemma mcoeffC c m: c%:MP@_m = c * (m == 1%MM)%:R.
+  Lemma mcoeffC c m: c%:MP@_m = c * (m == 0%MM)%:R.
   Proof. by rewrite mcoeff_MPoly coeffU eq_sym. Qed.
 
-  Lemma mpolyCK: cancel mpolyC (mcoeff 1%MM).
+  Lemma mpolyCK: cancel mpolyC (mcoeff 0%MM).
   Proof. by move=> c; rewrite mcoeffC eqxx mulr1. Qed.
 
   Definition msupp p : seq 'X_{1..n} :=
@@ -550,11 +589,11 @@ Section MPolyTheory.
   Lemma msupp0: msupp 0%:MP = [::].
   Proof. by rewrite msuppE /= freegU0 dom0. Qed.
 
-  Lemma msupp1: msupp 1%:MP = [:: 1%MM].
+  Lemma msupp1: msupp 1%:MP = [:: 0%MM].
   Proof. by rewrite msuppE /= domU1. Qed.
 
   Lemma msuppC (c : R):
-    msupp c%:MP = if c == 0 then [::] else [:: 1%MM].
+    msupp c%:MP = if c == 0 then [::] else [:: 0%MM].
   Proof. 
     case: (c =P 0)=> [->|/eqP nz_c]; first by rewrite msupp0.
     by rewrite msuppE domU //.
@@ -681,7 +720,7 @@ Section MSize.
   Lemma mpolyC_eq0 c: (c%:MP == 0 :> {mpoly R[n]}) = (c == 0).
   Proof. (* FIXME: coeffU1 / eqU1 *)
     rewrite eqE /=; apply/idP/eqP=> [|->//].
-    by move/freeg_eqP/(_ 1%MM); rewrite !coeffU eqxx !mulr1.
+    by move/freeg_eqP/(_ 0%MM); rewrite !coeffU eqxx !mulr1.
   Qed.
 
   Definition msize p := \max_(m <- msupp p) (mdeg m).+1.
@@ -692,7 +731,7 @@ Section MSize.
   Lemma msizeC c: msize c%:MP = (c != 0%R) :> nat.
   Proof.
     rewrite /msize msuppC; case: (_ == 0).
-    by rewrite big_nil. by rewrite big_seq1 mdeg1.
+    by rewrite big_nil. by rewrite big_seq1 mdeg0.
   Qed.
 
   Lemma msize_mdeg_lt p m: m \in msupp p -> mdeg m < msize p.
@@ -827,7 +866,7 @@ Section MPolyRing.
   Local Notation "!| m |" := (mdeg  m) (format "!| m |"): ring_scope.
 
   Local Notation "p *M_[ m ] q" :=
-    << (p@_m.1)%MM * (q@_m.2)%MM *g (m.1 * m.2)%MM >>
+    << (p@_m.1)%MM * (q@_m.2)%MM *g (m.1 + m.2)%MM >>
     (at level 40, no associativity, format "p  *M_[ m ]  q").
 
   Definition mpoly_mul p q : {mpoly R[n]} := [mpoly
@@ -877,7 +916,7 @@ Section MPolyRing.
 
   Lemma mcoeff_poly_mul p q m k: !|m| < k ->
     (p *M q)@_m =
-      \sum_(k : 'X_{1..n < k, k} | m == (k.1 * k.2)%MM)
+      \sum_(k : 'X_{1..n < k, k} | m == (k.1 + k.2)%MM)
         (p@_k.1 * q@_k.2).
   Proof.
     pose_big_enough i; first rewrite (mpoly_mulwE i i) // => lt_mk.
@@ -885,7 +924,7 @@ Section MPolyRing.
       apply/esym; rewrite big_cond_mulrn -!pair_bigA_curry /=.
       pose Ik := [subFinType of 'X_{1..n < k}].
       pose Ii := [subFinType of 'X_{1..n < i}].
-      pose F i j := (p@_i * q@_j) *+ (m == (i * j))%MM.
+      pose F i j := (p@_i * q@_j) *+ (m == (i + j))%MM.
       pose G i   := \sum_(j : 'X_{1..n < k}) (F i j).
       rewrite (big_sub_widen Ik Ii xpredT G) /=; last first.
         by move=> x /leq_trans; apply.
@@ -893,21 +932,21 @@ Section MPolyRing.
         case=> /= j _; rewrite -leqNgt => /(leq_trans lt_mk).
         move=> h; rewrite {}/G {}/F big1 // => /= l _.
         case: eqP h => [{1}->|]; last by rewrite mulr0n.
-        by rewrite mdegM ltnNge leq_addr.
+        by rewrite mdegD ltnNge leq_addr.
       apply/eq_bigr=> j _; rewrite {}/G.
       rewrite (big_sub_widen Ik Ii xpredT (F _)) /=; last first.
         by move=> x /leq_trans; apply.
       rewrite big_uncond => //=; last first.
         move=> l; rewrite -leqNgt => /(leq_trans lt_mk).
         move=> h; rewrite {}/F; case: eqP h; rewrite ?mulr0n //.
-        by move=> ->; rewrite mdegM ltnNge leq_addl.
+        by move=> ->; rewrite mdegD ltnNge leq_addl.
       by apply/eq_bigr=> l _; rewrite {}/F coeffU eq_sym mulr_natr.
     by close.
   Qed.                                                       
 
   Lemma mcoeff_poly_mul_rev p q m k: !|m| < k ->
     (p *M q)@_m =
-      \sum_(k : 'X_{1..n < k, k} | m == (k.1 * k.2)%MM)
+      \sum_(k : 'X_{1..n < k, k} | m == (k.1 + k.2)%MM)
         (p@_k.2 * q@_k.1).
   Proof.
     move=> /mcoeff_poly_mul=> ->; rewrite big_cond_mulrn.
@@ -966,13 +1005,13 @@ Section MPolyRing.
 
   Lemma mcoeffM p q m:
     (p * q)@_m =
-      \sum_(k : 'X_{1..n < !|m|.+1, !|m|.+1} | m == (k.1 * k.2)%MM)
+      \sum_(k : 'X_{1..n < !|m|.+1, !|m|.+1} | m == (k.1 + k.2)%MM)
         (p@_k.1 * q@_k.2).
   Proof. by apply: mcoeff_poly_mul. Qed.
 
   Lemma mcoeffMr p q m:
     (p * q)@_m =
-      \sum_(k : 'X_{1..n < !|m|.+1, !|m|.+1} | m == (k.1 * k.2)%MM)
+      \sum_(k : 'X_{1..n < !|m|.+1, !|m|.+1} | m == (k.1 + k.2)%MM)
         (p@_k.2 * q@_k.1).
   Proof.
     rewrite mcoeffM big_cond_mulrn -pair_bigA_curry /=.
@@ -1017,20 +1056,20 @@ Section MPolyRing.
   Lemma alg_mpolyC c: c%:A = c%:MP :> {mpoly R[n]}.
   Proof. by rewrite -mul_mpolyC mulr1. Qed.
 
-  Lemma mcoeff1_is_multiplicative:
-    multiplicative (mcoeff 1%MM : {mpoly R[n]} -> R).
+  Lemma mcoeff0_is_multiplicative:
+    multiplicative (mcoeff 0%MM : {mpoly R[n]} -> R).
   Proof.
     split=> [p q|]; rewrite ?mpolyCK //.
-    rewrite (mcoeff_poly_mul _ _ (k := 1)) ?mdeg1 //.
+    rewrite (mcoeff_poly_mul _ _ (k := 1)) ?mdeg0 //.
     rewrite (bigD1 (bm0, bm0)) ?simpm //=; last first.
     rewrite [X in _+X]big1 ?addr0 // => i /andP [] h.
     rewrite eqE /= !bmeqP /=; move/eqP/esym/(congr1 mdeg): h.
-    rewrite mdegM [X in _=X]mdeg1 => /eqP; rewrite addn_eq0.
+    rewrite mdegD [X in _=X]mdeg0 => /eqP; rewrite addn_eq0.
     by rewrite !mdeg_eq0=> /andP [/eqP->/eqP->]; rewrite !eqxx.
   Qed.
 
-  Canonical mcoeff1_rmorphism  := AddRMorphism mcoeff1_is_multiplicative.
-  Canonical mcoeff1_lrmorphism := [lrmorphism of mcoeff 1%MM].
+  Canonical mcoeff0_rmorphism  := AddRMorphism mcoeff0_is_multiplicative.
+  Canonical mcoeff0_lrmorphism := [lrmorphism of mcoeff 0%MM].
 End MPolyRing.
 
 (* -------------------------------------------------------------------- *)
@@ -1052,8 +1091,8 @@ Section MPolyVar.
     nosimpl [multinom (i == k : nat) | i < n].
 End MPolyVar.
 
-Notation "'X_ i" := (@mpolyX _ _ (@mX _ i)).
 Notation "'X_[ m ]" := (@mpolyX _ _ m).
+Notation "'X_ i"    := (@mpolyX _ _ U_(i)).
 
 (* -------------------------------------------------------------------- *)
 Section MPolyVarTheory.
@@ -1090,7 +1129,7 @@ Section MPolyVarTheory.
   Qed.
 
   Lemma mpolyME p q:
-    p * q = \sum_(m <- msupp p @@ msupp q) (p@_m.1 * q@_m.2) *: 'X_[m.1 * m.2].
+    p * q = \sum_(m <- msupp p @@ msupp q) (p@_m.1 * q@_m.2) *: 'X_[m.1 + m.2].
   Proof.
     apply/mpolyP=> m; rewrite {1}/GRing.mul /= mcoeff_MPoly.
     rewrite !raddf_sum; apply/eq_bigr=> i _ /=.
@@ -1098,7 +1137,7 @@ Section MPolyVarTheory.
   Qed.
 
   Lemma mpolywME p q k: msize p <= k -> msize q <= k ->
-    p * q = \sum_(m : 'X_{1..n < k, k}) (p@_m.1 * q@_m.2) *: 'X_[m.1 * m.2].
+    p * q = \sum_(m : 'X_{1..n < k, k}) (p@_m.1 * q@_m.2) *: 'X_[m.1 + m.2].
   Proof.  
     move=> ltpk ltqk; rewrite mpolyME; pose I := [subFinType of 'X_{1..n < k}].
     rewrite -pair_bigA_seq_curry (big_mksub I) /=; last first.
@@ -1112,7 +1151,7 @@ Section MPolyVarTheory.
     by move/mcoeff_eq0=> ->; rewrite mulr0 scale0r.
   Qed.    
 
-  Lemma mpolyXM m1 m2: 'X_[m1 * m2] = 'X_[m1] * 'X_[m2] :> {mpoly R[n]}.
+  Lemma mpolyXM m1 m2: 'X_[m1 + m2] = 'X_[m1] * 'X_[m2] :> {mpoly R[n]}.
   Proof.
     apply/mpoly_eqP; rewrite /GRing.mul /= !msuppX big_seq1 /=.
     by rewrite !mcoeffX !eqxx !simpm unlock /=.
@@ -1124,12 +1163,12 @@ Section MPolyVarTheory.
     by apply/eq_bigr=> /= i _; rewrite !mcoeffX GRing.commr_nat.
   Qed.
 
-  Lemma mcoeffMX p m k: (p * 'X_[m])@_(m * k) = p@_k.
+  Lemma mcoeffMX p m k: (p * 'X_[m])@_(m + k) = p@_k.
   Proof.
     rewrite commr_mpolyX mpolyME msuppX -pair_bigA_seq_curry /=.
     rewrite big_seq1 [X in _=X@__]mpolyE !raddf_sum /=.
     apply/eq_bigr=> i _; rewrite !mcoeffZ !mcoeffX eqxx mul1r.
-    by rewrite eqm_mul2l.
+    by rewrite eqm_add2l.
   Qed.
 
   Lemma mcoeff_mpoly (E : 'X_{1..n} -> R) m k: mdeg m < k ->
@@ -1173,53 +1212,13 @@ Section MPolyDeriv.
   Implicit Types p q r : {mpoly R[n]}.
   Implicit Types m : 'X_{1..n}.
 
-  Definition md1 i m :=
-    [multinom (m j - (i == j))%N | j < n].
-
-  Definition mbump (i : 'I_n) m :=
-    [multinom (m j + (i == j))%N | j < n].
-
-  Lemma md1E  (i : 'I_n) m j:
-    (md1 i m) j = (m j - (i == j))%N.
-  Proof. by rewrite !multinomE tnth_map tnth_ord_tuple. Qed.
-
-  Lemma md1C i j m: md1 i (md1 j m) = md1 j (md1 i m).
-  Proof. by apply/mnmP=> k; rewrite !md1E -!subnDA addnC. Qed.
-
-  Lemma mbumpE (i : 'I_n) m j:
-    (mbump i m) j = (m j + (i == j))%N.
-  Proof. by rewrite !multinomE tnth_map tnth_ord_tuple. Qed.
-
-  Lemma mbump_eq (i : 'I_n) m1 m2:
-    (mbump i m1 == mbump i m2) = (m1 == m2).
-  Proof.
-    apply/eqP/eqP=> [|->] // /mnmP h; apply/mnmP.
-    by move=> j; have/eqP := h j; rewrite !mbumpE eqn_add2r => /eqP.
-  Qed.
-
-  Lemma mbump_eq1 i m: (mbump i m == 1%MM) = false.
-  Proof.
-    apply/negP; move/eqP/mnmP/(_ i); rewrite mpow1.
-    by rewrite mbumpE eqxx addn1.
-  Qed.
-
-  Lemma md1K (i : 'I_n) m: md1 i (mbump i m) = m.
-  Proof. by apply/mnmP=> j; rewrite md1E mbumpE addnK. Qed.
-
-  Lemma mbumpK (i : 'I_n) m: m i != 0%N -> (mbump i (md1 i m)) = m.
-  Proof.
-    move=> nz_mi; apply/mnmP=> j; rewrite mbumpE md1E.
-    rewrite subnK //; move: nz_mi; case: (i =P j) => //= ->.
-    by rewrite lt0n.
-  Qed.
-
   Definition mderiv (i : 'I_n) p :=
-    \sum_(m <- msupp p) ((m i)%:R * p@_m) *: 'X_[md1 i m].
+    \sum_(m <- msupp p) ((m i)%:R * p@_m) *: 'X_[m - U_(i)].
 
   Local Notation "p ^`M ( i )" := (mderiv i p).
 
   Lemma mderivE p (i : 'I_n) k: msize p <= k ->
-    p^`M(i) = \sum_(m : 'X_{1..n < k}) ((m i)%:R * p@_m) *: 'X_[md1 i m].
+    p^`M(i) = \sum_(m : 'X_{1..n < k}) ((m i)%:R * p@_m) *: 'X_[m - U_(i)].
   Proof.
     pose I := [subFinType of 'X_{1..n < k}].
     move=> le_pk; rewrite /mderiv (big_mksub I) /=; first last.
@@ -1230,16 +1229,18 @@ Section MPolyDeriv.
   Qed.
   Implicit Arguments mderivE [p i].
 
-  Lemma mcoeff_deriv i m p: p^`M(i)@_m = p@_(mbump i m) *+ (m i).+1.
+  Lemma mcoeff_deriv i m p: p^`M(i)@_m = p@_(m + U_(i)) *+ (m i).+1.
   Proof.
     pose_big_enough j; first rewrite {2}[p](mpolywE (k := j)) //.
       rewrite !(mderivE j) // !raddf_sum -sumrMnl; apply/eq_bigr.
       move=> /= [k /= _] _; rewrite !mcoeffZ !mcoeffX.
-      case: (k =P mbump i m)=> [{1 3}->|].
-        by rewrite mbumpE eqxx addn1 md1K eqxx !simpm mulr_natl.
+      case: (k =P m + U_(i))%MM=> [{1 3}->|].
+        by rewrite mnmD mnm1 eqxx addn1 addmK eqxx !simpm mulr_natl.
       rewrite !simpm mul0rn; have [->|nz_mi] := (eqVneq (k i) 0%N).
         by rewrite !simpm.
-      by case: eqP=> [{1}<-|]; rewrite ?simpm // mbumpK.
+      case: eqP=> [{1}<-|]; rewrite ?simpm //.
+      rewrite submK // => l; rewrite mnm1; case: (i =P l) nz_mi=> //.
+      by move=> ->; rewrite -lt0n.
     by close.
   Qed.
 
@@ -1261,10 +1262,10 @@ Section MPolyDeriv.
   Lemma mderivC i c: mderiv i c%:MP = 0.
   Proof.
     apply/mpolyP=> m; rewrite mcoeff0 mcoeff_deriv mcoeffC.
-    by rewrite mbump_eq1 mulr0 mul0rn.
+    by rewrite mnmD_eq0 mnm1_eq0 andbF mulr0 mul0rn.
   Qed.
 
-  Lemma mderivX i m: mderiv i 'X_[m] = (m i)%:R *: 'X_[md1 i m].
+  Lemma mderivX i m: mderiv i 'X_[m] = (m i)%:R *: 'X_[m - U_(i)].
   Proof. by rewrite /mderiv msuppX big_seq1 mcoeffX eqxx mulr1. Qed.
 
   Lemma mderivN i: {morph mderiv i: x / - x}.
@@ -1302,8 +1303,9 @@ Section MPolyDeriv.
     pose_big_enough k; first pose mderivE := (mderivE k).
       rewrite ![p^`M(_)]mderivE // !raddf_sum /=; apply/eq_bigr.
       move=> l _; rewrite !mderivCM !mderivX !scalerA.
-      rewrite md1C -!commr_nat -!mulrA -!natrM; congr (_ * _%:R *: _).
-      by rewrite !md1E eq_sym; case: eqP=> [->//|_] /=; rewrite !subn0 mulnC.
+      rewrite !submDA mnm_addC -!commr_nat -!mulrA -!natrM.
+      congr (_ * _%:R *: _); rewrite !mnmB !mnm1 eq_sym.
+      by case: eqP=> [->//|_] /=; rewrite !subn0 mulnC.
     by close.
   Qed.
 
@@ -1351,16 +1353,16 @@ Section MPolyMorphism.
     Definition mmap  p := \sum_(m <- msupp p) (f p@_m) * (mmap1 m).
   End Defs.
 
-  Lemma mmap1_1 h: mmap1 h 1%MM = 1.
-  Proof. by rewrite /mmap1 big1 // => /= i _; rewrite mpow1 expr0. Qed.
+  Lemma mmap1_1 h: mmap1 h 0%MM = 1.
+  Proof. by rewrite /mmap1 big1 // => /= i _; rewrite mnm0 expr0. Qed.
 
   Lemma commr_mmap1_M h m1 m2:
        (forall i x, GRing.comm x (h i))
-    -> mmap1 h (m1 * m2) = (mmap1 h m1) * (mmap1 h m2).
+    -> mmap1 h (m1 + m2) = (mmap1 h m1) * (mmap1 h m2).
   Proof.
     move=> comm; pose F (i : 'I_n) := (h i ^+ m1 i) * (h i ^+ m2 i).
     rewrite /mmap1 (eq_bigr F) => [|i _]; last first.
-      by rewrite mpowD exprD.
+      by rewrite mnmD exprD.
     rewrite {}/F; elim/big_rec3: _; first by rewrite mulr1.
     move=> i y1 y2 y3 _ ->; rewrite -!mulrA; congr (_ * _).
     have commn k j x: GRing.comm x ((h j)^+k) by apply/commrX.
@@ -1610,10 +1612,10 @@ Section MPolyIdomain.
   Proof. Admitted.
 
   Definition mpoly_unit : pred {mpoly R[n]} :=
-    fun p => (p == (p@_1)%:MP) && (p@_1 \in GRing.unit).
+    fun p => (p == (p@_0)%:MP) && (p@_0 \in GRing.unit).
 
   Definition mpoly_inv p :=
-    if p \in mpoly_unit then (p@_1)^-1%:MP else p.
+    if p \in mpoly_unit then (p@_0)^-1%:MP else p.
 
   Lemma mpoly_mulVp : {in mpoly_unit, left_inverse 1 mpoly_inv *%R}.
   Proof. Admitted.
@@ -1704,4 +1706,3 @@ End MPolySym.
 *** coq-load-path: ("ssreflect" ".") ***
 *** End: ***
  *)
-
