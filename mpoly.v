@@ -5,6 +5,7 @@
 (* -------------------------------------------------------------------- *)
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype.
 Require Import bigop tuple finfun ssralg perm poly bigenough freeg.
+Require Import path.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -1051,8 +1052,8 @@ Section MPolyVar.
     nosimpl [multinom (i == k : nat) | i < n].
 End MPolyVar.
 
-Notation "'X_[ m ]" := (@mpolyX _ _ m).
 Notation "'X_ i" := (@mpolyX _ _ (@mX _ i)).
+Notation "'X_[ m ]" := (@mpolyX _ _ m).
 
 (* -------------------------------------------------------------------- *)
 Section MPolyVarTheory.
@@ -1129,6 +1130,16 @@ Section MPolyVarTheory.
     rewrite big_seq1 [X in _=X@__]mpolyE !raddf_sum /=.
     apply/eq_bigr=> i _; rewrite !mcoeffZ !mcoeffX eqxx mul1r.
     by rewrite eqm_mul2l.
+  Qed.
+
+  Lemma mcoeff_mpoly (E : 'X_{1..n} -> R) m k: mdeg m < k ->
+    (\sum_(m : 'X_{1..n < k}) (E m *: 'X_[m]))@_m = E m.
+  Proof.
+    move=> lt_mk; rewrite raddf_sum (bigD1 (Sub m lt_mk)) //=.
+    rewrite big1 ?addr0; last first.
+      case=> i /= lt_ik; rewrite eqE /= => ne_im.
+      by rewrite mcoeffZ mcoeffX (negbTE ne_im) mulr0.
+    by rewrite mcoeffZ mcoeffX eqxx mulr1.
   Qed.
 
   Lemma MPoly_is_linear: linear (@MPoly n R).
@@ -1437,6 +1448,11 @@ Section MPolyMorphism.
 End MPolyMorphism.
 
 (* -------------------------------------------------------------------- *)
+Lemma mmap1_id n (R : ringType) m:
+  mmap1 (fun i => 'X_i) m = 'X_[m] :> {mpoly R[n]}.
+Proof. Admitted.
+
+(* -------------------------------------------------------------------- *)
 Section MPolyMorphismComm.
   Variable n : nat.
   Variable R : ringType.
@@ -1520,6 +1536,63 @@ Section MEvalCom.
   Lemma mevalM v: {morph meval v: x y / x * y}.
   Proof. exact: rmorphM. Qed.
 End MEvalCom.
+
+(* -------------------------------------------------------------------- *)
+Section MPolyMap.
+  Variable n   : nat.
+  Variable R S : ringType.
+
+  Implicit Types p q r : {mpoly R[n]}.
+
+  Section Defs.
+    Variable f : R -> S.
+
+    Definition map_mpoly p: {mpoly S[n]} :=
+      mmap ((@mpolyC n _) \o f) (fun i => 'X_i) p.
+  End Defs.
+
+  Section Additive.
+    Variable f : {additive R -> S}.
+
+    Local Notation "p ^f" := (map_mpoly f p).
+
+    Lemma map_mpoly_is_additive: additive (map_mpoly f).
+    Proof. by apply/mmap_is_additive. Qed.
+
+    Canonical map_mpoly_additive := Additive map_mpoly_is_additive.
+
+    Lemma map_mpolyE p k: msize p <= k ->
+      p^f = \sum_(m : 'X_{1..n < k}) (f p@_m) *: 'X_[m].
+    Proof.
+      rewrite /map_mpoly; move/mmapE=> -> /=; apply/eq_bigr.
+      by move=> i _; rewrite mmap1_id mul_mpolyC.
+    Qed.
+    Implicit Arguments map_mpolyE [p].
+
+    Lemma mcoeff_map_mpoly m p: p^f@_m = f p@_m.
+    Proof.
+      pose_big_enough i; first rewrite (map_mpolyE i) //.
+        by rewrite (mcoeff_mpoly (fun m => (f p@_m))).
+      by close.
+    Qed.
+  End Additive.
+
+  Section Multiplicative.
+    Variable f : {rmorphism R -> S}.
+
+    Local Notation "p ^f" := (map_mpoly f p).
+
+    Lemma map_mpoly_is_multiplicative: multiplicative (map_mpoly f).
+    Proof.
+      apply/commr_mmap_is_multiplicative => /=.
+      + by move=> i x; apply/commr_mpolyX.
+      + by move=> p m m'; rewrite mmap1_id; apply/commr_mpolyX.
+    Qed.
+
+    Canonical map_mpoly_multiplicative :=
+      AddRMorphism map_mpoly_is_multiplicative.
+  End Multiplicative.
+End MPolyMap.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyIdomain.
@@ -1618,6 +1691,12 @@ Section MPolySym.
     apply: (iffP forallP)=> /= h s; last by rewrite -h.
     by rewrite (eqP (h s)).
   Qed.
+
+  Definition tmono (n : nat) (h : seq 'I_n) :=
+    sorted ltn (map val h).
+
+  Definition esym n k : {mpoly R[n]} :=
+    \sum_(h : k.-tuple 'I_n | tmono h) \prod_(i <- h) 'X_i.
 End MPolySym.
 
 (*
@@ -1625,3 +1704,4 @@ End MPolySym.
 *** coq-load-path: ("ssreflect" ".") ***
 *** End: ***
  *)
+
