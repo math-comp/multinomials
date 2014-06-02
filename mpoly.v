@@ -43,7 +43,9 @@ Section BigMkSub.
 
   Context {T  : choiceType}.
   Context {sT : pred T}.
+  Context {rT : pred T}.
   Context (I  : subFinType sT).
+  Context (J  : subFinType rT).
 
   Lemma big_mksub_cond {P : pred T} {F : T -> S} (r : seq T):
       uniq r
@@ -69,7 +71,40 @@ Section BigMkSub.
    -> \big[op/idx]_(x <- r) (F x)
     = \big[op/idx]_(x : I | val x \in r) (F (val x)).
   Proof. by move=> uniq_r h; apply/big_mksub_cond=> // x /h. Qed.
+
+  Lemma big_sub_widen {P : pred T} {F : T -> S}:
+         (forall x, sT x -> rT x)
+    ->   \big[op/idx]_(x : I | P (val x)) (F (val x))
+       = \big[op/idx]_(x : J | P (val x) && sT (val x)) (F (val x)).
+  Proof.
+    move=> h; pose Q := [pred x | P x && sT x].
+    rewrite -big_map -(big_map val Q F).
+    rewrite -big_filter -[X in _=X]big_filter; apply/eq_big_perm.
+    apply/uniq_perm_eq; rewrite ?(filter_uniq, map_inj_uniq val_inj) //;
+      try by rewrite /index_enum -enumT enum_uniq.
+    move=> x; rewrite !mem_filter {}/Q inE -andbA; congr (_ && _).
+    apply/idP/andP; last first.
+      by case=> sTx _; apply/mapP; exists (Sub x sTx); rewrite ?SubK.
+    case/mapP=> y _ ->; split; first by apply valP.
+    apply/mapP; exists (Sub (val y) (h _ (valP y))).
+      by rewrite /index_enum -enumT mem_enum.
+      by rewrite SubK.
+  Qed.
+
+  Lemma eq_big_widen {P : pred T} {F : T -> S}:
+         (forall x, sT x -> rT x)
+    ->   (forall x, ~~ (sT x) -> F x = idx)
+    ->   \big[op/idx]_(x : I | P (val x)) (F (val x))
+       = \big[op/idx]_(x : J | P (val x)) (F (val x)).
+  Proof.
+    move=> h1 h2; rewrite big_sub_widen //; apply/esym.
+    rewrite (bigID (sT \o val)) [X in op _ X]big1 ?simpm //.
+    by move=> j /andP [_ /h2].
+  Qed.
 End BigMkSub.
+
+Implicit Arguments big_sub_widen [S idx op T sT rT].
+Implicit Arguments big_sub_widen [S idx op T sT rT].
 
 (* -------------------------------------------------------------------- *)
 (* FIXME: move me or replace me                                         *)
@@ -833,24 +868,46 @@ Section MPolyRing.
 
   Implicit Arguments mpoly_mul_revwE [p q].
 
-  Lemma mcoeff_poly_mul p q m:
+  Lemma mcoeff_poly_mul p q m k: !|m| < k ->
     (p *M q)@_m =
-      \sum_(k : 'X_{1..n < !|m|.+1, !|m|.+1} | m == (k.1 * k.2)%MM)
+      \sum_(k : 'X_{1..n < k, k} | m == (k.1 * k.2)%MM)
         (p@_k.1 * q@_k.2).
-  Proof. Admitted.
-
-(*
-    pose_big_enough i.
-      rewrite (mpoly_mul_wideE i i) // mcoeff_MPoly raddf_sum /=.
-      pose P := [pred k : 'X_{1..n < i, i} | m == (k.1 * k.2)%MM].
-      rewrite (bigID P) {}/P /= [X in _+X]big1 ?addr0; last first.
-        by move=> j ne; rewrite coeffU eq_sym (negbTE ne) !simpm.
-      pose F := (fun k1 k2 => p@_k1 * q@_k2).
-      have /(big_mC_widen F) ->: !|m| < i by []; apply: eq_bigr.
-      by move=> j /eqP->; rewrite coeffU eqxx !simpm.
+  Proof.
+    pose_big_enough i; first rewrite (mpoly_mulwE i i) // => lt_mk.
+      rewrite mcoeff_MPoly raddf_sum /=; have lt_mi: k < i by [].
+      apply/esym; rewrite big_cond_mulrn -!pair_bigA_curry /=.
+      pose Ik := [subFinType of 'X_{1..n < k}].
+      pose Ii := [subFinType of 'X_{1..n < i}].
+      pose F i j := (p@_i * q@_j) *+ (m == (i * j))%MM.
+      pose G i   := \sum_(j : 'X_{1..n < k}) (F i j).
+      rewrite (big_sub_widen Ik Ii xpredT G) /=; last first.
+        by move=> x /leq_trans; apply.
+      rewrite big_uncond /=; last first.
+        case=> /= j _; rewrite -leqNgt => /(leq_trans lt_mk).
+        move=> h; rewrite {}/G {}/F big1 // => /= l _.
+        case: eqP h => [{1}->|]; last by rewrite mulr0n.
+        by rewrite mdegM ltnNge leq_addr.
+      apply/eq_bigr=> j _; rewrite {}/G.
+      rewrite (big_sub_widen Ik Ii xpredT (F _)) /=; last first.
+        by move=> x /leq_trans; apply.
+      rewrite big_uncond => //=; last first.
+        move=> l; rewrite -leqNgt => /(leq_trans lt_mk).
+        move=> h; rewrite {}/F; case: eqP h; rewrite ?mulr0n //.
+        by move=> ->; rewrite mdegM ltnNge leq_addl.
+      by apply/eq_bigr=> l _; rewrite {}/F coeffU eq_sym mulr_natr.
     by close.
+  Qed.                                                       
+
+  Lemma mcoeff_poly_mul_rev p q m k: !|m| < k ->
+    (p *M q)@_m =
+      \sum_(k : 'X_{1..n < k, k} | m == (k.1 * k.2)%MM)
+        (p@_k.2 * q@_k.1).
+  Proof.
+    move=> /mcoeff_poly_mul=> ->; rewrite big_cond_mulrn.
+    rewrite -pair_bigA_curry /= exchange_big pair_bigA /=.
+    rewrite /= -big_cond_mulrn; apply/eq_big=> //.
+    by move=> i /=; rewrite Monoid.mulmC.
   Qed.
-*)
 
   Lemma poly_mulA: associative mpoly_mul.
   Proof. Admitted.
@@ -956,7 +1013,8 @@ Section MPolyRing.
   Lemma mcoeff1_is_multiplicative:
     multiplicative (mcoeff 1%MM : {mpoly R[n]} -> R).
   Proof.
-    split=> [p q|]; rewrite ?mpolyCK // mcoeff_poly_mul.
+    split=> [p q|]; rewrite ?mpolyCK //.
+    rewrite (mcoeff_poly_mul _ _ (k := 1)) ?mdeg1 //.
     rewrite (bigD1 (bm0, bm0)) ?simpm //=; last first.
     rewrite [X in _+X]big1 ?addr0 // => i /andP [] h.
     rewrite eqE /= !bmeqP /=; move/eqP/esym/(congr1 mdeg): h.
