@@ -16,6 +16,189 @@ Delimit Scope multi_scope with MM.
 Local Notation simpm := Monoid.simpm.
 
 (* -------------------------------------------------------------------- *)
+(* FIXME: move me or replace me                                         *)
+Section BigUncond.
+  Variables T : Type.
+  Variables R : Type.
+
+  Variable idx : R.
+  Variable op  : Monoid.com_law idx.
+
+  Lemma big_uncond (P : pred T) (F : T -> R) r:
+       (forall i, ~~ P i -> F i = idx)
+    -> \big[op/idx]_(x <- r | P x) F x = \big[op/idx]_(x <- r) F x.
+  Proof.
+    move=> h; apply/esym; rewrite (bigID P) /= [X in op _ X]big1.
+      by rewrite Monoid.mulm1.
+    by move=> i /h.
+  Qed.
+End BigUncond.
+
+(* -------------------------------------------------------------------- *)
+(* FIXME: move me or replace me                                         *)
+Section BigMkSub.
+  Context  {S   : Type}.
+  Context  {idx : S}.
+  Context  {op  : Monoid.com_law idx}.
+
+  Context {T  : choiceType}.
+  Context {sT : pred T}.
+  Context (I  : subFinType sT).
+
+  Lemma big_mksub_cond {P : pred T} {F : T -> S} (r : seq T):
+      uniq r
+   -> (forall x, x \in r -> P x -> sT x)
+   -> \big[op/idx]_(x <- r | P x) (F x)
+    = \big[op/idx]_(x : I | (P (val x)) && (val x \in r)) (F (val x)).
+  Proof.
+    move=> uniq_r h; rewrite -big_filter; apply/esym.
+    pose Q x := P x && (x \in r); rewrite -(big_map val Q).
+    rewrite -big_filter; apply/eq_big_perm/uniq_perm_eq;
+      try rewrite filter_uniq // (map_inj_uniq val_inj).
+      by rewrite /index_enum -enumT enum_uniq.
+    move=> x; rewrite !mem_filter {}/Q; apply/andb_idr.
+    rewrite andbC; case/andP=> /h {h}h /h sT_x.
+    apply/mapP; exists (Sub x sT_x).
+      by rewrite /index_enum -enumT mem_enum.
+    by rewrite SubK.
+  Qed.
+
+  Lemma big_mksub {F : T -> S} (r : seq T):
+      uniq r
+   -> (forall x, x \in r -> sT x)
+   -> \big[op/idx]_(x <- r) (F x)
+    = \big[op/idx]_(x : I | val x \in r) (F (val x)).
+  Proof. by move=> uniq_r h; apply/big_mksub_cond=> // x /h. Qed.
+End BigMkSub.
+
+(* -------------------------------------------------------------------- *)
+(* FIXME: move me or replace me                                         *)
+Section Product.
+  Variables T U : Type.
+
+  Definition product (s1 : seq T) (s2 : seq U) :=
+    flatten [seq [seq (x, y) | y <- s2] | x <- s1].
+
+  Lemma product0s (s : seq U): product [::] s = [::].
+  Proof. by []. Qed.
+
+  Lemma products0 (s : seq T): product s [::] = [::].
+  Proof. by elim: s. Qed.
+
+  Lemma product_cons x s1 s2:
+    product (x :: s1) s2 =
+      [seq (x, y) | y <- s2] ++ product s1 s2.
+  Proof. by []. Qed.
+End Product.
+
+Local Infix "@@" := product (at level 60, right associativity).
+
+(* -------------------------------------------------------------------- *)
+(* FIXME: move me or replace me                                         *)
+Section ProductTheory.
+  Variable eT eU : eqType.
+  Variable T  U  : Type.
+  Variable T' U' : Type.
+  Variable fT : T -> T'.
+  Variable fU : U -> U'.
+
+  Notation f := (fun x => (fT x.1, fU x.2)).
+
+  Lemma product_size (s1 : seq T) (s2 : seq U):
+    size (product s1 s2) = (size s1 * size s2)%N.
+  Proof.
+    elim: s1 => [|x s1 ih] //=; rewrite !product_cons.
+    by rewrite size_cat ih size_map mulSn.
+  Qed.
+
+  Lemma product_map s1 s2:
+    map f (product s1 s2) = product (map fT s1) (map fU s2).
+  Proof.
+    elim: s1 => [|x s1 ih] //=.
+    by rewrite !product_cons map_cat ih -!map_comp.
+  Qed.
+
+  Lemma product_mem (s1 : seq eT) (s2 : seq eU) x:
+    (x \in product s1 s2) = (x.1 \in s1) && (x.2 \in s2).
+  Proof.
+    case: x => [x1 x2] /=; elim: s1 => [|x s1 ih] //=.
+    rewrite product_cons mem_cat ih in_cons andb_orl.
+    congr (_ || _); case: eqP=> [<-|ne_x1_x] /=.
+    + by rewrite mem_map // => z1 z2 [].
+    + by apply/mapP; case=> x' _ [].
+  Qed.
+
+  Lemma product_uniq (s1 : seq eT) (s2 : seq eU):
+    (uniq s1) && (uniq s2) -> uniq (product s1 s2).
+  Proof.
+    elim: s1 => [|x s1 ih] //=; rewrite product_cons -andbA.
+    case/and3P=> x_notin_s1 un_s1 un_s2; rewrite cat_uniq.
+    rewrite ih ?(un_s1, un_s2) andbT // map_inj_uniq //=; last first.
+      by move=> x1 x2 /= [].
+    rewrite un_s2 /=; apply/hasPn=> [[x1 x2]] /=.
+    rewrite product_mem /= => /andP [x1_in_s1 _].
+    apply/memPn=> [[y1 y2] /mapP [x' _ [-> ->]]].
+    by apply/eqP=> h; case: h x1_in_s1 x_notin_s1=> -> _ ->.
+  Qed.
+End ProductTheory.
+
+(* -------------------------------------------------------------------- *)
+(* FIXME: move me or replace me                                         *)
+Section BigOpProduct.
+  Variables T1 T2 R : Type.
+
+  Variable idx : R.
+  Variable op  : Monoid.com_law idx.
+
+  Lemma pair_bigA_seq_curry (F : T1 * T2 -> R) s1 s2:
+      \big[op/idx]_(i1 <- s1)
+        \big[op/idx]_(i2 <- s2) F (i1, i2)
+    = \big[op/idx]_(i <- product s1 s2) F i.
+  Proof.
+    elim: s1 => [|x s1 ih]; first by rewrite product0s !big_nil.
+    by rewrite product_cons big_cat big_cons ih big_map.
+  Qed.
+
+  Lemma pair_bigA_seq (F : T1 -> T2 -> R) s1 s2:
+      \big[op/idx]_(i1 <- s1)
+        \big[op/idx]_(i2 <- s2) F i1 i2
+    = \big[op/idx]_(i <- product s1 s2) F i.1 i.2.
+  Proof. by rewrite -pair_bigA_seq_curry. Qed.
+End BigOpProduct.
+
+(* -------------------------------------------------------------------- *)
+(* FIXME: move me or replace me                                         *)
+Section BigOpPair.
+  Variables T1 T2 : finType.
+  Variables R : Type.
+
+  Variable idx : R.
+  Variable op  : Monoid.com_law idx.
+
+  Lemma pair_bigA_curry (F : T1 * T2 -> R):
+      \big[op/idx]_i \big[op/idx]_j F (i, j)
+    = \big[op/idx]_x F x.
+  Proof. by rewrite pair_bigA; apply/eq_bigr; case. Qed.
+End BigOpPair.
+
+(* -------------------------------------------------------------------- *)
+(* FIXME: move me or replace me                                         *)
+Section BigOpMulrn.
+  Variable I : Type.
+  Variable R : ringType.
+
+  Variable F : I -> R.
+  Variable P : pred I.
+
+  Lemma big_cond_mulrn r:
+    \sum_(i <- r | P i) (F i) = \sum_(i <- r) (F i) *+ (P i).
+  Proof.
+    elim: r => [|x r ih]; first by rewrite !big_nil.
+    by rewrite !big_cons ih; case: (P x); rewrite ?(mulr0n, mulr1n, add0r).
+  Qed.
+End BigOpMulrn.
+
+(* -------------------------------------------------------------------- *)
 Reserved Notation "''X_{1..' n '}'"
   (at level 0, n at level 2).
 Reserved Notation "''X_{1..' n  < b '}'"
@@ -492,296 +675,6 @@ Section MSize.
 End MSize.
 
 (* -------------------------------------------------------------------- *)
-Section Product.
-  Variables T U : Type.
-
-  Definition product (s1 : seq T) (s2 : seq U) :=
-    flatten [seq [seq (x, y) | y <- s2] | x <- s1].
-
-  Lemma product0s (s : seq U): product [::] s = [::].
-  Proof. by []. Qed.
-
-  Lemma products0 (s : seq T): product s [::] = [::].
-  Proof. by elim: s. Qed.
-
-  Lemma product_cons x s1 s2:
-    product (x :: s1) s2 =
-      [seq (x, y) | y <- s2] ++ product s1 s2.
-  Proof. by []. Qed.
-End Product.
-
-Local Infix "@@" := product (at level 60, right associativity).
-
-(* -------------------------------------------------------------------- *)
-Section ProductTheory.
-  Variable eT eU : eqType.
-  Variable T  U  : Type.
-  Variable T' U' : Type.
-  Variable fT : T -> T'.
-  Variable fU : U -> U'.
-
-  Notation f := (fun x => (fT x.1, fU x.2)).
-
-  Lemma product_size (s1 : seq T) (s2 : seq U):
-    size (product s1 s2) = (size s1 * size s2)%N.
-  Proof.
-    elim: s1 => [|x s1 ih] //=; rewrite !product_cons.
-    by rewrite size_cat ih size_map mulSn.
-  Qed.
-
-  Lemma product_map s1 s2:
-    map f (product s1 s2) = product (map fT s1) (map fU s2).
-  Proof.
-    elim: s1 => [|x s1 ih] //=.
-    by rewrite !product_cons map_cat ih -!map_comp.
-  Qed.
-
-  Lemma product_mem (s1 : seq eT) (s2 : seq eU) x:
-    (x \in product s1 s2) = (x.1 \in s1) && (x.2 \in s2).
-  Proof.
-    case: x => [x1 x2] /=; elim: s1 => [|x s1 ih] //=.
-    rewrite product_cons mem_cat ih in_cons andb_orl.
-    congr (_ || _); case: eqP=> [<-|ne_x1_x] /=.
-    + by rewrite mem_map // => z1 z2 [].
-    + by apply/mapP; case=> x' _ [].
-  Qed.
-
-  Lemma product_uniq (s1 : seq eT) (s2 : seq eU):
-    (uniq s1) && (uniq s2) -> uniq (product s1 s2).
-  Proof.
-    elim: s1 => [|x s1 ih] //=; rewrite product_cons -andbA.
-    case/and3P=> x_notin_s1 un_s1 un_s2; rewrite cat_uniq.
-    rewrite ih ?(un_s1, un_s2) andbT // map_inj_uniq //=; last first.
-      by move=> x1 x2 /= [].
-    rewrite un_s2 /=; apply/hasPn=> [[x1 x2]] /=.
-    rewrite product_mem /= => /andP [x1_in_s1 _].
-    apply/memPn=> [[y1 y2] /mapP [x' _ [-> ->]]].
-    by apply/eqP=> h; case: h x1_in_s1 x_notin_s1=> -> _ ->.
-  Qed.
-End ProductTheory.
-
-(* -------------------------------------------------------------------- *)
-Section BigOpEqPredI.
-  Variable I : finType.
-  Variable R : Type.
-
-  Variable idx : R.
-  Variable op  : Monoid.com_law idx.
-
-  Lemma eq_big_predI (F G : I -> R) (P Q : pred I):
-       (forall i, i \notin [predI P & Q] -> F i = idx)
-    -> (forall i, Q i -> F i = G i)
-    -> \big[op/idx]_(i | P i) F i = \big[op/idx]_(i | Q i) G i.
-  Proof.
-    move=> h1 h2; rewrite (bigID Q) [X in op _ X]big1; last first.
-      by move=> i /andP [_ NQi]; rewrite h1 //= negb_and NQi orbT.
-    apply/esym; rewrite (bigID P) [X in op _ X]big1; last first.
-      by move=> i /andP [Qi NPi]; rewrite -h2 // h1 // negb_and NPi.
-    by rewrite big_andbC (eq_bigr F) // => i /andP [_ /h2->].
-  Qed.
-
-  Lemma eq_big_predI_condR (F G : I -> R) (P : pred I):
-       (forall i, ~~ (P i) -> F i = idx)
-    -> (forall i, P i -> F i = G i)
-    -> \big[op/idx]_i F i = \big[op/idx]_(i | P i) G i.
-  Proof. by move=> h1 h2; apply/eq_big_predI. Qed.
-End BigOpEqPredI.
-
-(* -------------------------------------------------------------------- *)
-Section BigOpProduct.
-  Variables T1 T2 R : Type.
-
-  Variable idx : R.
-  Variable op  : Monoid.com_law idx.
-
-  Lemma pair_bigA_seq_curry (F : T1 * T2 -> R) s1 s2:
-      \big[op/idx]_(i1 <- s1)
-        \big[op/idx]_(i2 <- s2) F (i1, i2)
-    = \big[op/idx]_(i <- product s1 s2) F i.
-  Proof.
-    elim: s1 => [|x s1 ih]; first by rewrite product0s !big_nil.
-    by rewrite product_cons big_cat big_cons ih big_map.
-  Qed.
-
-  Lemma pair_bigA_seq (F : T1 -> T2 -> R) s1 s2:
-      \big[op/idx]_(i1 <- s1)
-        \big[op/idx]_(i2 <- s2) F i1 i2
-    = \big[op/idx]_(i <- product s1 s2) F i.1 i.2.
-  Proof. by rewrite -pair_bigA_seq_curry. Qed.
-End BigOpProduct.
-
-(* -------------------------------------------------------------------- *)
-Section BigOpPair.
-  Variables T1 T2 : finType.
-  Variables R : Type.
-
-  Variable idx : R.
-  Variable op  : Monoid.com_law idx.
-
-  Lemma pair_bigA_curry (F : T1 * T2 -> R):
-      \big[op/idx]_i \big[op/idx]_j F (i, j)
-    = \big[op/idx]_x F x.
-  Proof. by rewrite pair_bigA; apply/eq_bigr; case. Qed.
-End BigOpPair.
-
-(* -------------------------------------------------------------------- *)
-Section BigUncond.
-  Variables T : Type.
-  Variables R : Type.
-
-  Variable idx : R.
-  Variable op  : Monoid.com_law idx.
-
-  Lemma big_uncond (P : pred T) (F : T -> R) r:
-       (forall i, ~~ P i -> F i = idx)
-    -> \big[op/idx]_(x <- r | P x) F x = \big[op/idx]_(x <- r) F x.
-  Proof.
-    move=> h; apply/esym; rewrite (bigID P) /= [X in op _ X]big1.
-      by rewrite Monoid.mulm1.
-    by move=> i /h.
-  Qed.
-End BigUncond.
-
-(* -------------------------------------------------------------------- *)
-Section BigMkSub.
-  Context  {S   : Type}.
-  Context  {idx : S}.
-  Context  {op  : Monoid.com_law idx}.
-
-  Context {T  : choiceType}.
-  Context {sT : pred T}.
-  Context (I  : subFinType sT).
-
-  Context {P : pred T}.
-  Context {F : T -> S}.
-
-  Variable h : forall x, P x -> sT x.
-
-  Lemma big_mksub (r : seq T): uniq r ->
-      \big[op/idx]_(x <- r | P x) (F x)
-    = \big[op/idx]_(x : I | (P (val x)) && (val x \in r)) (F (val x)).
-  Proof.
-    move=> uniq_r; rewrite -big_filter; apply/esym.
-    pose Q x := P x && (x \in r); rewrite -(big_map val Q).
-    rewrite -big_filter; apply/eq_big_perm/uniq_perm_eq;
-      try rewrite filter_uniq // (map_inj_uniq val_inj).
-      by rewrite /index_enum -enumT enum_uniq.
-    move=> x; rewrite !mem_filter {}/Q; apply/andb_idr.
-    case/andP=> /h sT_x x_in_r; apply/mapP; exists (Sub x sT_x).
-      by rewrite /index_enum -enumT mem_enum.
-    by rewrite SubK.
-  Qed.
-End BigMkSub.
-
-(* -------------------------------------------------------------------- *)
-Section BigMkBm.
-  Context {n : nat} {R : Type}.
-  Context {idx : R} {op : Monoid.com_law idx}.
-  Context {F : 'X_{1..n} -> R}.
-
-  Lemma big_mkbm_seq_cond {P : pred 'X_{1..n}}  {s} b:
-     \max_(x <- s) (mdeg x).+1 <= b -> uniq s ->
-       \big[op/idx]_(x <- s | P x) F x
-     = \big[op/idx]_(x : 'X_{1..n < b} | P x && (val x \in s)) F x.
-  Proof.
-    move=> gt_b_deg uniq_s /=; pose Q x := P x && (x \in s).
-    set r := index_enum [finType of 'X_{1..n < b}].
-    have rE: r = enum {: 'X_{1..n < b}} by rewrite enumT.
-    have uniq_r: uniq r by rewrite rE enum_uniq.
-    rewrite -(big_map val (r := r) Q) -[X in _=X]big_filter.
-    rewrite -big_filter; apply/eq_big_perm/uniq_perm_eq.
-      by rewrite filter_uniq.
-      by rewrite filter_uniq // (map_inj_uniq val_inj).
-    move=> /= m; rewrite !mem_filter {}/Q; apply/esym/andb_idr.
-    case/andP=> _ m_in_s; apply/mapP=> /=; move: gt_b_deg.
-    rewrite (bigD1_seq m) //= geq_max; case/andP=> lt_mb _.
-    by exists (BMultinom lt_mb)=> //; rewrite rE mem_enum.
-  Qed.
-
-  Lemma big_mkbm_seq {s} b: \max_(x <- s) (mdeg x).+1 <= b -> uniq s ->
-       \big[op/idx]_(x <- s) F x
-     = \big[op/idx]_(x : 'X_{1..n < b} | (val x \in s)) F x.
-  Proof. by apply: big_mkbm_seq_cond. Qed.
-
-  Lemma big_mkbm {P : pred 'X_{1..n}} b:
-       \big[op/idx]_(x <- [seq val m | m <- enum {: 'X_{1..n < b}}] | P x) F x
-     = \big[op/idx]_(x : 'X_{1..n < b} | P x) F x.
-  Proof.
-    rewrite (big_mkbm_seq_cond (b := b)).
-      apply: eq_bigl=> m /=; apply/andb_idr=> _; apply/mapP.
-      by exists m=> //; rewrite mem_enum.
-    + elim: (enum _) => [|m s ih]; first by rewrite big_nil.
-      by rewrite map_cons big_cons /= geq_max ih bmdeg.
-    + by rewrite (map_inj_uniq val_inj) enum_uniq.
-  Qed.
-End BigMkBm.
-
-(* -------------------------------------------------------------------- *)
-Section BigBmWiden.
-  Context {n : nat} {R : Type}.
-  Context {idx : R} {op : Monoid.com_law idx}.
-  Context {F G : 'X_{1..n} -> R}.
-
-  Lemma big_bm_widen_cond {P : pred 'X_{1..n}} b1 b2: b1 <= b2 ->
-      \big[op/idx]_(x : 'X_{1..n < b1} | P x) F x
-    = \big[op/idx]_(x : 'X_{1..n < b2} | P x && (mdeg x < b1)) F x.
-  Proof.
-    move=> le_b1b2; rewrite -(big_mkbm (P := P)).
-    rewrite -(big_mkbm (P := [pred m | P m && (mdeg m < b1)])) /=.
-    rewrite -big_filter -[X in _=X]big_filter.
-    apply/eq_big_perm/uniq_perm_eq.
-    + by rewrite filter_uniq// (map_inj_uniq val_inj) enum_uniq.
-    + by rewrite !filter_uniq // (map_inj_uniq val_inj) enum_uniq.
-    move=> /= m; rewrite !mem_filter -andbA; congr (_ && _).
-    apply/mapP/idP=> /= [[m' _ ->]|].
-    + rewrite bmdeg /=; apply/mapP; case: m'=> /= m' lt_m'_b1.
-      have lt := leq_trans lt_m'_b1 le_b1b2.
-      by exists (BMultinom lt)=> //; rewrite mem_enum.
-    + case/andP=> lt_mb1 _; exists (BMultinom lt_mb1) => //.
-      by rewrite mem_enum.
-  Qed.
-
-  Lemma big_bm_widen b1 b2: b1 <= b2 ->
-      \big[op/idx]_(x : 'X_{1..n < b1}) F x
-    = \big[op/idx]_(x : 'X_{1..n < b2} | mdeg x < b1) F x.
-  Proof. by apply: (big_bm_widen_cond (P := xpredT)). Qed.
-
-  Lemma eq_big_bm_widen b1 b2:
-       (forall m, minn b1 b2 <= mdeg m -> F m = idx)
-    -> (forall m, mdeg m < minn b1 b2 -> F m = G m)
-    ->   \big[op/idx]_(x : 'X_{1..n < b1}) F x
-       = \big[op/idx]_(x : 'X_{1..n < b2}) G x.
-  Proof. Admitted.
-(*
-    wlog: b1 b2 / b1 <= b2 => [wlog|h].
-      move=> h; case: (leqP b1 b2)=> [/wlog->//|].
-      by move/ltnW/wlog=> -> //; rewrite minnC.
-    have := h; rewrite minnC /minn ltnNge => -> /= h'.
-    apply/esym; rewrite (big_bm_widen h).
-    rewrite (bigID [pred m : 'X_{1..n < b2} | mdeg m < b1]) /=.
-    rewrite [X in op _ X]big1 ?simpm //.
-    by move=> i; rewrite -leqNgt => /h'.
-  Qed.
-*)
-End BigBmWiden.
-
-(* -------------------------------------------------------------------- *)
-Section BigOpMulrn.
-  Variable I : Type.
-  Variable R : ringType.
-
-  Variable F : I -> R.
-  Variable P : pred I.
-
-  Lemma big_cond_mulrn r:
-    \sum_(i <- r | P i) (F i) = \sum_(i <- r) (F i) *+ (P i).
-  Proof.
-    elim: r => [|x r ih]; first by rewrite !big_nil.
-    by rewrite !big_cons ih; case: (P x); rewrite ?(mulr0n, mulr1n, add0r).
-  Qed.
-End BigOpMulrn.
-
-(* -------------------------------------------------------------------- *)
 Section IterPoly.
   Variable R : ringType.
 
@@ -926,7 +819,7 @@ Section MPolyRing.
   Implicit Types m : 'X_{1..n}.
 
   Local Notation "`| p |" := (msize p) : ring_scope.
-  Local Notation "!| m |" := (mdeg  m) : ring_scope.
+  Local Notation "!| m |" := (mdeg  m) (format "!| m |"): ring_scope.
 
   Local Notation "p *M_[ m ] q" :=
     << (p@_m.1)%MM * (q@_m.2)%MM *g (m.1 * m.2)%MM >>
@@ -939,37 +832,51 @@ Section MPolyRing.
   Local Notation "p *M q" := (mpoly_mul p q)
      (at level 40, left associativity, format "p  *M  q").
 
-  Lemma mpoly_mul_wideE p q kp kq: msize p <= kp -> msize q <= kq ->
+  Lemma mul_poly1_eq0L p q (m : 'X_{1..n} * 'X_{1..n}):
+    m.1 \notin msupp p -> p *M_[m] q = 0.
+  Proof. by move/mcoeff_eq0=> ->; rewrite mul0r freegU0. Qed.
+
+  Lemma mul_poly1_eq0R p q (m : 'X_{1..n} * 'X_{1..n}):
+    m.2 \notin msupp q -> p *M_[m] q = 0.
+  Proof. by move/mcoeff_eq0=> ->; rewrite mulr0 freegU0. Qed.
+
+  Lemma mpoly_mulwE p q kp kq: msize p <= kp -> msize q <= kq ->
     p *M q = [mpoly \sum_(m : 'X_{1..n < kp, kq}) (p *M_[m] q)].
   Proof.
-    move=> le_p le_q; apply/mpoly_eqP/esym => /=.
+    pose Ip := [subFinType of 'X_{1..n < kp}].
+    pose Iq := [subFinType of 'X_{1..n < kq}].
+    move=> lep leq; apply/mpoly_eqP/esym=> /=.
     rewrite -pair_bigA_curry -pair_bigA_seq_curry /=.
-    rewrite (big_mkbm_seq (b := kp)) //=; apply/eq_big_predI_condR.
-      move=> /= i /mcoeff_eq0 ->; rewrite big1 //.
-      by move=> j _; rewrite !simpm freegU0.
-    move=> /= i _; rewrite (big_mkbm_seq (b := kq)) //=.
-    apply/eq_big_predI_condR=> [/= j|//].
-    by move/mcoeff_eq0=> ->; rewrite !simpm freegU0.
+    rewrite (big_mksub Ip) ?msupp_uniq //=; first last.
+      by move=> x /msize_mdeg_lt /leq_trans; apply.
+    rewrite [X in _=X]big_uncond /=; last first.
+      move=> i /mcoeff_eq0=> ->; rewrite big1=> //.
+      by move=> j _; rewrite mul0r freegU0.
+    apply/eq_bigr=> i _; rewrite (big_mksub Iq) /=; first last.
+      by move=> x /msize_mdeg_lt /leq_trans; apply.
+      by rewrite msupp_uniq.
+    rewrite [X in _=X]big_uncond //= => j /mcoeff_eq0.
+    by move=> ->; rewrite mulr0 freegU0.
   Qed.
 
-  Implicit Arguments mpoly_mul_wideE [p q].
+  Implicit Arguments mpoly_mulwE [p q].
 
-  Lemma mpoly_mulE p q:
-    p *M q = [mpoly \sum_(m : 'X_{1..n < `|p|, `|q| }) p *M_[m] q].
-  Proof. by apply: mpoly_mul_wideE. Qed.
-
-  Lemma big_mC_widen (F : 'X_{1..n} -> 'X_{1..n} -> R) m i: !|m| < i ->
-      \sum_(k : 'X_{1..n < !|m|.+1, !|m|.+1} | m == (k.1 * k.2)%MM) F k.1 k.2
-    = \sum_(k : 'X_{1..n < i      , i      } | m == (k.1 * k.2)%MM) F k.1 k.2.
+  Lemma mpoly_mul_revwE p q kp kq: msize p <= kp -> msize q <= kq ->
+    p *M q = [mpoly \sum_(m : 'X_{1..n < kq, kp}) (p *M_[(m.2, m.1)] q)].
   Proof.
-    move=> lt_mi; rewrite big_cond_mulrn [X in _=X]big_cond_mulrn.
-  Admitted.
+    move=> lep leq;  rewrite -pair_bigA_curry exchange_big /=.
+    by rewrite pair_bigA /= -mpoly_mulwE //.
+  Qed.  
+
+  Implicit Arguments mpoly_mul_revwE [p q].
 
   Lemma mcoeff_poly_mul p q m:
     (p *M q)@_m =
       \sum_(k : 'X_{1..n < !|m|.+1, !|m|.+1} | m == (k.1 * k.2)%MM)
         (p@_k.1 * q@_k.2).
-  Proof.
+  Proof. Admitted.
+
+(*
     pose_big_enough i.
       rewrite (mpoly_mul_wideE i i) // mcoeff_MPoly raddf_sum /=.
       pose P := [pred k : 'X_{1..n < i, i} | m == (k.1 * k.2)%MM].
@@ -980,6 +887,7 @@ Section MPolyRing.
       by move=> j /eqP->; rewrite coeffU eqxx !simpm.
     by close.
   Qed.
+*)
 
   Lemma poly_mulA: associative mpoly_mul.
   Proof. Admitted.
@@ -1003,7 +911,7 @@ Section MPolyRing.
   Lemma poly_mulDl: left_distributive mpoly_mul +%R.
   Proof.
     move=> p q r; pose_big_enough i.
-      rewrite !(mpoly_mul_wideE i (msize r)) //=.
+      rewrite !(mpoly_mulwE i (msize r)) //=.
       apply/mpoly_eqP=> /=; rewrite -big_split /=; apply: eq_bigr.
       by case=> [[i1 /= _] [i2 /= _]] _; rewrite freegUD -mulrDl -mcoeffD.
     by close.
@@ -1012,7 +920,7 @@ Section MPolyRing.
   Lemma poly_mulDr: right_distributive mpoly_mul +%R.
   Proof.
     move=> p q r; pose_big_enough i.
-      rewrite !(mpoly_mul_wideE (msize p) i) //=.
+      rewrite !(mpoly_mulwE (msize p) i) //=.
       apply/mpoly_eqP=> /=; rewrite -big_split /=; apply: eq_bigr.
       by case=> [[i1 /= _] [i2 /= _]] _; rewrite freegUD -mulrDr -mcoeffD.
     by close.
@@ -1146,10 +1054,10 @@ Section MPolyVarTheory.
     p = \sum_(m : 'X_{1..n < k}) (p@_m *: 'X_[m]).
   Proof.
     move=> lt_pk; pose I := [subFinType of 'X_{1..n < k}].
-    rewrite {1}[p]mpolyE big_seq (big_mksub I) //=; first last.
-      by rewrite msupp_uniq.
+    rewrite {1}[p]mpolyE (big_mksub I) //=; first last.
       by move=> x /msize_mdeg_lt /leq_trans; apply.
-    rewrite big_uncond //= => i; rewrite andbb.
+      by rewrite msupp_uniq.
+    rewrite big_uncond //= => i.
     by move/mcoeff_eq0 ->; rewrite scale0r.
   Qed.
 
@@ -1165,14 +1073,14 @@ Section MPolyVarTheory.
     p * q = \sum_(m : 'X_{1..n < k, k}) (p@_m.1 * q@_m.2) *: 'X_[m.1 * m.2].
   Proof.  
     move=> ltpk ltqk; rewrite mpolyME; pose I := [subFinType of 'X_{1..n < k}].
-    rewrite -pair_bigA_seq_curry big_seq (big_mksub I) /=; last first.
-      by rewrite msupp_uniq. by move=> m /msize_mdeg_lt /leq_trans; apply.
-    rewrite big_uncond /= => [|i]; last rewrite andbb; last first.
+    rewrite -pair_bigA_seq_curry (big_mksub I) /=; last first.
+      by move=> m /msize_mdeg_lt /leq_trans; apply. by rewrite msupp_uniq. 
+    rewrite big_uncond /= => [|i]; last first.
       by move/mcoeff_eq0=> ->; rewrite big1 // => j _; rewrite mul0r scale0r.
     rewrite -pair_bigA_curry /=; apply/eq_bigr=> i _.
-    rewrite big_seq (big_mksub I) /=; last first.
-      by rewrite msupp_uniq. by move=> m /msize_mdeg_lt /leq_trans; apply.
-    rewrite big_uncond /= => [//|j]; last rewrite andbb.
+    rewrite (big_mksub I) /=; last first.
+      by move=> m /msize_mdeg_lt /leq_trans; apply. by rewrite msupp_uniq. 
+    rewrite big_uncond /= => [//|j].
     by move/mcoeff_eq0=> ->; rewrite mulr0 scale0r.
   Qed.    
 
@@ -1273,9 +1181,10 @@ Section MPolyDeriv.
     p^`M(i) = \sum_(m : 'X_{1..n < k}) ((m i)%:R * p@_m) *: 'X_[md1 i m].
   Proof.
     pose I := [subFinType of 'X_{1..n < k}].
-    move=> le_pk; rewrite /mderiv big_seq (big_mksub I) /=; first last.
-      by rewrite msupp_uniq. by move=> x /msize_mdeg_lt/leq_trans/(_ le_pk).
-    rewrite big_uncond //= => j; rewrite andbb => /mcoeff_eq0 ->.
+    move=> le_pk; rewrite /mderiv (big_mksub I) /=; first last.
+      by move=> x /msize_mdeg_lt/leq_trans/(_ le_pk).
+      by rewrite msupp_uniq.
+    rewrite big_uncond //= => j /mcoeff_eq0 ->.
     by rewrite mulr0 scale0r.
   Qed.
   Implicit Arguments mderivE [p i].
@@ -1388,10 +1297,11 @@ Section MPolyMorphism.
     Lemma mmapE p i: msize p <= i ->
       p^[f,h] = \sum_(m : 'X_{1..n < i}) (f p@_m) * m^[h].
     Proof.
-      pose P := [pred m : 'X_{1..n < i} | val m \in msupp p].
-      move=> le; rewrite (bigID P) /= [X in _+X]big1; last first.
-        by case=> /= m _ /mcoeff_eq0 ->; rewrite raddf0 mul0r.
-      by rewrite /mmap (big_mkbm_seq (b := i)) //= addr0.
+      move=> le_pi; set I := [subFinType of 'X_{1..n < i}].
+      rewrite /mmap (big_mksub I) ?msupp_uniq //=; first last.
+        by move=> x /msize_mdeg_lt /leq_trans; apply.
+      rewrite big_uncond //= => j /mcoeff_eq0 ->.
+      by rewrite raddf0 mul0r.
     Qed.
     Implicit Arguments mmapE [p].
 
