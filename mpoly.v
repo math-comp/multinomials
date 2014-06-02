@@ -774,43 +774,6 @@ Section Inject.
 End Inject.
 
 (* -------------------------------------------------------------------- *)
-Section BigWiden.
-  Variable R : Type.
-
-  Variable idx : R.
-  Variable op  : Monoid.com_law idx.
-
-  Variables T     : choiceType.
-  Variables PI PJ : pred T.
-  Variables I     : subFinType PI.
-  Variables J     : subFinType PJ.
-
-  Variable P : pred T.
-  Variable F : T -> R.
-
-  Hypothesis h: forall x, PI x -> PJ x.
-
-  Lemma big_widen:
-      \big[op/idx]_(i : I | P (val i)) F (val i)
-    = \big[op/idx]_(j : J | P (val j) && PI (val j)) F (val j).
-  Proof.
-    pose Q := [pred j : T | P j && PI j]; apply/esym.
-    rewrite (eq_bigl (Q \o val)) // /comp -big_map -big_filter.
-    apply/esym; rewrite -big_map -big_filter; apply/eq_big_perm.
-    apply/uniq_perm_eq; rewrite ?(filter_uniq, map_inj_uniq val_inj);
-      try by rewrite // /index_enum -enumT enum_uniq.
-    move=> x; rewrite !mem_filter {}/Q inE -andbA; congr (_ && _).
-    apply/mapP/idP=> [[y _ ->//=]|]; last first.
-      by case/andP=> hx _; exists (Sub x hx)=> //; rewrite SubK.
-    rewrite valP /=; apply/mapP; exists (Sub (val y) (h (valP _))).
-      by rewrite /index_enum -enumT mem_enum.
-      by rewrite SubK.
-  Qed.  
-End BigWiden.
-
-Implicit Arguments big_widen [R idx op T PI PJ I J].
-
-(* -------------------------------------------------------------------- *)
 Section MPolyRing.
   Variable n : nat.
   Variable R : ringType.
