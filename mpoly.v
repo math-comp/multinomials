@@ -277,6 +277,8 @@ Reserved Notation "x ^[ f , g ]"
    (at level 2, left associativity, format "x ^[ f , g ]").
 Reserved Notation "p ^`M ( m )"
    (at level 8, format "p ^`M ( m )").
+Reserved Notation "p ^`M ( m , n )"
+   (at level 8, format "p ^`M ( m ,  n )").
 
 (* -------------------------------------------------------------------- *)
 Section MultinomDef.
@@ -1170,6 +1172,9 @@ Section MPolyDeriv.
     (md1 i m) j = (m j - (i == j))%N.
   Proof. by rewrite !multinomE tnth_map tnth_ord_tuple. Qed.
 
+  Lemma md1C i j m: md1 i (md1 j m) = md1 j (md1 i m).
+  Proof. by apply/mnmP=> k; rewrite !md1E -!subnDA addnC. Qed.
+
   Lemma mbumpE (i : 'I_n) m j:
     (mbump i m) j = (m j + (i == j))%N.
   Proof. by rewrite !multinomE tnth_map tnth_ord_tuple. Qed.
@@ -1248,6 +1253,9 @@ Section MPolyDeriv.
     by rewrite mbump_eq1 mulr0 mul0rn.
   Qed.
 
+  Lemma mderivX i m: mderiv i 'X_[m] = (m i)%:R *: 'X_[md1 i m].
+  Proof. by rewrite /mderiv msuppX big_seq1 mcoeffX eqxx mulr1. Qed.
+
   Lemma mderivN i: {morph mderiv i: x / - x}.
   Proof. exact: raddfN. Qed.
 
@@ -1277,6 +1285,42 @@ Section MPolyDeriv.
 
   Lemma mderivM i p q: (p * q)^`M(i) = (p^`M(i) * q) + (p * q^`M(i)).
   Proof. Admitted.
+
+  Lemma mderiv_comm i j p: p^`M(i)^`M(j) = p^`M(j)^`M(i).
+  Proof.
+    pose_big_enough k; first pose mderivE := (mderivE k).
+      rewrite ![p^`M(_)]mderivE // !raddf_sum /=; apply/eq_bigr.
+      move=> l _; rewrite !mderivCM !mderivX !scalerA.
+      rewrite md1C -!commr_nat -!mulrA -!natrM; congr (_ * _%:R *: _).
+      by rewrite !md1E eq_sym; case: eqP=> [->//|_] /=; rewrite !subn0 mulnC.
+    by close.
+  Qed.
+
+  Definition mderivn i k p : {mpoly R[n]} :=
+    iter k (mderiv i) p.
+
+  Notation "p ^`M ( i , k )" := (mderivn i k p).
+
+  Lemma mderivn0 i p: p^`M(i, 0) = p.
+  Proof. by []. Qed.
+
+  Lemma nderivn1 i p: p^`M(i, 1) = p^`M(i).
+  Proof. by []. Qed.
+
+  Lemma mderivnS i k p: p^`M(i, k.+1) = p^`M(i, k)^`M(i).
+  Proof. by []. Qed.
+
+  Lemma mderivSn i k p: p^`M(i, k.+1) = p^`M(i)^`M(i, k).
+  Proof. by rewrite /mderivn iterSr. Qed.
+
+  Lemma mderivn_is_linear i k: linear (mderivn i k).
+  Proof. by elim: k=> //= k ih c p q /=; rewrite ih mderivD mderivZ. Qed.
+
+  Canonical mderivn_additive i k := Additive (mderivn_is_linear i k).
+  Canonical mderivn_linear   i k := Linear   (mderivn_is_linear i k).
+
+  Definition mderivm m p : {mpoly R[n]} :=
+    foldr (fun i p => mderivn i (m i) p) p (enum 'I_n).
 End MPolyDeriv.
 
 (* -------------------------------------------------------------------- *)
