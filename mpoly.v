@@ -1,3 +1,7 @@
+(* --------------------------------------------------------------------
+ * (c) Copyright 2014 IMDEA Software Institute.
+ * -------------------------------------------------------------------- *)
+
 (* -------------------------------------------------------------------- *)
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype.
 Require Import bigop tuple finfun ssralg perm poly bigenough freeg.
