@@ -3,9 +3,9 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype.
-Require Import bigop tuple finfun ssralg perm poly bigenough freeg.
-Require Import path.
+Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path choice.
+Require Import finset fintype finfun tuple bigop ssralg ssrint.
+Require Import perm zmodp binomial bigenough poly freeg.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -19,6 +19,7 @@ Delimit Scope mpoly_scope with MP.
 Delimit Scope multi_scope with MM.
 
 Local Notation simpm := Monoid.simpm.
+Local Notation ilift := fintype.lift.
 
 (* -------------------------------------------------------------------- *)
 (* FIXME: move me or replace me                                         *)
@@ -38,6 +39,19 @@ Section BigUncond.
     by move=> i /h.
   Qed.
 End BigUncond.
+
+(* -------------------------------------------------------------------- *)
+(* FIXME: move me or replace me                                         *)
+Section BigSet.
+  Variable T   : Type.
+  Variable idx : T.
+  Variable op  : Monoid.law idx.
+
+  Lemma big_set (I : finType) (P : pred I) (F : I -> T):
+      \big[op/idx]_(x in [set i : I | P i]) (F x)
+    = \big[op/idx]_(x : I | P x) (F x).
+  Proof. by rewrite /index_enum; apply/eq_bigl=> i; rewrite inE. Qed.
+End BigSet.
 
 (* -------------------------------------------------------------------- *)
 (* FIXME: move me or replace me                                         *)
@@ -282,6 +296,8 @@ Reserved Notation "p ^`M ( m )"
    (at level 8, format "p ^`M ( m )").
 Reserved Notation "p ^`M ( m , n )"
    (at level 8, format "p ^`M ( m ,  n )").
+Reserved Notation "''s_' ( n , k )"
+  (at level 8, n, l at level 2, format "''s_' ( n ,  k )").
 
 (* -------------------------------------------------------------------- *)
 Section MultinomDef.
@@ -1683,23 +1699,218 @@ Section MPolySym.
 
   Canonical msym_multiplicative s := AddRMorphism (msym_is_multiplicative s).
 
+  Lemma msym1 s: msym s 1 = 1.
+  Proof. exact: rmorph1. Qed.
+
   Lemma msymM s: {morph msym s: x y / x * y}.
   Proof. exact: rmorphM. Qed.
 
-  Definition issym p := [forall s, msym s p == p].
+  Definition symmetric: qualifier 0 {mpoly R[n]} :=
+    [qualify p | [forall s, msym s p == p]].
 
-  Lemma issymP p: reflect (forall s, p = msym s p) (issym p).
+  Fact symmetric_key: pred_key symmetric. Proof. by []. Qed.
+  Canonical symmetric_keyed := KeyedQualifier symmetric_key.
+
+  Lemma issymP p: reflect (forall s, msym s p = p) (p \is symmetric).
   Proof.
-    apply: (iffP forallP)=> /= h s; last by rewrite -h.
+    apply: (iffP forallP)=> /= h s; last by rewrite h.
     by rewrite (eqP (h s)).
   Qed.
+
+  Lemma sym_zmod: zmod_closed symmetric.
+  Proof.
+    split=> [|p q /issymP sp /issymP sq]; apply/issymP=> s.
+      by rewrite msym0.
+    by rewrite msymB sp sq.
+  Qed.
+
+  Canonical sym_opprPred := OpprPred sym_zmod.
+  Canonical sym_addrPred := AddrPred sym_zmod.
+  Canonical sym_zmodPred := ZmodPred sym_zmod.
+
+  Lemma sym_mulr_closed: mulr_closed symmetric.
+  Proof.
+    split=> [|p q /issymP sp /issymP sq]; apply/issymP=> s.
+      by rewrite msym1.
+    by rewrite msymM sp sq.
+  Qed.
+
+  Canonical sym_mulrPred     := MulrPred     sym_mulr_closed.
+  Canonical sym_smulrPred    := SmulrPred    sym_mulr_closed.
+  Canonical sym_semiringPred := SemiringPred sym_mulr_closed.
+  Canonical sym_subringPred  := SubringPred  sym_mulr_closed.
 
   Definition tmono (n : nat) (h : seq 'I_n) :=
     sorted ltn (map val h).
 
-  Definition esym n k : {mpoly R[n]} :=
+  Definition mesym (k : nat): {mpoly R[n]} :=
     \sum_(h : k.-tuple 'I_n | tmono h) \prod_(i <- h) 'X_i.
+
+  Lemma mesym_sym k: mesym k \is symmetric.
+  Proof. Admitted.
+
+  Lemma mesym0: mesym 0 = 1.
+  Proof.
+    have h: enum {: 0.-tuple 'I_n} = [:: [tuple]].
+      admit.
+    rewrite /mesym /index_enum -enumT h -big_filter.
+    by rewrite big_seq1 /= big_nil.
+  Qed.
 End MPolySym.
+
+Notation "''s_' ( n , k )" := (@mesym n _ k).
+
+(* -------------------------------------------------------------------- *)
+Local Notation widen := (widen_ord (leqnSn _)).
+
+Section MWiden.
+  Variable n : nat.
+  Variable R : ringType.
+
+  Definition mwiden (p : {mpoly R[n]}) : {mpoly R[n.+1]} :=
+    mmap (@mpolyC _ _) (fun i => 'X_(widen i)) p.
+
+  Definition mnmwiden (m : 'X_{1..n}) : 'X_{1..n.+1} :=
+    [multinom of rcons m 0%N].
+
+  Lemma mnmwiden1 i: (mnmwiden U_(i) = U_(widen i))%MM.
+  Proof.
+    apply/mnmP; case=> j /= lt; rewrite /mnmwiden !mnmE; apply/esym.
+    rewrite eqE multinomE /tnth /=; move: (tnth_default _ _) => x.
+    rewrite nth_rcons size_map size_enum_ord; move: lt.
+    rewrite ltnS leq_eqVlt; case/orP => [/eqP->|lt].
+      by apply/eqP; rewrite ltnn eqxx eqb0 ltn_eqF.
+    rewrite lt (nth_map i) ?size_enum_ord //.
+    by apply/esym; rewrite eqE /= nth_enum_ord.
+  Qed.
+
+  Lemma mwiden_is_additive: additive mwiden.
+  Proof. by apply/mmap_is_additive. Qed.
+
+  Lemma mwiden0     : mwiden 0 = 0               . Proof. exact: raddf0. Qed.
+  Lemma mwidenN     : {morph mwiden: x / - x}    . Proof. exact: raddfN. Qed.
+  Lemma mwidenD     : {morph mwiden: x y / x + y}. Proof. exact: raddfD. Qed.
+  Lemma mwidenB     : {morph mwiden: x y / x - y}. Proof. exact: raddfB. Qed.
+  Lemma mwidenMn  k : {morph mwiden: x / x *+ k} . Proof. exact: raddfMn. Qed.
+  Lemma mwidenMNn k : {morph mwiden: x / x *- k} . Proof. exact: raddfMNn. Qed.
+
+  Canonical mwiden_additive := Additive mwiden_is_additive.
+
+  Lemma mwiden_is_multiplicative: multiplicative mwiden.
+  Proof.
+    apply/commr_mmap_is_multiplicative=> /=.
+    + by move=> i p; apply/commr_mpolyX.
+    + move=> p m m'; rewrite /mmap1; elim/big_rec: _ => /=.
+        by apply/commr1.
+      by move=> i q _; apply/commrM/commrX/commr_mpolyX.
+  Qed.
+
+  Canonical mwiden_rmorphism := AddRMorphism mwiden_is_multiplicative.
+
+  Lemma mwiden1: mwiden 1 = 1.
+  Proof. exact: rmorph1. Qed.
+
+  Lemma mwidenM: {morph mwiden: x y / x * y}.
+  Proof. exact: rmorphM. Qed.
+
+  Lemma mwidenX m: mwiden 'X_[m] = 'X_[mnmwiden m].
+  Proof. Admitted.
+
+  Lemma inj_mwiden: injective mwiden.
+  Proof. Admitted.
+
+  Definition mpwiden (p : {poly {mpoly R[n]}}) : {poly {mpoly R[n.+1]}} :=
+    map_poly mwiden p.
+
+  Lemma mpwiden_is_additive: additive mpwiden.
+  Proof. exact: map_poly_is_additive. Qed.
+
+  Canonical mpwiden_additive := Additive mpwiden_is_additive.
+
+  Lemma mpwiden_is_rmorphism: rmorphism mpwiden.
+  Proof. exact: map_poly_is_rmorphism. Qed.
+
+  Canonical mpwiden_rmorphism := RMorphism mpwiden_is_rmorphism.
+
+  Lemma mpwidenZ c p: mpwiden (c *: p) = mwiden c *: (mpwiden p).
+  Proof. by rewrite /mpwiden map_polyZ. Qed.
+End MWiden.
+
+(* -------------------------------------------------------------------- *)
+Section MESymTheory.
+  Variable R : ringType.
+
+  Definition twiden n k (t : k.-tuple 'I_n) :=
+    [tuple of map widen t].
+
+  Lemma inj_widen n: injective (widen : 'I_n -> _).
+  Proof. by move=> x y /eqP; rewrite eqE /= val_eqE => /eqP. Qed.
+
+  Lemma mesymSS n k:
+    's_(n.+1, k.+1) = mwiden 's_(n, k.+1) + mwiden 's_(n, k) * 'X_(inord n)
+    :> {mpoly R[n.+1]}.
+  Proof.
+    pose T k n := k.-tuple 'I_n; rewrite {1}/mesym.
+    pose F1 (t : T k.+1 n) := twiden t.
+    pose F2 (t : T k n) := [tuple of rcons [seq widen i | i <- t] (inord n)].
+    pose E1 := [set F1 t | t : T k.+1 n & tmono t].
+    pose E2 := [set F2 t | t : T k n & tmono t].
+    have inj_F1: injective F1.
+      by move=> x y /= [] /(inj_map (@inj_widen _)) /val_inj.
+    have inj_F2: injective F2.
+      move=> x y /= [] /(congr1 rev); rewrite !rev_rcons.
+      case=> /(congr1 rev); rewrite !revK => [].
+      by move/(inj_map (@inj_widen _)) /val_inj.
+    have sorted_E1: forall t, t \in E1 -> tmono t.
+      move=> /= t /imsetP [/= u]; rewrite inE /tmono => st_u ->.
+      by rewrite -map_comp (eq_map (f2 := val)).
+    have sorted_E2: forall t, t \in E2 -> tmono t.
+      move=> /= t /imsetP [/= u]; rewrite inE /tmono => st_u ->.
+      case: u st_u; case=> //= x u _ st_u.
+      rewrite map_rcons -map_comp (eq_map (f2 := val)) //.
+      by rewrite rcons_path st_u /= last_map inordK.
+    have disj_E: [disjoint E1 & E2].
+      apply/pred0P=> x /=; apply/negP=> /andP [].
+      case/imsetP=> /= t1 _ -> /imsetP /= [t2 /= _].
+      move/(congr1 ((@tnth _ _)^~ ord_max))/esym.
+      rewrite {1}/tnth nth_rcons size_map size_tuple /= ltnn eqxx.
+      by apply/eqP; rewrite eqE /= inordK // tnth_map gtn_eqF /=.
+    have split_E: [set t : T k.+1 n.+1 | tmono t] = E1 :|: E2.
+      apply/esym/eqP; rewrite eqEcard; apply/andP; split.
+        apply/subsetP=> /= t; rewrite in_setU; case/orP.
+        * by move/sorted_E1; rewrite inE.
+        * by move/sorted_E2; rewrite inE.
+      rewrite cardsU disjoint_setI0 // cards0 subn0.
+      rewrite !card_imset /= ?(cardsT, card_tuple, card_ord) //.
+      by rewrite !card_ltn_sorted_tuples binS addnC.
+    rewrite -big_set /= split_E big_set /= bigU //=; congr (_ + _).
+    + rewrite /E1 big_imset /=; last by move=> t1 t2 _ _; apply/inj_F1.
+      rewrite big_set /mesym /= raddf_sum /=; apply/eq_bigr=> i _.
+      admit.
+    + rewrite /E2 big_imset /=; last by move=> t1 t2 _ _; apply/inj_F2.
+      rewrite big_set /mesym raddf_sum mulr_suml /=.
+      apply/eq_bigr=> i _; set s := [seq _ | _ <- i].
+      admit.
+  Qed.
+
+  Lemma viete:
+    forall n,
+         \prod_(i < n   ) ('X - ('X_i)%:P)
+      =  \sum_ (k < n.+1) (-1)^+k *: ('s_(n, k) *: 'X^(n-k))
+      :> {poly {mpoly int[n]}}.
+  Proof.
+    elim => [|n ih].
+      by rewrite !big_ord0 big_ord1 mesym0 expr0 !scale1r.
+    pose F n k : {poly {mpoly int[n]}} :=
+      (-1)^+k *: ('s_(n, k) *: 'X^(n-k)).
+    rewrite big_ord_recr /=; set p := (\prod_(_ < _) _).
+    have {p}->: p = mpwiden (\prod_(i < n) ('X - ('X_i)%:P)).
+      rewrite /mpwiden rmorph_prod /=; apply/eq_bigr.
+      move=> /= i _; rewrite raddfB /= map_polyX map_polyC /=.
+      by rewrite mwidenX mnmwiden1.
+    rewrite {}ih (eq_bigr (F _ \o val)) 1?(eq_bigr (F n.+1 \o val)) //.
+  Admitted.
+End MESymTheory.
 
 (*
 *** Local Variables: ***
