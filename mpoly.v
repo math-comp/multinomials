@@ -2040,61 +2040,101 @@ Section MPolySym.
   Definition tmono (n : nat) (h : seq 'I_n) :=
     sorted ltn (map val h).
 
+  Lemma uniq_tmono (h : seq 'I_n): tmono h -> uniq h.
+  Proof.
+    rewrite /tmono => /sorted_uniq; rewrite (map_inj_uniq val_inj).
+    by apply; [apply/ltn_trans | move=> ?; rewrite /ltn /= ltnn].
+  Qed.
+
+  Lemma eq_tmono (h1 h2 : seq 'I_n):
+    tmono h1 -> tmono h2 -> h1 =i h2 -> h1 = h2.
+  Proof.
+    move=> tm1 tm2 h; apply/(inj_map val_inj).
+    apply/(eq_sorted_irr (leT := ltn))=> //.
+      by apply/ltn_trans.
+      by move=> ?; rewrite /ltn /= ltnn.
+    move=> m; apply/mapP/mapP; case=> /= x;
+      by rewrite (h, =^~ h)=> {h} h ->; exists x.
+  Qed.
+
   Definition mesym (k : nat): {mpoly R[n]} :=
     \sum_(h : k.-tuple 'I_n | tmono h) \prod_(i <- h) 'X_i.
 
-  Definition echar k (m : 'X_{1..n}) :=
+  Definition mechar k (m : 'X_{1..n}) :=
     (mdeg m == k) && [forall i, m i <= 1%N].
 
   Lemma mcoeff_mesym (k : nat) m:
-    (mesym k)@_m = (echar k m)%:R.
-  Proof.                      (* Have to restart proof from scratch *)
-    case: (boolP (echar k m)) => /= h; last first.
-    + rewrite /mesym raddf_sum /= big1 // => i tmon.
-      rewrite mprodXE mcoeffX; case e: (_ == _) => //.
-      have/eqP/(congr1 mdeg) := e; rewrite mdeg_sum.
-      rewrite (eq_bigr (fun _ => 1%N)); last first.
-        by move=> j _; rewrite mdeg1.
-      rewrite big_const_seq count_predT iter_addn_0.
-      rewrite mul1n size_tuple => /esym eq_m_k; move: h.
-      rewrite /echar eq_m_k eqxx andTb negb_forall.
-      case/existsP=> /= j h; move/eqP/mnmP/(_ j): e.
-      rewrite mnm_sum; case: (boolP (j \in i)).
-      * move=> j_in_i; rewrite (bigD1_seq j) //=; last first.
-          move/sorted_uniq: tmon; rewrite (map_inj_uniq val_inj).
-          by apply; [apply/ltn_trans | move=> ?; rewrite /ltn /= ltnn].
-        rewrite big1 ?addn0 => [|l ne_li]; last first.
-          by rewrite mnm1 (negbTE ne_li).
-        by rewrite mnm1 eqxx => /esym mj1; rewrite mj1 in h.
-      * move=> j_notin_i; rewrite big_seq  big1; last first.
-          move=> l l_in_i; rewrite mnm1; case: eqP=> //.
-          by move=> eq_lj; rewrite -eq_lj l_in_i in j_notin_i.
-        by move=> /esym mj0; rewrite mj0 in h.
-    + case/andP: h=> /eqP eq_mk /forallP /= h.
-      pose s := [seq i <- enum 'I_n | m i != 0%N].
-      have size_s: size s = k.
-        rewrite -eq_mk mdegE (bigID [pred i | m i != 0%N]) /=.
-        rewrite [X in (_+X)%N]big1=> [|i]; last first.
-          by rewrite negbK=> /eqP ->.
-        rewrite addn0 (eq_bigr (fun _ => 1%N)); last first.
-          by move=> i; move: (h i); case: (m i) => [|[|]].
-        rewrite big_const /= iter_addn_0 mul1n /s.
-        by rewrite cardE !size_filter -enumT /=; apply/eq_count.
-      pose t := tcast size_s (in_tuple s).
-      have tmono_t: tmono t.
-        rewrite /tmono; have {size_s t}->: tval t = s.
-          by rewrite {eq_mk}/t; case: k / size_s.
-        rewrite /s. admit.
-      rewrite /mesym raddf_sum (bigD1 t) //=.
-      rewrite [X in _+X]big1 ?addr0 => [|i]; last first.
-        case/andP=> [tmono_i ne_it]; rewrite mprodXE.
-        rewrite mcoeffX.
-  Admitted.
+    (mesym k)@_m = (mechar k m)%:R.
+  Proof.
+    pose P (h : k.-tuple 'I_n) := \big[+%MM/0%MM]_(i <- h) U_(i)%MM.
+    transitivity (\sum_(h : k.-tuple 'I_n | tmono h) (m == P h)%:R : R).
+      rewrite /mesym raddf_sum /=; apply/eq_bigr=> i _.
+      by rewrite mprodXE mcoeffX eq_sym.
+    have mdeg_P h: mdeg (P h) = k.
+      rewrite /P mdeg_sum (eq_bigr (fun _ => 1%N)); last first.
+        by move=> i _; rewrite mdeg1.
+      by rewrite big_const_seq count_predT iter_addn_0 mul1n size_tuple.
+    have PE (h : k.-tuple 'I_n) i: uniq h -> (P h) i = (i \in h).
+      move=> uniq_h; rewrite /P mnm_sum; case: (boolP (i \in h)).
+      + move=> i_in_h; rewrite (bigD1_seq i) //= big1.
+          by rewrite addn0 mnm1 eqxx.
+          by move=> j ne_ji; rewrite mnm1 (negbTE ne_ji).
+      + move=> i_notin_h; rewrite big_seq big1 // => j j_in_h.
+        rewrite mnm1; case: eqP=> //= eq_ji; move: j_in_h i_notin_h.
+        by rewrite -eq_ji => ->.
+    have inj_P (h1 h2 : k.-tuple 'I_n):
+      tmono h1 -> tmono h2 -> P h1 = P h2 -> h1 = h2.
+      move=> tm1 tm2 eq; apply/eqP; rewrite -val_eqE.
+      apply/eqP/eq_tmono=> //= i; move/mnmP/(_ i): eq.
+      by rewrite !PE ?uniq_tmono //; do! case: (_ \in _).
+    rewrite /mechar; case: (mdeg m =P k) => /= [eq_mk|]; last first.
+      move/eqP=> ne_mk; rewrite big1 // => i _; have ->: 0 = 0%:R by [].
+      congr _%:R; apply/eqP; rewrite eqb0; apply/eqP => /(congr1 mdeg).
+      by rewrite mdeg_P => /eqP; rewrite (negbTE ne_mk).
+    have mE (h : k.-tuple 'I_n):
+      uniq h -> [forall i, m i == (i \in h)] = (m == P h).
+      move=> uniq_h; apply/forallP/eqP=> [|->] /=.
+      + by move=> eqm; apply/mnmP=> i; rewrite PE // (eqP (eqm i)).
+      + by move=> i; rewrite PE.
+    case hm1: [forall i, m i <= 1] => /=; last first.
+      rewrite big1 // => h /uniq_tmono uniq_h; rewrite -mE //.
+      have ->: 0 = 0%:R by []; congr _%:R; apply/eqP.
+      rewrite eqb0; apply/forallP => /= hf; move/existsP: hm1.
+      by case=> /= x; rewrite (eqP (hf x)); case: (_ \in _).
+    pose s := [seq i <- enum 'I_n | m i != 0%N].    
+    have size_s: size s = k.
+      pose Q := [pred i | m i == 0%N].
+      rewrite /s -eq_mk mdegE (bigID Q) /=.
+      rewrite big1 => [|i /eqP->//]; rewrite add0n.
+      rewrite (eq_bigr (fun _ => 1%N)) => [|i]; last first.
+        by move/forallP/(_ i): hm1; case: (m i) => [|[|]].
+      rewrite big_const iter_addn_0 mul1n cardE.
+      by rewrite {2}/enum_mem -enumT /=.
+    pose t := tcast size_s (in_tuple s); have tE: tval t = s.
+      by rewrite {}/t; case: {P mdeg_P PE inj_P eq_mk mE} k / size_s.
+    have tm_t: tmono t; first rewrite /tmono.
+      rewrite {size_s t}tE; case sE: s=> [|j s'] //.
+      rewrite -{s'}sE; pose s' := [seq val i | i <- enum 'I_n].
+      have ->: [seq val i | i <- s] = [seq i <- s' | m (insubd j i) != 0%N].
+        rewrite /s /s' !filter_map; congr [seq _ | _ <- _]; congr (map _ _).
+        by apply/eq_filter=> l /=; rewrite /insubd valK.
+      apply/sorted_filter; first by apply/ltn_trans.
+      by rewrite {}/s' val_enum_ord iota_ltn_sorted.
+    have PtE: m == P t.
+      rewrite -mE ?uniq_tmono //; apply/forallP=> /= i.
+      rewrite memtE tE /s mem_filter mem_enum andbT.
+      by move/forallP/(_ i): hm1; case: (m i) => [|[|]].
+    rewrite (bigD1 t) //= PtE big1 ?addr0 //.
+    move=> t' /andP [tm_t' ne_t't]; rewrite (eqP PtE).
+    have ->: 0 = 0%:R by []; congr _%:R; apply/eqP.
+    rewrite eqb0; apply/eqP=> /inj_P -/(_ tm_t tm_t').
+    by move/esym/eqP; rewrite (negbTE ne_t't).
+  Qed.
 
   Lemma mesym_sym k: mesym k \is symmetric.
   Proof.
     apply/issymP=> s; apply/mpolyP=> m; rewrite mcoeff_sym.
-    rewrite !mcoeff_mesym /echar; rewrite {1}mdegE.
+    rewrite !mcoeff_mesym /mechar; rewrite {1}mdegE.
     rewrite (reindex [eta s^-1]%g) /=; last first.
       by exists s=> i _; rewrite (permK, permKV).
     rewrite (eq_bigr (fun i => m i))=> [|i _]; last first.
@@ -2109,10 +2149,22 @@ Section MPolySym.
   Qed.
 
   Lemma mesym0: mesym 0 = 1.
-  Proof. Admitted.
+  Proof.
+    rewrite /mesym (bigD1 [tuple]) //= big_nil big1 ?addr0 //.
+    by move=> i /andP [_]; rewrite tuple0. 
+  Qed.
 
   Lemma mesymnn: mesym n = \prod_(i < n) 'X_i.
-  Proof. Admitted.
+  Proof.
+    move: (cardsD1 (ord_tuple n) [set h : n.-tuple 'I_n | tmono h]).
+    rewrite (@card_ltn_sorted_tuples n n) binn inE /=.
+    rewrite /tmono /= val_enum_ord iota_ltn_sorted /=.
+    rewrite -{1}[1%N]addn0 => /addnI /esym /eqP; rewrite cards_eq0.
+    move/eqP=> h; rewrite /mesym -big_set /= (bigD1 (ord_tuple n)) /=.
+      rewrite [X in _+X]big1 ?addr0 ?enumT // => i.
+      by rewrite andbC -in_setD1 h in_set0.
+    by rewrite inE /tmono /= val_enum_ord iota_ltn_sorted.
+  Qed.
 End MPolySym.
 
 Implicit Arguments symmetric [n R].
@@ -2131,6 +2183,26 @@ Section MWiden.
 
   Definition mnmwiden (m : 'X_{1..n}) : 'X_{1..n.+1} :=
     [multinom of rcons m 0%N].
+
+  Lemma mnmwiden0: mnmwiden 0 = 0%MM.
+  Proof.
+    apply/mnmP=> i; rewrite mnm0 multinomE (tnth_nth 0%N).
+    by rewrite /= nth_rcons size_nseq nth_nseq !if_same.
+  Qed.
+
+  Lemma mnmwidenD m1 m2: mnmwiden (m1 + m2) = (mnmwiden m1 + mnmwiden m2)%MM.
+  Proof.
+    apply/mnmP=> i; rewrite mnmD !multinomE !(tnth_nth 0%N) /=.
+    rewrite !nth_rcons size_map size_enum_ord !size_tuple !if_same.
+    case h: (i < n); last by rewrite addn0.
+    rewrite (nth_map (Ordinal h)) ?size_enum_ord //.
+    by rewrite /fun_of_multinom !(tnth_nth 0%N) /= !nth_enum_ord.
+  Qed.
+
+  Lemma mnmwiden_sum (I : Type) (r : seq I) P F:
+      mnmwiden (\big[+%MM/0%MM]_(x <- r | P x) (F x))
+    = \big[+%MM/0%MM]_(x <- r | P x) (mnmwiden (F x)).
+  Proof. by apply/big_morph; [apply/mnmwidenD | apply/mnmwiden0]. Qed.  
 
   Lemma mnmwiden1 i: (mnmwiden U_(i) = U_(widen i))%MM.
   Proof.
@@ -2258,11 +2330,17 @@ Section MESymTheory.
     rewrite -big_set /= split_E big_set /= bigU //=; congr (_ + _).
     + rewrite /E1 big_imset /=; last by move=> t1 t2 _ _; apply/inj_F1.
       rewrite big_set /mesym /= raddf_sum /=; apply/eq_bigr=> i _.
-      admit.
+      rewrite !mprodXE mwidenX; congr 'X_[_]; apply/mnmP=> j.
+      rewrite big_map mnmwiden_sum !mnm_sum; apply/eq_bigr.
+      by move=> l _; rewrite mnmwiden1.
     + rewrite /E2 big_imset /=; last by move=> t1 t2 _ _; apply/inj_F2.
       rewrite big_set /mesym raddf_sum mulr_suml /=.
       apply/eq_bigr=> i _; set s := [seq _ | _ <- i].
-      admit.
+      rewrite !mprodXE mwidenX -mpolyXD; congr 'X_[_].
+      rewrite mnmwiden_sum; move/perm_eqlP: (perm_rcons (inord n) s).
+      move=> h; rewrite {h}(eq_big_perm _ h) /= big_cons mnm_addC.
+      congr (_ + _)%MM; rewrite big_map; apply/eq_bigr.
+      by move=> l _; rewrite mnmwiden1.
   Qed.
 
   Lemma Viete:
