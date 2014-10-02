@@ -326,6 +326,6 @@ Notation "\max_ ( i 'in' A ) F" :=
 
 (*
 *** Local Variables: ***
-*** coq-load-path: ("ssreflect" ".") ***
+*** coq-load-path: ("ssreflect" "ssreflect-extra" ".") ***
 *** End: ***
  *)

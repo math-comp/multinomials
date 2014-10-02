@@ -13,3 +13,4 @@ Makefile.coq
 
 /ssreflect/*.v
 /ssreflect/*.ml*
+/ssreflect-tmp/

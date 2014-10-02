@@ -1,12 +1,32 @@
 # -*- Makefile -*-
 
 # --------------------------------------------------------------------
-INCFLAGS = -I ssreflect -I .
-SUBDIRS  =
+INCFLAGS = -I ssreflect -I ssreflect-extra -I .
+SUBDIRS  = ssreflect ssreflect-extra
 
 COQFILES = poset.v freeg.v mpoly.v
 
--include Makefile.common
+include Makefile.common
+
+# --------------------------------------------------------------------
+SSRV   = 1.5
+SSRTMP = ssreflect-tmp
+SSRURL = http://ssr.msr-inria.inria.fr/FTP/ssreflect-$(SSRV).tar.gz
+MTHURL = http://ssr.msr-inria.inria.fr/FTP/mathcomp-$(SSRV).tar.gz
+
+.PHONY: get-ssr
+
+get-ssr:
+	$(MAKE) -C ssreflect this-distclean
+	[ ! -e $(SSRTMP) ] || rm -rf $(SSRTMP); mkdir $(SSRTMP)
+	wget -P $(SSRTMP) $(SSRURL)
+	wget -P $(SSRTMP) $(MTHURL)
+	tar -C $(SSRTMP) -xof $(SSRTMP)/ssreflect-$(SSRV).tar.gz
+	tar -C $(SSRTMP) -xof $(SSRTMP)/mathcomp-$(SSRV).tar.gz
+	cp $(SSRTMP)/ssreflect-$(SSRV)/src/* $(TOP)/ssreflect/
+	cp $(SSRTMP)/ssreflect-$(SSRV)/theories/* $(TOP)/ssreflect/
+	cd ssreflect && ../scripts/add-ssr.py ../$(SSRTMP)/mathcomp-$(SSRV)/theories ../*.v
+	rm -rf ssreflect-tmp/
 
 # --------------------------------------------------------------------
 this-clean::

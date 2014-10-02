@@ -2427,6 +2427,6 @@ End MESymTheory.
 
 (*
 *** Local Variables: ***
-*** coq-load-path: ("ssreflect" ".") ***
+*** coq-load-path: ("ssreflect" "ssreflect-extra" ".") ***
 *** End: ***
  *)
