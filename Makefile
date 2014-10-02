@@ -2,7 +2,7 @@
 
 # --------------------------------------------------------------------
 INCFLAGS = -I ssreflect -I .
-SUBDIRS  = ssreflect
+SUBDIRS  =
 
 COQFILES = poset.v freeg.v mpoly.v
 

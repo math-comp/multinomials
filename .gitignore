@@ -10,3 +10,6 @@
 *.glob
 
 Makefile.coq
+
+/ssreflect/*.v
+/ssreflect/*.ml*
