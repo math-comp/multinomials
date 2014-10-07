@@ -1,8 +1,16 @@
 # -*- Makefile -*-
 
 # --------------------------------------------------------------------
-INCFLAGS = -I ssreflect -I ssreflect-extra -I .
-SUBDIRS  = ssreflect ssreflect-extra
+INCFLAGS := -I .
+SUBDIRS  :=
+
+ifeq ($(SSR_TOP),)
+INCFLAGS += -I ssreflect -I ssreflect-extra 
+SUBDIRS  += ssreflect ssreflect-extra
+else
+INCFLAGS += -I ${SSR_TOP}/ssreflect/${COQBRANCH}/src -R ${SSR_TOP}/theories/ Ssreflect
+SUBDIRS  +=
+endif
 
 COQFILES = poset.v freeg.v mpoly.v
 
