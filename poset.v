@@ -238,6 +238,29 @@ Section LexOrder.
   Qed.
 End LexOrder.
 
+
+(* -------------------------------------------------------------------- *)
+Lemma lex_nat_sum (k : nat) (s1 s2 r1 r2: k.-tuple nat):
+       lex s1 r1 -> lex s2 r2
+    -> lex [seq (x.1 + x.2)%N | x <- zip s1 s2]
+           [seq (x.1 + x.2)%N | x <- zip r1 r2].
+Proof.
+  have le_th (l : nat) (s r: l.+1.-tuple nat):
+    lex s r -> (thead s <= thead r)%N.
+  + rewrite [s]tuple_eta [r]tuple_eta /= !theadE leq_eqVlt !ltnP.
+    by case/orP=> [->|/andP [->//]]; rewrite orbC.
+  elim: k s1 s2 r1 r2 => [|k ih] s1 s2 r1 r2 le1 le2.
+    by do! rewrite tuple0 /=.
+  have := le1; rewrite [s1]tuple_eta [r1]tuple_eta.
+  have := le2; rewrite [s2]tuple_eta [r2]tuple_eta.
+  rewrite /= !ltnP; case/orP=> [|/andP [/eqP-> lex2]].
+    by move/(leq_add (le_th _ _ _ le1)); rewrite addnS=> ->.
+  case/orP=> [|/andP [/eqP-> lex1]]; first by rewrite ltn_add2r=> ->.
+  set s1' := [tuple of behead s1]; set s2' := [tuple of behead s2].
+  set r1' := [tuple of behead r1]; set r2' := [tuple of behead r2].
+  by rewrite ltnn eqxx /=; apply/(ih s1' s2' r1' r2').
+Qed.
+
 (* -------------------------------------------------------------------- *)
 Module CPO.
   Section ClassDef.
@@ -447,6 +470,19 @@ Section BigMaxTheory.
     case: ih=> // x /andP [x_in eq_Fx]; exists x.
     by rewrite in_cons x_in orbT eq_Fx.
   Qed.
+
+  Lemma leo_bigmax_cond (P : pred T) (r : seq T) i0: total (@le U) ->
+    P i0 -> i0 \in r -> F i0 <= \max_(i <- r | P i) F i.
+  Proof.
+    move=> tot Pi0; elim: r=> // x r ih; rewrite in_cons.
+    case/orP=> [/eqP<-|]; rewrite big_cons ?Pi0.
+      by rewrite leo_max // leoo.
+    by move/ih; case: (P x)=> //; rewrite leo_max 1?orbC // => ->.
+  Qed.
+
+  Lemma leo_bigmax (r : seq T) i0: total (@le U) ->
+    i0 \in r -> F i0 <= \max_(i <- r) F i.
+  Proof. move=> tot i0_in_r; exact/leo_bigmax_cond. Qed.
 End BigMaxTheory.
 
 (*

@@ -581,7 +581,29 @@ Section MultinomOrder.
     elim: r => [|m r ih]; first by rewrite !big_nil mdeg0.
     by rewrite !big_cons mdeg_max ih.
   Qed.
+
+  Lemma leo_add (m1 m2 n1 n2 : 'X_{1..n}):
+    (m1 <= n1 -> m2 <= n2 -> (m1 + m2)%MM <= (n1 + n2)%MM)%O.
+  Proof.
+    have eq (m m' : 'X_{1..n}):
+        [seq (x.1 + x.2 )%N | x <- zip m m']
+      = [seq (m i + m' i)%N | i <- enum 'I_n].
+    + have sz_mm': size (zip m m') = n.
+        by rewrite size_zip !size_tuple minnn.
+      apply/(@eq_from_nth _ 0%N).
+        by rewrite !size_map sz_mm' -enumT size_enum_ord.
+      move=> i; rewrite size_map sz_mm' => lt_in.
+      rewrite (nth_map (0, 0)%N) ?sz_mm' //=.
+      rewrite nth_zip ?size_tuple //=.
+      rewrite (nth_map (Ordinal lt_in)) ?size_enum_ord //.
+      by rewrite /fun_of_multinom !(tnth_nth 0%N) !nth_enum_ord.
+    rewrite /le /= /mnmc_le => le1 le2; have := (lex_nat_sum le1 le2).
+    rewrite !mdegD /= !ltnP; case/orP=> [->//|/andP [->] le /=].
+    by apply/orP; right; rewrite -!eq le.
+  Qed.
 End MultinomOrder.
+
+Hint Resolve lem_total.
 
 (* -------------------------------------------------------------------- *)
 Section DegBoundMultinom.
@@ -1175,6 +1197,22 @@ Section MPolyRing.
     by apply: eq_bigl=> k /=; rewrite Monoid.mulmC.
   Qed.
 
+  Lemma msuppM p q:
+    {subset msupp (p * q) <= [seq (m1 + m2)%MM | m1 <- msupp p, m2 <- msupp q]}.
+  Proof.
+    move=> m; rewrite -[_ \in _]negbK -mcoeff_eq0 mcoeffM=> nz_s.
+    apply/memPn=> /= h; move: nz_s; rewrite big1 ?eqxx //=.
+    case=> m1 m2 /=; pose m'1 : 'X_{1..n} := m1; pose m'2 : 'X_{1..n} := m2.
+    move/eqP=> mE; case: (boolP (m'1 \in msupp p)); last first.
+      by move/memN_msupp_eq0=> ->; rewrite mul0r.
+    case: (boolP (m'2 \in msupp q)); last first.
+      by move/memN_msupp_eq0=> ->; rewrite mulr0.
+    rewrite {}/m'1 {}/m'2=> m2_in_q m1_in_p; absurd false=> //.
+    move: (h m); rewrite eqxx; apply; apply/allpairsP=> /=.
+    exists (m1 : 'X_{1..n}, m2 : 'X_{1..n}) => /=.
+    by rewrite m1_in_p m2_in_q /=.
+  Qed.
+
   Lemma mul_mpolyC c p: c%:MP * p = c *: p.
   Proof.
     have [->|nz_c] := eqVneq c 0; first by rewrite scale0r mul0r.
@@ -1464,14 +1502,21 @@ Section MPolyLead.
     by rewrite big_cons -maxnSS {}ih // !big_cons.
   Qed.
 
+  Lemma msupp_le_mlead p m: m \in msupp p -> (m <= mlead p)%O.
+  Proof. by move=> m_in_p; apply/(leo_bigmax id)=> //; apply/lem_total. Qed.
+
   Lemma mleadc_eq0 p: (p@_(mlead p) == 0) = (p == 0).
   Proof.
     apply/idP/idP => [|/eqP->]; last by rewrite mcoeff0.
     by case: (p =P 0) => // /eqP /mlead_supp; rewrite mcoeff_eq0 => ->.
   Qed.
 
-  Lemma mleadM p q: mlead (p * q) = (mlead p + mlead q)%MM.
-  Proof. Admitted.
+  Lemma mleadM p q: (mlead (p * q) <= (mlead p + mlead q)%MM)%O.
+  Proof.
+    have [->|] := eqVneq (p * q) 0; first by rewrite mlead0 le0o.
+    move/mlead_supp/msuppM/allpairsP => [[m1 m2] /=] [m1_in_p m2_in_q ->].
+    by apply/leo_add; apply/msupp_le_mlead.
+  Qed.
 End MPolyLead.
 
 (* -------------------------------------------------------------------- *)
