@@ -1,7 +1,7 @@
 A Coq/SSReflect Library for Multinomials
 ========================================================================
 
-  This library is based in SSReflect/MathComp Library version 1.5.
+  This library is based on SSReflect/MathComp Library version 1.5.
 
 Authors
 ========================================================================
