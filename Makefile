@@ -25,7 +25,7 @@ MTHURL = http://ssr.msr-inria.inria.fr/FTP/mathcomp-$(SSRV).tar.gz
 .PHONY: get-ssr
 
 get-ssr:
-	$(MAKE) -C ssreflect this-distclean
+	$(MAKE) -C ssreflect distclean
 	[ ! -e $(SSRTMP) ] || rm -rf $(SSRTMP); mkdir $(SSRTMP)
 	wget -P $(SSRTMP) $(SSRURL)
 	wget -P $(SSRTMP) $(MTHURL)
