@@ -2530,11 +2530,6 @@ Section MESymTheory.
 
   Local Notation "m # s" := [multinom m (s i) | i < n]
     (at level 40, left associativity, format "m # s").
-
-  Lemma decomp p: p \is symmetric ->
-    { r : seq (R * 'X_{1..n}) |
-        p = \sum_(m <- r) \sum_(s : 'S_n) m.1 *: 'X_[m.2#s] }.
-  Proof. Admitted.
 End MESymTheory.
 
 (*
