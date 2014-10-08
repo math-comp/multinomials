@@ -816,6 +816,12 @@ Section MPolyZMod.
   Lemma mpolyCB     : {morph mpolyC: x y / x - y}. Proof. exact: raddfB. Qed.
   Lemma mpolyCMn  k : {morph mpolyC: x / x *+ k} . Proof. exact: raddfMn. Qed.
   Lemma mpolyCMNn k : {morph mpolyC: x / x *- k} . Proof. exact: raddfMNn. Qed.
+
+  Lemma msupp_eq0 p: (msupp p == [::]) = (p == 0).
+  Proof.
+    case: p=> p /=; rewrite msuppE /GRing.zero /= /mpolyC.
+    by rewrite dom_eq0 freegU0 /=.
+  Qed.
 End MPolyZMod.  
 
 (* -------------------------------------------------------------------- *)
@@ -1197,23 +1203,6 @@ Section MPolyRing.
 End MPolyRing.
 
 (* -------------------------------------------------------------------- *)
-Section MPolyLead.
-  Variable n : nat.
-  Variable R : ringType.
-
-  Implicit Types p q r : {mpoly R[n]}.
-
-  Definition mlead p : 'X_{1..n} :=
-    (\max_(m <- msupp p) m)%O.
-
-  Lemma mlead_supp p: mlead p \in msupp p.
-  Proof. Admitted.
-
-  Lemma mlead_deg p: p != 0 -> mdeg (mlead p) = (msize p).+1.
-  Proof. Admitted.
-End MPolyLead.
-
-(* -------------------------------------------------------------------- *)
 Section MPolyVar.
   Variable n : nat.
   Variable R : ringType.
@@ -1407,6 +1396,27 @@ Section MPolyVarTheory.
     by move=> c q m _ _ /hS h; rewrite raddfD /= MPolyU.
   Qed.
 End MPolyVarTheory.
+
+(* -------------------------------------------------------------------- *)
+Section MPolyLead.
+  Variable n : nat.
+  Variable R : ringType.
+
+  Implicit Types p q r : {mpoly R[n]}.
+
+  Definition mlead p : 'X_{1..n} :=
+    (\max_(m <- msupp p) m)%O.
+
+  Lemma mlead_supp p: p != 0 -> mlead p \in msupp p.
+  Proof.
+    move=> nz_p; case: (eq_bigmaxo id (r := msupp p)) => /=.
+      by rewrite msupp_eq0.
+    by rewrite /mlead=> m /andP [m_in_p /eqP ->].
+  Qed.
+
+  Lemma mlead_deg p: p != 0 -> mdeg (mlead p) = (msize p).+1.
+  Proof. Admitted.
+End MPolyLead.
 
 (* -------------------------------------------------------------------- *)
 Section MPoly0.
