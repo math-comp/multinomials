@@ -400,7 +400,7 @@ Section MaxTheory.
     by move/eqP; rewrite eq_sym (negbTE ne_yx).
   Qed.
 
-  Lemma maxn_idPr {x y} : reflect (max x y = y) (x <= y).
+  Lemma maxo_idPr {x y} : reflect (max x y = y) (x <= y).
   Proof. by rewrite maxoC; apply/maxo_idPl. Qed.
 
   Lemma maxoo: idempotent max.

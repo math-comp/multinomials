@@ -519,27 +519,27 @@ Section MultinomOrder.
   Definition mnmc_le m1 m2 :=
     @lex [posetType of nat] (mdeg m1 :: m1) (mdeg m2 :: m2).
 
-  Lemma lem_refl: reflexive mnmc_le.
+  Lemma lemc_refl: reflexive mnmc_le.
   Proof. by case=> t; apply/lex_refl. Qed.
 
-  Lemma lem_antisym: antisymmetric mnmc_le.
+  Lemma lemc_antisym: antisymmetric mnmc_le.
   Proof.
     case=> [[m1 /= h1]] [[m2 /= h2]] /=.
     rewrite /mnmc_le => /lex_antisym [_ h].
     by apply/eqP; do 2! rewrite -val_eqE /= ?h.
   Qed.
 
-  Lemma lem_trans: transitive mnmc_le.
+  Lemma lemc_trans: transitive mnmc_le.
   Proof. by case=> [m1] [m2] [m3]; apply/lex_trans. Qed.
 
-  Lemma lem_total: total mnmc_le.
+  Lemma lemc_total: total mnmc_le.
   Proof.
     case=> [m1] [m2]; apply/lex_total.
     by move=> n1 n2; rewrite !lenP leq_total.
   Qed.
 
   Definition multinom_posetMixin :=
-    POSetMixin lem_refl lem_antisym lem_trans.
+    POSetMixin lemc_refl lemc_antisym lemc_trans.
   Canonical multinom_posetType :=
     Eval hnf in (POSetType 'X_{1..n} multinom_posetMixin).
 
@@ -551,10 +551,36 @@ Section MultinomOrder.
     by move/eqP; rewrite -lt0n mdeg0 ltnP => ->.
   Qed.
 
+  Lemma lem_total: total (@le multinom_posetType).
+  Proof. exact/lemc_total. Qed.
+
+  Hint Resolve lem_total.
+
   Definition multinom_CPOMixin :=
     CPOMixin le0m.
   Canonical multinom_CPOType :=
     Eval hnf in (CPOType 'X_{1..n} multinom_CPOMixin).
+
+  Lemma lem_mdeg (m1 m2 : 'X_{1..n}): (m1 <= m2)%O -> mdeg m1 <= mdeg m2.
+  Proof.
+    rewrite /le /= /mnmc_le /= leq_eqVlt ltnP.
+    by case/orP=> [->|/andP [->//]]; rewrite orbC.
+  Qed.
+
+  Lemma mdeg_max (m1 m2 : 'X_{1..n}):
+    mdeg (maxo m1 m2) = maxn (mdeg m1) (mdeg m2).
+  Proof.
+    apply/esym; rewrite /maxo; case: (boolP (_ < _)%O).
+      by move/ltoW/lem_mdeg/maxn_idPr.
+    by rewrite -letNgt // => /lem_mdeg/maxn_idPl.
+  Qed.
+
+  Lemma mdeg_bigmax (r : seq 'X_{1..n}):
+    mdeg (\max_(m <- r) m)%O = \max_(m <- r) mdeg m.
+  Proof.
+    elim: r => [|m r ih]; first by rewrite !big_nil mdeg0.
+    by rewrite !big_cons mdeg_max ih.
+  Qed.
 End MultinomOrder.
 
 (* -------------------------------------------------------------------- *)
@@ -692,8 +718,11 @@ Section MPolyTheory.
   Lemma msupp_uniq p: uniq (msupp p).
   Proof. by rewrite msuppE uniq_dom. Qed.
 
-  Lemma mcoeff_eq0 p m: m \notin msupp p -> p@_m = 0.
+  Lemma memN_msupp_eq0 p m: m \notin msupp p -> p@_m = 0.
   Proof. by rewrite !msuppE /mcoeff => /coeff_outdom. Qed.
+
+  Lemma mcoeff_eq0 p m: (p@_m == 0) = (m \notin msupp p).
+  Proof. by rewrite msuppE mem_dom inE /mcoeff negbK. Qed.
 
   Lemma msupp0: msupp 0%:MP = [::].
   Proof. by rewrite msuppE /= freegU0 dom0. Qed.
@@ -1005,11 +1034,11 @@ Section MPolyRing.
 
   Lemma mul_poly1_eq0L p q (m : 'X_{1..n} * 'X_{1..n}):
     m.1 \notin msupp p -> p *M_[m] q = 0.
-  Proof. by move/mcoeff_eq0=> ->; rewrite mul0r freegU0. Qed.
+  Proof. by move/memN_msupp_eq0=> ->; rewrite mul0r freegU0. Qed.
 
   Lemma mul_poly1_eq0R p q (m : 'X_{1..n} * 'X_{1..n}):
     m.2 \notin msupp q -> p *M_[m] q = 0.
-  Proof. by move/mcoeff_eq0=> ->; rewrite mulr0 freegU0. Qed.
+  Proof. by move/memN_msupp_eq0=> ->; rewrite mulr0 freegU0. Qed.
 
   Lemma mpoly_mulwE p q kp kq: msize p <= kp -> msize q <= kq ->
     p *M q = [mpoly \sum_(m : 'X_{1..n < kp, kq}) (p *M_[m] q)].
@@ -1021,12 +1050,12 @@ Section MPolyRing.
     rewrite (big_mksub Ip) ?msupp_uniq //=; first last.
       by move=> x /msize_mdeg_lt /leq_trans; apply.
     rewrite [X in _=X]big_uncond /=; last first.
-      move=> i /mcoeff_eq0=> ->; rewrite big1=> //.
+      move=> i /memN_msupp_eq0=> ->; rewrite big1=> //.
       by move=> j _; rewrite mul0r freegU0.
     apply/eq_bigr=> i _; rewrite (big_mksub Iq) /=; first last.
       by move=> x /msize_mdeg_lt /leq_trans; apply.
       by rewrite msupp_uniq.
-    rewrite [X in _=X]big_uncond //= => j /mcoeff_eq0.
+    rewrite [X in _=X]big_uncond //= => j /memN_msupp_eq0.
     by move=> ->; rewrite mulr0 freegU0.
   Qed.
 
@@ -1324,7 +1353,7 @@ Section MPolyVarTheory.
       by move=> x /msize_mdeg_lt /leq_trans; apply.
       by rewrite msupp_uniq.
     rewrite big_uncond //= => i.
-    by move/mcoeff_eq0 ->; rewrite scale0r.
+    by move/memN_msupp_eq0 ->; rewrite scale0r.
   Qed.
 
   Lemma mpolyME p q:
@@ -1342,12 +1371,12 @@ Section MPolyVarTheory.
     rewrite -pair_bigA_seq_curry (big_mksub I) /=; last first.
       by move=> m /msize_mdeg_lt /leq_trans; apply. by rewrite msupp_uniq. 
     rewrite big_uncond /= => [|i]; last first.
-      by move/mcoeff_eq0=> ->; rewrite big1 // => j _; rewrite mul0r scale0r.
+      by move/memN_msupp_eq0=> ->; rewrite big1 // => j _; rewrite mul0r scale0r.
     rewrite -pair_bigA_curry /=; apply/eq_bigr=> i _.
     rewrite (big_mksub I) /=; last first.
       by move=> m /msize_mdeg_lt /leq_trans; apply. by rewrite msupp_uniq. 
     rewrite big_uncond /= => [//|j].
-    by move/mcoeff_eq0=> ->; rewrite mulr0 scale0r.
+    by move/memN_msupp_eq0=> ->; rewrite mulr0 scale0r.
   Qed.    
 
   Lemma commr_mpolyX m p: GRing.comm p 'X_[m].
@@ -1407,6 +1436,19 @@ Section MPolyLead.
   Definition mlead p : 'X_{1..n} :=
     (\max_(m <- msupp p) m)%O.
 
+  Definition mleadC (c : R): mlead c%:MP = 0%MM.
+  Proof.
+    rewrite /mlead msuppC; case: eqP=> _.
+      by rewrite big_nil.
+      by rewrite unlock /= maxo0.
+  Qed.
+
+  Definition mlead0: mlead 0 = 0%MM.
+  Proof. by rewrite mleadC. Qed.
+
+  Definition mlead1: mlead 1 = 0%MM.
+  Proof. by rewrite mleadC. Qed.
+
   Lemma mlead_supp p: p != 0 -> mlead p \in msupp p.
   Proof.
     move=> nz_p; case: (eq_bigmaxo id (r := msupp p)) => /=.
@@ -1414,7 +1456,21 @@ Section MPolyLead.
     by rewrite /mlead=> m /andP [m_in_p /eqP ->].
   Qed.
 
-  Lemma mlead_deg p: p != 0 -> mdeg (mlead p) = (msize p).+1.
+  Lemma mlead_deg p: p != 0 -> (mdeg (mlead p)).+1 = msize p.
+  Proof.
+    move=> /mlead_supp lc_in_p; rewrite /mlead /msize mdeg_bigmax.
+    have: msupp p != [::] by case: (msupp p) lc_in_p.
+    elim: (msupp p)=> [|m [|m' r] ih] // _; first by rewrite !big_seq1.
+    by rewrite big_cons -maxnSS {}ih // !big_cons.
+  Qed.
+
+  Lemma mleadc_eq0 p: (p@_(mlead p) == 0) = (p == 0).
+  Proof.
+    apply/idP/idP => [|/eqP->]; last by rewrite mcoeff0.
+    by case: (p =P 0) => // /eqP /mlead_supp; rewrite mcoeff_eq0 => ->.
+  Qed.
+
+  Lemma mleadM p q: mlead (p * q) = (mlead p + mlead q)%MM.
   Proof. Admitted.
 End MPolyLead.
 
@@ -1450,7 +1506,7 @@ Section MPolyDeriv.
     move=> le_pk; rewrite /mderiv (big_mksub I) /=; first last.
       by move=> x /msize_mdeg_lt/leq_trans/(_ le_pk).
       by rewrite msupp_uniq.
-    rewrite big_uncond //= => j /mcoeff_eq0 ->.
+    rewrite big_uncond //= => j /memN_msupp_eq0 ->.
     by rewrite mulr0 scale0r.
   Qed.
   Implicit Arguments mderivE [p i].
@@ -1634,7 +1690,7 @@ Section MPolyMorphism.
       move=> le_pi; set I := [subFinType of 'X_{1..n < i}].
       rewrite /mmap (big_mksub I) ?msupp_uniq //=; first last.
         by move=> x /msize_mdeg_lt /leq_trans; apply.
-      rewrite big_uncond //= => j /mcoeff_eq0 ->.
+      rewrite big_uncond //= => j /memN_msupp_eq0 ->.
       by rewrite raddf0 mul0r.
     Qed.
     Implicit Arguments mmapE [p].
@@ -1890,7 +1946,7 @@ Section MPolyIdomain.
   Proof.
     move=> le_p_1; apply/mpolyP=> m; rewrite mcoeffC.
     case: (m =P 0%MM)=> [->|/eqP]; first by rewrite mulr1.
-    rewrite mulr0 -mdeg_eq0 => nz_m; rewrite mcoeff_eq0 //.
+    rewrite mulr0 -mdeg_eq0 => nz_m; rewrite memN_msupp_eq0 //.
     by apply/msize_mdeg_ge; rewrite 1?(@leq_trans 1) // lt0n.
   Qed.
 
@@ -2194,6 +2250,18 @@ Section MWiden.
   Definition mnmwiden (m : 'X_{1..n}) : 'X_{1..n.+1} :=
     [multinom of rcons m 0%N].
 
+  Lemma mnmwiden_ordmax m: (mnmwiden m) ord_max = 0%N.
+  Proof.
+    rewrite multinomE (tnth_nth 0%N) nth_rcons /=.
+    by rewrite size_tuple ltnn eqxx.
+  Qed.
+
+  Lemma mnmwiden_widen m (i : 'I_n): (mnmwiden m) (widen i) = m i.
+  Proof.
+    case: m=> m; rewrite !multinomE !(tnth_nth 0%N).
+    by rewrite nth_rcons size_tuple /=; case: i => i /= ->.
+  Qed.    
+
   Lemma mnmwiden0: mnmwiden 0 = 0%MM.
   Proof.
     apply/mnmP=> i; rewrite mnm0 multinomE (tnth_nth 0%N).
@@ -2223,6 +2291,12 @@ Section MWiden.
       by apply/eqP; rewrite ltnn eqxx eqb0 ltn_eqF.
     rewrite lt (nth_map i) ?size_enum_ord //.
     by apply/esym; rewrite eqE /= nth_enum_ord.
+  Qed.
+
+  Lemma inj_mnmwiden: injective mnmwiden.
+  Proof.
+    move=> m1 m2 /mnmP h; apply/mnmP=> i; move: (h (widen i)).
+    by rewrite !mnmwiden_widen.
   Qed.
 
   Lemma mwiden_is_additive: additive mwiden.
@@ -2261,10 +2335,38 @@ Section MWiden.
   Proof. by rewrite raddfN /= mwidenC. Qed.
 
   Lemma mwidenX m: mwiden 'X_[m] = 'X_[mnmwiden m].
-  Proof. Admitted.
+  Proof.
+    rewrite /mwiden mmapX /mmap1 /= (mpolyXE _ 1); apply/esym.
+    rewrite (eq_bigr (fun i => 'X_i ^+ (mnmwiden m i))); last first.
+      by move=> i _; rewrite perm1.
+    rewrite big_ord_recr /= mnmwiden_ordmax expr0 mulr1.
+    by apply/eq_bigr=> i _; rewrite mnmwiden_widen.
+  Qed.
+
+  Lemma mwidenZ c p: mwiden (c *: p) = c *: mwiden p.
+  Proof. by rewrite /mwiden mmapZ /= mul_mpolyC. Qed.
+
+  Lemma mwidenE (p : {mpoly R[n]}) (k : nat): msize p <= k ->
+    mwiden p = \sum_(m : 'X_{1..n < k}) (p@_m *: 'X_[mnmwiden m]).
+  Proof.
+    move=> h; rewrite {1}[p](mpolywE (k := k)) //.
+    rewrite raddf_sum /=; apply/eq_bigr=> m _.
+    by rewrite mwidenZ mwidenX.
+  Qed.    
+
+  Lemma mwiden_mnmwiden p m: (mwiden p)@_(mnmwiden m) = p@_m.
+  Proof.
+    rewrite (mwidenE (k := msize p)) // raddf_sum /=.
+    rewrite [X in _=X@__](mpolywE (k := msize p)) //.
+    rewrite raddf_sum /=; apply/eq_bigr=> i _.
+    by rewrite !mcoeffZ !mcoeffX inj_eq //; apply/inj_mnmwiden.
+  Qed.
 
   Lemma inj_mwiden: injective mwiden.
-  Proof. Admitted.
+  Proof.
+    move=> m1 m2 /mpolyP h; apply/mpolyP=> m.
+    by move: (h (mnmwiden m)); rewrite !mwiden_mnmwiden.
+  Qed.
 
   Definition mpwiden (p : {poly {mpoly R[n]}}) : {poly {mpoly R[n.+1]}} :=
     map_poly mwiden p.
