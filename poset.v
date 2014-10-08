@@ -140,6 +140,12 @@ Section POSetTheory.
   Lemma lto_trans: transitive (<%O : rel R).
   Proof. by move=> y x z le1 /ltoW le2; apply/(@lto_leo_trans y). Qed.
 
+  Lemma leo_lto_trans y x z: x <= y -> y < z -> x < z.
+  Proof.
+    rewrite leo_eqVlt; case/orP=> [/eqP->//|].
+    by move/lto_trans; apply.
+  Qed.
+
   Lemma leoNgt x y: (x <= y) -> ~~ (y < x).
   Proof.
     move=> le_xy; apply/negP=> /andP [ne_yx le_yx].
@@ -290,8 +296,25 @@ Definition bot (R : cpoType) : R :=
 Notation "0" := (@bot _) : cpo_scope.
 
 (* -------------------------------------------------------------------- *)
+Section CPOTheory.
+  Variable T : cpoType.
+
+  Lemma le0o (x : T): 0 <= x.
+  Proof. by case: T x=> U [? []]. Qed.
+
+  Lemma leqo0 (x : T): (x <= 0) = (x == 0).
+  Proof.
+    apply/idP/eqP=> [le_x0|->//]; apply/eqP.
+    by rewrite eqo_leq le_x0 le0o.
+  Qed.
+
+  Lemma lto0 (x : T): (x < 0) = false.
+  Proof. by apply/negP=> /ltoNge; rewrite le0o. Qed.
+End CPOTheory.
+
+(* -------------------------------------------------------------------- *)
 Section Max.
-  Variable T : posetType.
+  Context {T : posetType}.
 
   Implicit Types x y z : T.
 
@@ -323,6 +346,108 @@ Notation "\max_ ( i 'in' A | P ) F" :=
  (\big[@maxo _/0%O]_(i in A | P%B) F%N) : cpo_scope.
 Notation "\max_ ( i 'in' A ) F" :=
  (\big[@maxo _/0%O]_(i in A) F%N) : cpo_scope.
+
+(* -------------------------------------------------------------------- *)
+Section MaxTheory.
+  Variable T : cpoType.
+
+  Hypothesis total: total (@le T).
+
+  Local Notation max := (@maxo T) (only parsing).
+
+  Lemma max0o: left_id 0%O max.
+  Proof. by move=> x; rewrite /maxo lto_neqAle le0o andbT; case: eqP. Qed.
+
+  Lemma maxo0: right_id 0%O max.
+  Proof. by move=> x; rewrite /maxo lto0. Qed.
+
+  Lemma maxoC: commutative max.
+  Proof.
+    move=> x y; rewrite /maxo lttNge // leo_eqVlt.
+    by case: eqP=> [->|_] /=; [rewrite ltoo | case: (_ < _)].
+  Qed.
+
+  Lemma maxoAC: right_commutative max.
+  Proof.
+    move=> x y z; rewrite /maxo; case: (boolP (x < y)).
+    + move=> lt_xy; case: (boolP (y < z)) => [lt_yz|].
+        by rewrite (lto_trans lt_xy lt_yz) lttNge ?ltoW.
+      rewrite -letNgt // => le_zy; case: (boolP (x < z)).
+        by move=> _; rewrite lto_neqAle le_zy andbT; case: eqP.
+      by rewrite lt_xy.
+    + rewrite -letNgt // => le_yx; case: (boolP (x < z)).
+        move=> lt_xz; rewrite lttNge // ltoW //.
+        by apply/(leo_lto_trans le_yx lt_xz).
+      by move=> _; rewrite lttNge // le_yx.
+  Qed.
+
+  Lemma maxoA: associative max.
+  Proof. by move=> x y z; rewrite !(maxoC x) maxoAC. Qed.
+
+  Lemma maxoCA: left_commutative max.
+  Proof. by move=> x y z; rewrite !maxoA (maxoC x). Qed.
+
+  Lemma maxoACA : interchange max max.
+  Proof. by move=> x y z t; rewrite -!maxoA (maxoCA y). Qed.
+
+  Lemma maxo_idPl {x y} : reflect (max x y = x) (x >= y).
+  Proof.
+    apply: (iffP idP)=> [le_yx|].
+      by rewrite /maxo lttNge // le_yx.
+    move=> eq_max; rewrite letNgt //; apply/negP.
+    rewrite lto_neqAle; case/andP=> ne_yx le_yx.
+    move: eq_max; rewrite /maxo lto_neqAle ne_yx le_yx /=.
+    by move/eqP; rewrite eq_sym (negbTE ne_yx).
+  Qed.
+
+  Lemma maxn_idPr {x y} : reflect (max x y = y) (x <= y).
+  Proof. by rewrite maxoC; apply/maxo_idPl. Qed.
+
+  Lemma maxoo: idempotent max.
+  Proof. by move=> x; apply/maxo_idPl. Qed.
+
+  Lemma leo_max x y1 y2: (x <= max y1 y2) = (x <= y1) || (x <= y2).
+  Proof.
+    without loss le_y21: y1 y2 / y2 <= y1.
+      by case/orP: (total y2 y1) => le_y12; last rewrite maxoC orbC; apply.
+    by rewrite (maxo_idPl le_y21) orb_idr // => /leo_trans->.
+  Qed.
+
+  Lemma lto_max x y1 y2: (x < max y1 y2) = (x < y1) || (x < y2).
+  Proof.
+    without loss le_y21: y1 y2 / y2 <= y1.
+      by case/orP: (total y2 y1) => le_y12; last rewrite maxoC orbC; apply.
+    by rewrite (maxo_idPl le_y21) orb_idr // => /lto_leo_trans->.
+  Qed.
+
+  Lemma leo_maxl x y: x <= max x y. Proof. by rewrite leo_max leoo. Qed.
+  Lemma leo_maxr x y: y <= max x y. Proof. by rewrite maxoC leo_maxl. Qed.
+
+  Lemma gto_max x y1 y2: (x > max y1 y2) = (x > y1) && (x > y2).
+  Proof. by rewrite !lttNge // leo_max negb_or. Qed.
+
+  Lemma geo_max x y1 y2: (x >= max y1 y2) = (x >= y1) && (x >= y2).
+  Proof. by rewrite letNgt // lto_max negb_or -!letNgt. Qed.
+End MaxTheory.  
+
+(* -------------------------------------------------------------------- *)
+Section BigMaxTheory.
+  Variable T : eqType.
+  Variable U : cpoType.
+  Variable F : T -> U.
+
+  Lemma eq_bigmaxo (r : seq T): r != [::] ->
+    {x : T | (x \in r) && \max_(i <- r) F i == F x}.
+  Proof.
+    elim: r => [//|z r ih] _; case: r ih => [_|z' r ih].
+      exists z; rewrite mem_seq1 eqxx /=.
+      by rewrite unlock /= maxo0.
+    rewrite big_cons; set M := \max_(_ <- _) _; rewrite /maxo.
+    case: (F z < M); last by exists z; rewrite in_cons !eqxx.
+    case: ih=> // x /andP [x_in eq_Fx]; exists x.
+    by rewrite in_cons x_in orbT eq_Fx.
+  Qed.
+End BigMaxTheory.
 
 (*
 *** Local Variables: ***
