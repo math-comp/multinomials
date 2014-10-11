@@ -238,27 +238,114 @@ Section LexOrder.
   Qed.
 End LexOrder.
 
+Definition ltx (T : posetType) (x y : seq T) := (x != y) && (lex x y).
+
+Lemma lex_eqVlt (T : posetType) (x y : seq T):
+  lex x y = (x == y) || (ltx x y).
+Proof.
+  rewrite /ltx orb_andr orbN /= orb_idl //.
+  by move/eqP=> ->; rewrite lex_refl.
+Qed.
 
 (* -------------------------------------------------------------------- *)
-Lemma lex_nat_sum (k : nat) (s1 s2 r1 r2: k.-tuple nat):
-       lex s1 r1 -> lex s2 r2
-    -> lex [seq (x.1 + x.2)%N | x <- zip s1 s2]
+Lemma ltxP (T : posetType) (k : nat) (s r : k.-tuple T):
+  reflect
+    (exists2 i : 'I_k,
+         tnth s i < tnth r i
+       & forall j : 'I_k, (j < i)%N -> tnth s j = tnth r j)
+    (ltx s r).
+Proof.
+  rewrite /ltx; have [->|ne_sr] /= := eqVneq s r.
+    by rewrite eqxx; constructor; case=> i; rewrite ltoo.
+  rewrite ne_sr /=; elim: k s r ne_sr => [|n ih] s r.
+    by rewrite [s]tuple0 [r]tuple0. have z := (thead s).
+  rewrite [s]tuple_eta [r]tuple_eta /ltx eqE /=.
+  case: (boolP (thead s < thead r)) => /= [lt_hrs _|].
+    by constructor; exists ord0; rewrite ?tnth0.
+  move=> ltN_hrs; case: (thead s =P thead r) => /=; last first.
+    move=> /eqP ne_hsr _; constructor; case=> i.
+    rewrite !(tnth_nth z) /=; case: i=> /=.
+    case=> [|i] _ /=; first by rewrite (negbTE ltN_hrs).
+    move=> _ /(_ ord0 (erefl _)); rewrite !tnth0.
+    by move/eqP; rewrite (negbTE ne_hsr).
+  move=> -> /=; rewrite eqseq_cons eqxx /= => ne.
+  move: (ih [tuple of behead s] [tuple of behead r] ne).
+  case=> h; constructor; first case h.
+    move=> i lt eq; exists (lift ord0 i).
+    + by move: lt; rewrite !(tnth_nth z) /=.
+    + case=> j /= lt_jSn; rewrite !(tnth_nth z) /=.
+      rewrite /bump leq0n add1n ltnS; case: j lt_jSn => [//|j].
+      by rewrite ltnS=> lt_jn /(eq (Ordinal lt_jn)); rewrite !(tnth_nth z).
+  case; case=> i /= lt_iSn; rewrite !(tnth_nth z) /=.
+  case: i lt_iSn => [|i] /=; first by rewrite ltoo.
+  rewrite ltnS=> lt_in lt eq; apply/h => {h}.
+  exists (Ordinal lt_in); rewrite ?(tnth_nth z) //=.
+  move=> j lt_ij; move: (eq (inord j.+1)).
+  by rewrite !(tnth_nth z) /= !inordK ?ltnS //=; apply.
+Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma ltx_lex_nat_sum (k : nat) (s1 s2 r1 r2: k.-tuple nat):
+       ltx s1 r1 -> lex s2 r2
+    -> ltx [seq (x.1 + x.2)%N | x <- zip s1 s2]
            [seq (x.1 + x.2)%N | x <- zip r1 r2].
 Proof.
-  have le_th (l : nat) (s r: l.+1.-tuple nat):
-    lex s r -> (thead s <= thead r)%N.
-  + rewrite [s]tuple_eta [r]tuple_eta /= !theadE leq_eqVlt !ltnP.
-    by case/orP=> [->|/andP [->//]]; rewrite orbC.
-  elim: k s1 s2 r1 r2 => [|k ih] s1 s2 r1 r2 le1 le2.
-    by do! rewrite tuple0 /=.
-  have := le1; rewrite [s1]tuple_eta [r1]tuple_eta.
-  have := le2; rewrite [s2]tuple_eta [r2]tuple_eta.
-  rewrite /= !ltnP; case/orP=> [|/andP [/eqP-> lex2]].
-    by move/(leq_add (le_th _ _ _ le1)); rewrite addnS=> ->.
-  case/orP=> [|/andP [/eqP-> lex1]]; first by rewrite ltn_add2r=> ->.
-  set s1' := [tuple of behead s1]; set s2' := [tuple of behead s2].
-  set r1' := [tuple of behead r1]; set r2' := [tuple of behead r2].
-  by rewrite ltnn eqxx /=; apply/(ih s1' s2' r1' r2').
+  move=> lt1; rewrite lex_eqVlt; case/orP.
+    move/eqP=> ->; apply/ltxP=> /=; case/ltxP: lt1.
+    move=> i le eq; exists i.
+    + rewrite !(tnth_nth 0%N) /= !(nth_map (0, 0)); last first.
+        by rewrite size_zip !size_tuple minnn.
+        by rewrite size_zip !size_tuple minnn.
+      rewrite !nth_zip ?size_tuple //= ltnP ltn_add2r.
+      by move: le; rewrite !(tnth_nth 0%N) !ltnP.
+    + move=> j lt_ij; rewrite !(tnth_nth 0%N) /=.
+      rewrite !(nth_map (0, 0)) ?(size_zip, size_tuple, minnn) //=.
+      apply/eqP; rewrite !nth_zip ?size_tuple //= eqn_add2r.
+      by move: (eq _ lt_ij); rewrite !(tnth_nth 0%N)=> ->.
+  move=> lt2; case/ltxP: lt1=> i lti eqi; case/ltxP: lt2=> j ltj eqj.
+  have lt_ij_k: (minn i j < k)%N by rewrite gtn_min ltn_ord.
+  pose a := Ordinal lt_ij_k; apply/ltxP; exists a.
+  + rewrite !(tnth_nth 0%N) /= !(nth_map (0, 0)); first last.
+      by rewrite size_zip !size_tuple minnn.
+      by rewrite size_zip !size_tuple minnn.
+    rewrite !nth_zip ?size_tuple //= ltnP.
+    rewrite /minn; case: (ssrnat.ltnP i j) => [lt_ij|].
+      by rewrite -!tnth_nth eqj // ltn_add2r -ltnP.
+    rewrite leq_eqVlt => /orP [/eqP|lt_ji]; last first.
+      by rewrite -!tnth_nth eqi // ltn_add2l -ltnP.
+    move=> eq_ij; rewrite -addnS leq_add // -?ltnP ?ltj.
+      by apply/ltnW; rewrite -ltnP eq_ij -!tnth_nth.
+      by rewrite -!tnth_nth.
+  + move=> l lt_la; rewrite !(tnth_nth 0%N) /=.
+    rewrite !(nth_map (0, 0)) ?(size_zip, size_tuple, minnn) //.
+    move: lt_la; rewrite leq_min => /andP [lt_li lt_lj].
+    by rewrite !nth_zip ?size_tuple //= -!tnth_nth ?(eqi, eqj).
+Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma ltx_nat_sum (k : nat) (s1 s2 r1 r2: k.-tuple nat):
+       ltx s1 r1 -> ltx s2 r2
+    -> ltx [seq (x.1 + x.2)%N | x <- zip s1 s2]
+           [seq (x.1 + x.2)%N | x <- zip r1 r2].
+Proof.
+  move=> lt1; rewrite /ltx; case/andP=> _.
+  by apply/ltx_lex_nat_sum: lt1.
+Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma lex_ltx_nat_sum (k : nat) (s1 s2 r1 r2: k.-tuple nat):
+       lex s1 r1 -> ltx s2 r2
+    -> ltx [seq (x.1 + x.2)%N | x <- zip s1 s2]
+           [seq (x.1 + x.2)%N | x <- zip r1 r2].
+Proof.
+  have eqC (s r : k.-tuple nat):
+      [seq x.1+x.2 | x <- zip s r]
+    = [seq x.1+x.2 | x <- zip r s].
+  + apply/(@eq_from_nth _ 0%N); rewrite ?(size_map, size_zip) minnC //.
+    move=> i lt_is; rewrite !(nth_map (0, 0)) ?size_zip // 1?minnC //.
+    by rewrite !nth_zip ?size_tuple //= addnC.
+  move=> le lt; move/ltx_lex_nat_sum/(_ le): lt.
+  by rewrite [X in ltx X _] eqC [X in ltx _ X]eqC.
 Qed.
 
 (* -------------------------------------------------------------------- *)

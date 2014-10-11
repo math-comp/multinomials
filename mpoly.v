@@ -429,6 +429,10 @@ Section MultinomTheory.
     by move=> i; move: (h i); rewrite !mnmD => /addnI.
   Qed.
 
+  Lemma eqm_add2r m n1 n2:
+    ((n1 + m)%MM == (n2 + m)%MM) = (n1 == n2).
+  Proof. by rewrite ![(_ + m)%MM]mnm_addC eqm_add2l. Qed.
+
   Lemma addmK m: cancel (mnm_add^~ m) (mnm_sub^~ m).
   Proof. by move=> m' /=; apply/mnmP=> i; rewrite !(mnmD, mnmB) addnK. Qed.
 
@@ -582,8 +586,21 @@ Section MultinomOrder.
     by rewrite !big_cons mdeg_max ih.
   Qed.
 
-  Lemma leo_add (m1 m2 n1 n2 : 'X_{1..n}):
-    (m1 <= n1 -> m2 <= n2 -> (m1 + m2)%MM <= (n1 + n2)%MM)%O.
+  Lemma ltm_ltx (m m' : 'X_{1..n}):
+    (m < m')%O = ltx (mdeg m :: m) (mdeg m' :: m').
+  Proof.
+    apply/idP/idP.
+    + rewrite lto_neqAle /le /= /mnmc_le lex_eqVlt.
+      case/andP=> ne_mm' /orP [] //; rewrite eqseq_cons /=.
+      by rewrite !(inj_eq val_inj) (negbTE ne_mm') andbF.
+    + rewrite /ltx; case/andP; rewrite eqseq_cons => ne.
+      have {ne}ne: m != m'; first apply/negP=> /eqP.
+        by move=> eq_mm'; rewrite eq_mm' !eqxx in ne.
+      by move=> lex; rewrite lto_neqAle (negbTE ne).
+  Qed.
+
+  Lemma lem_ltm_add (m1 m2 n1 n2 : 'X_{1..n}):
+    (m1 < n1 -> m2 <= n2 -> (m1 + m2)%MM < (n1 + n2)%MM)%O.
   Proof.
     have eq (m m' : 'X_{1..n}):
         [seq (x.1 + x.2 )%N | x <- zip m m']
@@ -597,10 +614,25 @@ Section MultinomOrder.
       rewrite nth_zip ?size_tuple //=.
       rewrite (nth_map (Ordinal lt_in)) ?size_enum_ord //.
       by rewrite /fun_of_multinom !(tnth_nth 0%N) !nth_enum_ord.
-    rewrite /le /= /mnmc_le => le1 le2; have := (lex_nat_sum le1 le2).
-    rewrite !mdegD /= !ltnP; case/orP=> [->//|/andP [->] le /=].
-    by apply/orP; right; rewrite -!eq le.
+    rewrite /le /= /mnmc_le ltm_ltx => ltx1 lex2.
+    have := (ltx_lex_nat_sum ltx1 lex2) => /= lt.
+    by rewrite ltm_ltx /= !mdegD -!eq.
   Qed.
+
+  Lemma ltm_lem_add (m1 m2 n1 n2 : 'X_{1..n}):
+    (m1 <= n1 -> m2 < n2 -> (m1 + m2)%MM < (n1 + n2)%MM)%O.
+  Proof.
+    move=> le /lem_ltm_add /(_ le).
+    by rewrite [(m1+_)%MM]mnm_addC [(n1+_)%MM]mnm_addC.
+  Qed.
+
+  Lemma ltm_add (m1 m2 n1 n2 : 'X_{1..n}):
+    (m1 < n1 -> m2 < n2 -> (m1 + m2)%MM < (n1 + n2)%MM)%O.
+  Proof. by move=> lt1 /ltoW /(lem_ltm_add lt1). Qed.
+
+  Lemma lem_add (m1 m2 n1 n2 : 'X_{1..n}):
+    (m1 <= n1 -> m2 <= n2 -> (m1 + m2)%MM <= (n1 + n2)%MM)%O.
+  Proof. Admitted.
 End MultinomOrder.
 
 Hint Resolve lem_total.
@@ -1515,9 +1547,46 @@ Section MPolyLead.
   Proof.
     have [->|] := eqVneq (p * q) 0; first by rewrite mlead0 le0o.
     move/mlead_supp/msuppM/allpairsP => [[m1 m2] /=] [m1_in_p m2_in_q ->].
-    by apply/leo_add; apply/msupp_le_mlead.
+    by apply/lem_add; apply/msupp_le_mlead.
   Qed.
+
+  Notation mleadc p := (p@_(mlead p)).
+
+  Lemma mleadcC (c : R): mleadc c%:MP_[n] = c.
+  Proof. by rewrite mleadC mcoeffC eqxx mulr1. Qed.
+
+  Lemma mleadc0: mleadc (0 : {mpoly R[n]}) = 0.
+  Proof. by rewrite mleadcC. Qed.
+
+  Lemma mleadc1: mleadc (1 : {mpoly R[n]}) = 1.
+  Proof. by rewrite mleadcC. Qed.
+
+  Lemma mleadcM p q:
+    (p * q)@_(mlead p + mlead q) = mleadc p * mleadc q.
+  Proof.
+    have [->|nz_p] := eqVneq p 0; first by rewrite mleadc0 !mul0r mcoeff0.
+    have [->|nz_q] := eqVneq q 0; first by rewrite mleadc0 !mulr0 mcoeff0.
+    rewrite mpolyME (bigD1_seq (mlead p, mlead q)) /=; first last.
+    + by rewrite product_uniq // !msupp_uniq.
+    + by rewrite product_mem /= !mlead_supp.
+    rewrite mcoeffD mcoeffZ mcoeffX eqxx mulr1.
+    rewrite big_seq_cond raddf_sum /= big1 ?addr0 //.
+    case=> m1 m2; rewrite product_mem /= -andbA; case/and3P.
+    move=> m1_in_p m2_in_q ne_m_lc; rewrite mcoeffZ mcoeffX.
+    move/msupp_le_mlead: m1_in_p; move/msupp_le_mlead: m2_in_q.
+    rewrite leo_eqVlt; case/orP=> [/eqP m2E|]; last first.
+      by move=> lt /ltm_lem_add /(_ lt) /lto_eqF ->; rewrite mulr0.
+    move: ne_m_lc; rewrite m2E xpair_eqE eqxx andbT.
+    rewrite leo_eqVlt=> /negbTE => -> /=; rewrite eqm_add2r.
+    by move/lto_eqF=> ->; rewrite mulr0.
+  Qed.
+
+  Lemma mleadM_proper p q: mleadc p * mleadc q != 0 ->
+    mlead (p * q) = (mlead p + mlead q)%MM.
+  Proof. Admitted.
 End MPolyLead.
+
+Notation mleadc p := (p@_(mlead p)).
 
 (* -------------------------------------------------------------------- *)
 Section MPoly0.
