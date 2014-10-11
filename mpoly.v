@@ -1583,7 +1583,11 @@ Section MPolyLead.
 
   Lemma mleadM_proper p q: mleadc p * mleadc q != 0 ->
     mlead (p * q) = (mlead p + mlead q)%MM.
-  Proof. Admitted.
+  Proof.
+    move: (mleadM p q); rewrite leo_eqVlt; case/orP=> [/eqP->//|].
+    rewrite -mleadcM mcoeff_eq0 negbK => ltm /msupp_le_mlead lem.
+    by move: (lto_leo_trans ltm lem); rewrite ltoo.
+  Qed.    
 End MPolyLead.
 
 Notation mleadc p := (p@_(mlead p)).
@@ -2034,7 +2038,14 @@ Section MPolyIdomain.
 
   Lemma msizeM p q: p != 0 -> q != 0 ->
     msize (p * q) = (msize p + msize q).-1.
-  Proof. Admitted.
+  Proof.
+    move=> nz_p nz_q; have lm_pq: mlead (p * q) = (mlead p + mlead q)%MM.
+      by rewrite mleadM_proper // mulf_neq0 ?mleadc_eq0.
+    rewrite -!mlead_deg //; last first.
+      by rewrite -mleadc_eq0 lm_pq mleadcM ?mulf_neq0 ?mleadc_eq0.
+    rewrite !(addnS, addSn) /= mleadM_proper ?mdegD //.
+    by rewrite mulf_neq0 ?mleadc_eq0.
+  Qed.
 
   Lemma mpoly_idomainAxiom p q:
     p * q = 0 -> (p == 0) || (q == 0).
