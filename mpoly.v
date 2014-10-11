@@ -599,7 +599,7 @@ Section MultinomOrder.
       by move=> lex; rewrite lto_neqAle (negbTE ne).
   Qed.
 
-  Lemma lem_ltm_add (m1 m2 n1 n2 : 'X_{1..n}):
+  Lemma ltm_lem_add (m1 m2 n1 n2 : 'X_{1..n}):
     (m1 < n1 -> m2 <= n2 -> (m1 + m2)%MM < (n1 + n2)%MM)%O.
   Proof.
     have eq (m m' : 'X_{1..n}):
@@ -619,20 +619,25 @@ Section MultinomOrder.
     by rewrite ltm_ltx /= !mdegD -!eq.
   Qed.
 
-  Lemma ltm_lem_add (m1 m2 n1 n2 : 'X_{1..n}):
+  Lemma lem_ltm_add (m1 m2 n1 n2 : 'X_{1..n}):
     (m1 <= n1 -> m2 < n2 -> (m1 + m2)%MM < (n1 + n2)%MM)%O.
   Proof.
-    move=> le /lem_ltm_add /(_ le).
+    move=> le /ltm_lem_add /(_ le).
     by rewrite [(m1+_)%MM]mnm_addC [(n1+_)%MM]mnm_addC.
   Qed.
 
   Lemma ltm_add (m1 m2 n1 n2 : 'X_{1..n}):
     (m1 < n1 -> m2 < n2 -> (m1 + m2)%MM < (n1 + n2)%MM)%O.
-  Proof. by move=> lt1 /ltoW /(lem_ltm_add lt1). Qed.
+  Proof. by move=> lt1 /ltoW /(ltm_lem_add lt1). Qed.
 
   Lemma lem_add (m1 m2 n1 n2 : 'X_{1..n}):
     (m1 <= n1 -> m2 <= n2 -> (m1 + m2)%MM <= (n1 + n2)%MM)%O.
-  Proof. Admitted.
+  Proof.
+    rewrite leo_eqVlt; case/orP=> [/eqP->|].
+      rewrite leo_eqVlt; case/orP=> [/eqP->|]; first by rewrite leoo.
+      by move/(lem_ltm_add (leoo n1))/ltoW.
+    by move=> lt; move/(ltm_lem_add lt)/ltoW.
+  Qed.
 End MultinomOrder.
 
 Hint Resolve lem_total.
