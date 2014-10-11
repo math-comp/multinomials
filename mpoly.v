@@ -1580,7 +1580,7 @@ Section MPolyLead.
     move=> m1_in_p m2_in_q ne_m_lc; rewrite mcoeffZ mcoeffX.
     move/msupp_le_mlead: m1_in_p; move/msupp_le_mlead: m2_in_q.
     rewrite leo_eqVlt; case/orP=> [/eqP m2E|]; last first.
-      by move=> lt /ltm_lem_add /(_ lt) /lto_eqF ->; rewrite mulr0.
+      by move=> lt /lem_ltm_add /(_ lt) /lto_eqF ->; rewrite mulr0.
     move: ne_m_lc; rewrite m2E xpair_eqE eqxx andbT.
     rewrite leo_eqVlt=> /negbTE => -> /=; rewrite eqm_add2r.
     by move/lto_eqF=> ->; rewrite mulr0.
