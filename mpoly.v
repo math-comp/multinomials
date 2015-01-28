@@ -292,6 +292,8 @@ Reserved Notation "s @_ i"
    (at level 3, i at level 2, left associativity, format "s @_ i").
 Reserved Notation "e .@[ x ]"
   (at level 2, left associativity, format "e .@[ x ]").
+Reserved Notation "p \mPo q"
+  (at level 50).
 Reserved Notation "x ^[ f ]"
    (at level 2, left associativity, format "x ^[ f ]").
 Reserved Notation "x ^[ f , g ]"
@@ -1851,9 +1853,6 @@ Section MPolyMorphism.
     Variable h : 'I_n -> S.
     Variable f : {rmorphism R -> S}.
 
-    Hypothesis commr_h: forall i x, GRing.comm x (h i).
-    Hypothesis commr_f: forall p m m', GRing.comm (f p@_m) (m'^[h]).
-
     Lemma mmapX m: ('X_[m])^[f,h] = m^[h].
     Proof. by rewrite /mmap msuppX big_seq1 mcoeffX eqxx rmorph1 mul1r. Qed.
 
@@ -1864,6 +1863,9 @@ Section MPolyMorphism.
         by move=> j _; rewrite mcoeffZ mulrA -rmorphM.
       by close.
     Qed.
+
+    Hypothesis commr_h: forall i x, GRing.comm x (h i).
+    Hypothesis commr_f: forall p m m', GRing.comm (f p@_m) (m'^[h]).
 
     Lemma commr_mmap_is_multiplicative: multiplicative (mmap f h).
     Proof.
@@ -1931,6 +1933,53 @@ Section MPolyComRing.
   Canonical mpolynomial_algType :=
     Eval hnf in [algType R of mpoly n R for mpoly_algType].
 End MPolyComRing.  
+
+(* -------------------------------------------------------------------- *)
+Section MPolyComp.
+  Variable n : nat.
+  Variable R : ringType.
+
+  Implicit Types p q : {mpoly R[n]}.
+  Implicit Types lp : n.-tuple {mpoly R[n]}.
+
+  Definition comp_mpoly lq p: {mpoly R[n]}:=
+    mmap (@mpolyC n R) (tnth lq) p.
+
+  Local Notation "p \mPo lq" := (comp_mpoly lq p).
+
+  Lemma comp_mpolyE p lq:
+    p \mPo lq = \sum_(m <- msupp p) (p@_m *: \prod_(i < n) (tnth lq i)^+(m i)).
+  Proof. by apply/eq_bigr=> i _; rewrite mul_mpolyC. Qed.
+
+  Lemma comp_mpoly_is_additive lq : additive (comp_mpoly lq).
+  Proof. by move=> p q; rewrite /comp_mpoly -mmapB. Qed.
+
+  Canonical comp_mpoly_additive lq := Additive (comp_mpoly_is_additive lq).
+
+  Lemma comp_mpoly0   lq   : 0 \mPo lq = 0                     . Proof. exact: raddf0. Qed.
+  Lemma comp_mpolyN   lq   : {morph comp_mpoly lq: x / - x}    . Proof. exact: raddfN. Qed.
+  Lemma comp_mpolyD   lq   : {morph comp_mpoly lq: x y / x + y}. Proof. exact: raddfD. Qed.
+  Lemma comp_mpolyB   lq   : {morph comp_mpoly lq: x y / x - y}. Proof. exact: raddfB. Qed.
+  Lemma comp_mpolyMn  lq k : {morph comp_mpoly lq: x / x *+ k} . Proof. exact: raddfMn. Qed.
+  Lemma comp_mpolyMNn lq k : {morph comp_mpoly lq: x / x *- k} . Proof. exact: raddfMNn. Qed.
+
+  Lemma comp_mpoly_is_linear lq: linear (comp_mpoly lq).
+  Proof.
+    move=> c p q; rewrite comp_mpolyD /comp_mpoly.
+    by rewrite mmapZ mul_mpolyC.
+  Qed.
+
+  Canonical comp_mpoly_linear lq := Linear (comp_mpoly_is_linear lq).
+
+  Lemma comp_mpoly1 lq: 1 \mPo lq = 1.
+  Proof. by rewrite /comp_mpoly -mpolyC1 mmapC. Qed.
+
+  Lemma comp_mpolyC c lq: c%:MP \mPo lq = c%:MP.
+  Proof. by rewrite /comp_mpoly mmapC. Qed.
+
+  Lemma comp_mpolyX i lq: 'X_i \mPo lq = lq`_i.
+  Proof. by rewrite /comp_mpoly mmapX mmap1U -tnth_nth. Qed.
+End MPolyComp.
 
 (* -------------------------------------------------------------------- *)
 Section MEval.
@@ -2459,7 +2508,7 @@ Section MWiden.
   Proof. exact: rmorphM. Qed.
 
   Lemma mwidenC c: mwiden c%:MP = c%:MP.  
-  Proof. by rewrite /mwiden mmapC /=. Qed.
+  Proof. by rewrite /mwiden mmapC. Qed.
 
   Lemma mwidenN1: mwiden (-1) = -1.
   Proof. by rewrite raddfN /= mwidenC. Qed.
