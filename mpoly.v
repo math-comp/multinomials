@@ -515,6 +515,31 @@ Notation "m1 - m2"   := (mnm_sub m1 m2) : multi_scope.
 Notation "x *+ n"    := (mnm_muln x n) : multi_scope.
 Notation "m1 <= m2"  := (mnm_le m1 m2) : multi_scope.
 
+Notation "\sum_ ( i <- r | P ) F" :=
+  (\big[+%MM/0%MM]_(i <- r | P%B) F%MM) : multi_scope.
+Notation "\sum_ ( i <- r ) F" :=
+  (\big[+%MM/0%MM]_(i <- r) F%MM) : multi_scope.
+Notation "\sum_ ( m <= i < n | P ) F" :=
+  (\big[+%MM/0%MM]_(m <= i < n | P%B) F%MM) : multi_scope.
+Notation "\sum_ ( m <= i < n ) F" :=
+  (\big[+%MM/0%MM]_(m <= i < n) F%MM) : multi_scope.
+Notation "\sum_ ( i | P ) F" :=
+  (\big[+%MM/0%MM]_(i | P%B) F%MM) : multi_scope.
+Notation "\sum_ i F" :=
+  (\big[+%MM/0%MM]_i F%MM) : multi_scope.
+Notation "\sum_ ( i : t | P ) F" :=
+  (\big[+%MM/0%MM]_(i : t | P%B) F%MM) (only parsing) : multi_scope.
+Notation "\sum_ ( i : t ) F" :=
+  (\big[+%MM/0%MM]_(i : t) F%MM) (only parsing) : multi_scope.
+Notation "\sum_ ( i < n | P ) F" :=
+  (\big[+%MM/0%MM]_(i < n | P%B) F%MM) : multi_scope.
+Notation "\sum_ ( i < n ) F" :=
+  (\big[+%MM/0%MM]_(i < n) F%MM) : multi_scope.
+Notation "\sum_ ( i 'in' A | P ) F" :=
+  (\big[+%MM/0%MM]_(i in A | P%B) F%MM) : multi_scope.
+Notation "\sum_ ( i 'in' A ) F" :=
+  (\big[+%MM/0%MM]_(i in A) F%MM) : multi_scope.
+
 (* -------------------------------------------------------------------- *)
 Section MultinomOrder.
   Context {n : nat}.
@@ -1357,7 +1382,7 @@ Section MPolyVarTheory.
   Qed.
 
   Lemma mpolyX_prod s:
-    \prod_(i <- s) 'X_[i] = 'X_[\big[+%MM/0%MM]_(i <- s) i].
+    \prod_(i <- s) 'X_[i] = 'X_[\sum_(i <- s) i].
   Proof.
     elim: s => [|i s ih]; first by rewrite !big_nil mpolyX0.
     by rewrite !big_cons mpolyXD ih.
@@ -1371,15 +1396,14 @@ Section MPolyVarTheory.
 
   Lemma mprodXnE (F : 'I_n -> 'X_{1..n}) m (r : seq _):
       \prod_(i <- r) 'X_[R, F i] ^+ m i
-    = 'X_[\big[mnm_add/0%MM]_(i <- r) ((F i *+ m i)%MM)].
+    = 'X_[\sum_(i <- r) (F i *+ m i)].
   Proof.
     elim: r => [|x r ih]; first by rewrite !big_nil mpolyX0.
     by rewrite !big_cons mpolyXD mpolyXn ih.
   Qed.
 
   Lemma mprodXE (F : 'I_n -> 'X_{1..n}) (r : seq _):
-      \prod_(i <- r) 'X_[R, F i]
-    = 'X_[\big[mnm_add/0%MM]_(i <- r) (F i)].
+      \prod_(i <- r) 'X_[R, F i] = 'X_[\sum_(i <- r) F i].
   Proof.
     pose m   := [multinom 1%N | i < n].
     pose G i := 'X_[R, F i] ^+ m i.
@@ -2308,10 +2332,9 @@ Section MPolySym.
   Definition mechar k (m : 'X_{1..n}) :=
     (mdeg m == k) && [forall i, m i <= 1%N].
 
-  Lemma mcoeff_mesym (k : nat) m:
-    (mesym k)@_m = (mechar k m)%:R.
+  Lemma mcoeff_mesym (k : nat) m: (mesym k)@_m = (mechar k m)%:R.
   Proof.
-    pose P (h : k.-tuple 'I_n) := \big[+%MM/0%MM]_(i <- h) U_(i)%MM.
+    pose P (h : k.-tuple 'I_n) := (\sum_(i <- h) U_(i))%MM.
     transitivity (\sum_(h : k.-tuple 'I_n | tmono h) (m == P h)%:R : R).
       rewrite /mesym raddf_sum /=; apply/eq_bigr=> i _.
       by rewrite mprodXE mcoeffX eq_sym.
@@ -2457,8 +2480,8 @@ Section MWiden.
   Qed.
 
   Lemma mnmwiden_sum (I : Type) (r : seq I) P F:
-      mnmwiden (\big[+%MM/0%MM]_(x <- r | P x) (F x))
-    = \big[+%MM/0%MM]_(x <- r | P x) (mnmwiden (F x)).
+      mnmwiden (\sum_(x <- r | P x) (F x))
+    = (\sum_(x <- r | P x) (mnmwiden (F x)))%MM.
   Proof. by apply/big_morph; [apply/mnmwidenD | apply/mnmwiden0]. Qed.  
 
   Lemma mnmwiden1 i: (mnmwiden U_(i) = U_(widen i))%MM.
