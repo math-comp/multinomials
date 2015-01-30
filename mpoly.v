@@ -2699,7 +2699,7 @@ Section MESymTheory.
     by rewrite -!mul_polyC !mulrA mulrAC polyC_mul.
   Qed.
 
-  Lemma mroots_coeff (R : idomainType) n (cs : n.-tuple R) (k : 'I_n):
+  Lemma mroots_coeff (R : idomainType) n (cs : n.-tuple R) (k : 'I_n.+1):
       (\prod_(c <- cs) ('X - c%:P))`_(n - k)
     = (-1)^+k * 's_(n, k).@[cs].
   Proof.
@@ -2711,12 +2711,12 @@ Section MESymTheory.
       move=> i _; rewrite raddfB /= map_polyX map_polyC /=.
       by rewrite mmapX mmap1U.
     rewrite big_tuple => ->; rewrite raddf_sum coef_sum /=.
-    rewrite (bigD1 (widen k)) //= big1 ?addr0; last first.
+    rewrite (bigD1 k) //= big1 ?addr0; last first.
       case=> i /= lt_iSk; rewrite eqE /= => ne_ik.
       rewrite !map_polyZ /= map_polyXn !coefZ coefXn.
-      rewrite -(eqn_add2r i) subnK // addnC addnBA 1?ltnW //.
-      rewrite -(eqn_add2r k) subnK 1?addnC; last first.
-        by rewrite ltnW // ltn_addr.
+      rewrite -(eqn_add2r i) subnK // addnC.
+      rewrite -(eqn_add2r k) -addnA subnK 1?addnC; last first.
+        by move: (ltn_ord k); rewrite ltnS.
       by rewrite eqn_add2l (negbTE ne_ik) !mulr0.
     rewrite !map_polyZ !rmorphX raddfN /= mmapC !coefZ /=.
     congr (_ * _); rewrite map_polyX coefXn eqxx mulr1.
