@@ -2334,8 +2334,9 @@ Section MPolySym.
   Lemma mesym_tupleE (k : nat): mesym k =
     \sum_(h : k.-tuple 'I_n | tmono h) \prod_(i <- h) 'X_i.
   Proof.
-    have tval_tcast T k1 k2 (eq : k1 = k2) (x : k1.-tuple T): tval (tcast eq x) = tval x.
-      admit.
+    have tval_tcast T k1 k2 (eq : k1 = k2) (x : k1.-tuple T):
+      tval (tcast eq x) = tval x.
+    + by rewrite /tcast; case: k2 / eq.
     pose t2s (t : k.-tuple 'I_n) := [set x | x \in t].
     rewrite /mesym -[X in X=_]big_set -[X in _=X]big_set /=.
     set E := [set t2s x | x in [pred t | tmono (tval t)]].
