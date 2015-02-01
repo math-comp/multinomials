@@ -431,6 +431,13 @@ Section MultinomTheory.
   Lemma mnm1E i j: (mnmd i) j = (i == j)%N.
   Proof. by rewrite multinomE tnth_map tnth_ord_tuple. Qed.
 
+  Lemma lep1mP i m: (mnmd i <= m)%MM = (m i != 0)%N.
+  Proof.
+    apply/mnm_lepP/idP=> [/(_ i)|]; rewrite ?mnm1E -?lt0n.
+      by case: eqP.
+      by move=> lt0_mi j; rewrite mnm1E; case: eqP=> // <-.
+  Qed.
+
   Lemma mnm_addC: commutative mnm_add.
   Proof. by move=> m1 m2; apply/mnmP=> i; rewrite !mnmE addnC. Qed.
 
@@ -467,6 +474,12 @@ Section MultinomTheory.
   Proof.
     move=> /mnm_lepP h; apply/mnmP=> i.
     by rewrite !(mnmDE, mnmBE) subnK.
+  Qed.
+
+  Lemma addmBA m1 m2 m3: (m3 <= m2)%MM -> (m1 + (m2 - m3))%MM = (m1 + m2 - m3)%MM.
+  Proof.
+    move/mnm_lepP=> h; apply/mnmP=> i.
+    by rewrite !(mnmBE, mnmDE) addnBA.
   Qed.
 
   Lemma submDA m1 m2 m3: (m1 - m2 - m3)%MM = (m1 - (m2 + m3))%MM.
@@ -1413,6 +1426,12 @@ Section MPolyRing.
   Lemma mpolyC1: mpolyC n 1 = 1.
   Proof. exact: rmorph1. Qed.
 
+  Lemma mpolyC_nat (k : nat): (k%:R)%:MP = k%:R :> {mpoly R[n]}.
+  Proof.
+    apply/mpolyP=> i; rewrite mcoeffC mcoeffMn mcoeffC.
+    by rewrite mul1r commr_nat mulr_natr.
+  Qed.
+
   Lemma mpolyCM: {morph mpolyC n (R := _): p q / p * q}.
   Proof. exact: rmorphM. Qed.
 
@@ -1812,6 +1831,12 @@ Section MPolyDeriv.
   Lemma mderivX i m: mderiv i 'X_[m] = (m i)%:R *: 'X_[m - U_(i)].
   Proof. by rewrite /mderiv msuppX big_seq1 mcoeffX eqxx mulr1. Qed.
 
+  Lemma commr_mderivX i m p: GRing.comm p ('X_[m])^`M(i).
+  Proof.
+    rewrite /GRing.comm mderivX -mul_mpolyC mpolyC_nat.
+    by rewrite -{1}commr_nat mulrA commr_nat commr_mpolyX mulrA.
+  Qed.
+
   Lemma mderivN i: {morph mderiv i: x / - x}.
   Proof. exact: raddfN. Qed.
 
@@ -1843,9 +1868,23 @@ Section MPolyDeriv.
   Proof.
     elim/mpolyind: p; first by rewrite !(mul0r, add0r, mderiv0).
     move=> c m p ih; rewrite !(mulrDl, mderivD) -addrA.
-    rewrite [X in _=_+X]addrCA -ih addrA; congr (_ + _).
+    rewrite [X in _=_+X]addrCA -ih addrA => {ih}; congr (_ + _).
     rewrite -!scalerAl !mderivZ -scalerAl -scalerDr; congr (_ *: _).
-  Admitted.
+    pose_big_enough k; rewrite 1?[q](mpolywE (k := k)) //; try by close.
+    do! rewrite mulr_sumr ?raddf_sum /=; rewrite -big_split /=.
+    apply/eq_bigr=> h _; rewrite -!commr_mpolyX -scalerAl -mpolyXD.
+    rewrite !mderivZ -commr_mderivX -!scalerAl -scalerDr; congr (_ *: _).
+    rewrite !mderivX -!commr_mpolyX -!scalerAl -!mpolyXD mnmDE.
+    have [z_mi|ne_mi] := eqVneq (m i) 0%N.
+      rewrite z_mi addn0 scale0r add0r; congr (_ *: 'X_[_]).
+      apply/mnmP=> j; rewrite !(mnmBE, mnmDE, mnm1E).
+      by case: eqP => /= [<-|]; rewrite ?subn0 // z_mi !addn0.
+    apply/esym; rewrite mnm_addC addmBA; last by rewrite lep1mP.
+    have [z_hi|ne_hi] := eqVneq (h i) 0%N.
+      by rewrite z_hi add0n scale0r addr0.
+    rewrite addrC mnm_addC addmBA; last by rewrite lep1mP.
+    by rewrite mnm_addC -scalerDl natrD.
+  Qed.
 
   Lemma mderiv_comm i j p: p^`M(i)^`M(j) = p^`M(j)^`M(i).
   Proof.
