@@ -293,43 +293,6 @@ Proof.
 Qed.
 
 (* -------------------------------------------------------------------- *)
-Lemma ltxP (T : posetType) (k : nat) (s r : k.-tuple T):
-  reflect
-    (exists2 i : 'I_k,
-         tnth s i < tnth r i
-       & forall j : 'I_k, (j < i)%N -> tnth s j = tnth r j)
-    (ltx s r).
-Proof.
-  rewrite /ltx; have [->|ne_sr] /= := eqVneq s r.
-    by rewrite eqxx; constructor; case=> i; rewrite ltoo.
-  rewrite ne_sr /=; elim: k s r ne_sr => [|n ih] s r.
-    by rewrite [s]tuple0 [r]tuple0. have z := (thead s).
-  rewrite [s]tuple_eta [r]tuple_eta /ltx eqE /=.
-  case: (boolP (thead s < thead r)) => /= [lt_hrs _|].
-    by constructor; exists ord0; rewrite ?tnth0.
-  move=> ltN_hrs; case: (thead s =P thead r) => /=; last first.
-    move=> /eqP ne_hsr _; constructor; case=> i.
-    rewrite !(tnth_nth z) /=; case: i=> /=.
-    case=> [|i] _ /=; first by rewrite (negbTE ltN_hrs).
-    move=> _ /(_ ord0 (erefl _)); rewrite !tnth0.
-    by move/eqP; rewrite (negbTE ne_hsr).
-  move=> -> /=; rewrite eqseq_cons eqxx /= => ne.
-  move: (ih [tuple of behead s] [tuple of behead r] ne).
-  case=> h; constructor; first case h.
-    move=> i lt eq; exists (lift ord0 i).
-    + by move: lt; rewrite !(tnth_nth z) /=.
-    + case=> j /= lt_jSn; rewrite !(tnth_nth z) /=.
-      rewrite /bump leq0n add1n ltnS; case: j lt_jSn => [//|j].
-      by rewrite ltnS=> lt_jn /(eq (Ordinal lt_jn)); rewrite !(tnth_nth z).
-  case; case=> i /= lt_iSn; rewrite !(tnth_nth z) /=.
-  case: i lt_iSn => [|i] /=; first by rewrite ltoo.
-  rewrite ltnS=> lt_in lt eq; apply/h => {h}.
-  exists (Ordinal lt_in); rewrite ?(tnth_nth z) //=.
-  move=> j lt_ij; move: (eq (inord j.+1)).
-  by rewrite !(tnth_nth z) /= !inordK ?ltnS //=; apply.
-Qed.
-
-(* -------------------------------------------------------------------- *)
 Lemma ltx_lex_nat_sum (k : nat) (s1 s2 r1 r2: k.-tuple nat):
        ltx s1 r1 -> lex s2 r2
     -> ltx [seq (x.1 + x.2)%N | x <- zip s1 s2]
@@ -337,19 +300,23 @@ Lemma ltx_lex_nat_sum (k : nat) (s1 s2 r1 r2: k.-tuple nat):
 Proof.
   move=> lt1; rewrite lex_eqVlt; case/orP.
     move/eqP=> ->; apply/ltxP=> /=; case/ltxP: lt1.
-    move=> i le eq; exists i.
+    move=> i eq le; exists i.
+    + move=> j lt_ij; rewrite !(tnth_nth 0%N) /=.
+      rewrite !(nth_map (0, 0)) ?(size_zip, size_tuple, minnn) //=.
+      apply/eqP; rewrite !nth_zip ?size_tuple //= eqn_add2r.
+      by move: (eq _ lt_ij); rewrite !(tnth_nth 0%N)=> ->.
     + rewrite !(tnth_nth 0%N) /= !(nth_map (0, 0)); last first.
         by rewrite size_zip !size_tuple minnn.
         by rewrite size_zip !size_tuple minnn.
       rewrite !nth_zip ?size_tuple //= ltnP ltn_add2r.
       by move: le; rewrite !(tnth_nth 0%N) !ltnP.
-    + move=> j lt_ij; rewrite !(tnth_nth 0%N) /=.
-      rewrite !(nth_map (0, 0)) ?(size_zip, size_tuple, minnn) //=.
-      apply/eqP; rewrite !nth_zip ?size_tuple //= eqn_add2r.
-      by move: (eq _ lt_ij); rewrite !(tnth_nth 0%N)=> ->.
-  move=> lt2; case/ltxP: lt1=> i lti eqi; case/ltxP: lt2=> j ltj eqj.
+  move=> lt2; case/ltxP: lt1=> i eqi lti; case/ltxP: lt2=> j eqj ltj.
   have lt_ij_k: (minn i j < k)%N by rewrite gtn_min ltn_ord.
   pose a := Ordinal lt_ij_k; apply/ltxP; exists a.
+  + move=> l lt_la; rewrite !(tnth_nth 0%N) /=.
+    rewrite !(nth_map (0, 0)) ?(size_zip, size_tuple, minnn) //.
+    move: lt_la; rewrite leq_min => /andP [lt_li lt_lj].
+    by rewrite !nth_zip ?size_tuple //= -!tnth_nth ?(eqi, eqj).
   + rewrite !(tnth_nth 0%N) /= !(nth_map (0, 0)); first last.
       by rewrite size_zip !size_tuple minnn.
       by rewrite size_zip !size_tuple minnn.
@@ -361,10 +328,6 @@ Proof.
     move=> eq_ij; rewrite -addnS leq_add // -?ltnP ?ltj.
       by apply/ltnW; rewrite -ltnP eq_ij -!tnth_nth.
       by rewrite -!tnth_nth.
-  + move=> l lt_la; rewrite !(tnth_nth 0%N) /=.
-    rewrite !(nth_map (0, 0)) ?(size_zip, size_tuple, minnn) //.
-    move: lt_la; rewrite leq_min => /andP [lt_li lt_lj].
-    by rewrite !nth_zip ?size_tuple //= -!tnth_nth ?(eqi, eqj).
 Qed.
 
 (* -------------------------------------------------------------------- *)

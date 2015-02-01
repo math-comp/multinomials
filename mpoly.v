@@ -731,9 +731,9 @@ Section MultinomOrder.
     rewrite /mnmc_le /= eq_mdeg ltoo eqxx /=.
     apply: (iffP idP) => [/ltxP|].
     + case=> i h1 h2; exists i => [j|].
-      by apply/h2. by rewrite -ltnP; apply/h1.
+      by apply/h1. by rewrite -ltnP; apply/h2.
     + case=> i h1 h2; apply/ltxP; exists i.
-      by rewrite ltnP; apply/h2. by apply/h1. 
+       by apply/h1. by rewrite ltnP; apply/h2.
   Qed.
 End MultinomOrder.
 
