@@ -236,6 +236,51 @@ Section LexOrder.
       by rewrite !eqxx ltoo /= ih.
     by move=> lt; rewrite [x==y]eq_sym (lto_eqF lt) /= orbF.
   Qed.
+
+  Lemma ltxP_seq (x : T) (s1 s2 : seq T): size s1 = size s2 ->
+    reflect
+      (exists2 i : nat, i < size s1 &
+         [/\ forall j, (j < i)%N -> nth x s1 j = nth x s2 j
+          &  nth x s1 i < nth x s2 i])
+      ((s1 != s2) && lex s1 s2).
+  Proof.
+    elim: s1 s2=> [|x1 s1 ih] [|x2 s2] //=.
+      by move=> _; constructor; do 2! case.
+    case=> eq_sz; rewrite eqseq_cons; case: eqP.
+      move=> -> /=; rewrite ltoo /=; apply: (iffP idP).
+        move/ih=> /(_ eq_sz) [i lt_i_sz1 [h1 h2]].
+        by exists i.+1 => //; split=> //; case.
+      case; case=> /= [_ []|n]; first by rewrite ltoo.
+      rewrite ltnP ltnS => lt_n_sz1 [h1 h2]; apply/ih=> //.
+      exists n; [by rewrite ltnP | split=> // j lt_jn].
+      by apply/(h1 j.+1).
+    move/eqP=> ne_x1x2; rewrite /= orbF; case h: (x1 < x2).
+      by constructor; exists 0.
+    constructor; case; case=> [|n] _; case=> /=.
+      by rewrite h.
+    by move/(_ 0 (erefl true))=> /= /eqP; rewrite (negbTE ne_x1x2).
+  Qed.
+    
+  Lemma ltxP n (s1 s2 : n.-tuple T):
+    reflect
+      (exists2 i : 'I_n,
+            forall (j : 'I_n), (j < i)%N -> tnth s1 j = tnth s2 j
+          & tnth s1 i < tnth s2 i)
+      ((s1 != s2) && lex s1 s2).
+  Proof.
+    case: n s1 s2 => [|n] s1 s2.
+      by rewrite [s1]tuple0 [s2]tuple0; constructor; do 2! case.
+    have x: T by case: {s2} s1; case.
+    move: (@ltxP_seq x s1 s2); rewrite !size_tuple.
+    case=> // h; constructor.
+    + case: h=> i; rewrite ltnP => p [h1 h2].
+      exists (Ordinal p) => [j|] /=; rewrite !(tnth_nth x) //.
+      by apply/h1.
+    + move=> ho; apply/h => {h}; case: ho; case=> i /= p.
+      rewrite !(tnth_nth x) /= => h1 h2; exists i; rewrite ?ltnP //.
+      split=> // j lt_ji; move: (h1 (Ordinal (ltn_trans lt_ji p)) lt_ji).
+      by rewrite !(tnth_nth x).
+  Qed.
 End LexOrder.
 
 Definition ltx (T : posetType) (x y : seq T) := (x != y) && (lex x y).
