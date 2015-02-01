@@ -21,6 +21,9 @@ Delimit Scope multi_scope with MM.
 Local Notation simpm := Monoid.simpm.
 Local Notation ilift := fintype.lift.
 
+Local Notation efst := (@fst _ _) (only parsing).
+Local Notation esnd := (@snd _ _) (only parsing).
+
 (* -------------------------------------------------------------------- *)
 (* FIXME: move me or replace me                                         *)
 Section BigUncond.
@@ -229,10 +232,15 @@ Section BigOpPair.
   Variable idx : R.
   Variable op  : Monoid.com_law idx.
 
+  Lemma pair_big_dep_curry (F : T1 * T2 -> R) (P : pred (T1 * T2)):
+      \big[op/idx]_i \big[op/idx]_(j | P (i, j)) F (i, j)
+    = \big[op/idx]_(x | P x) F x.
+  Proof. by rewrite pair_big_dep /=; apply/eq_big; case. Qed.
+
   Lemma pair_bigA_curry (F : T1 * T2 -> R):
       \big[op/idx]_i \big[op/idx]_j F (i, j)
     = \big[op/idx]_x F x.
-  Proof. by rewrite pair_bigA; apply/eq_bigr; case. Qed.
+  Proof. by apply/pair_big_dep_curry. Qed.
 End BigOpPair.
 
 (* -------------------------------------------------------------------- *)
@@ -351,6 +359,9 @@ Canonical multinom_subCountType n :=
 Bind Scope multi_scope with multinom.
 
 (* -------------------------------------------------------------------- *)
+Notation "m1 <= m2" := [forall i, m1%MM i <= m2%MM i] : multi_scope.
+
+(* -------------------------------------------------------------------- *)
 Section MultinomTheory.
   Context {n : nat}.
 
@@ -367,6 +378,18 @@ Section MultinomTheory.
   Proof.
     case: m1 m2 => [m1] [m2] /=; split=> [[->]//|] h.
     by apply/val_eqP/eqP/eq_from_tnth => i /=; rewrite -!multinomE.
+  Qed.
+
+  Lemma mnm_lepP m1 m2: reflect (forall i, m1 i <= m2 i) (m1 <= m2)%MM.
+  Proof. by apply: (iffP forallP). Qed.
+
+  Lemma lepm_refl m: (m <= m)%MM.
+  Proof. by apply/mnm_lepP=> i. Qed.
+
+  Lemma lepm_trans m3 m1 m2: (m1 <= m2 -> m2 <= m3 -> m1 <= m3)%MM.
+  Proof.
+    move=> /mnm_lepP h1 /mnm_lepP h2; apply/mnm_lepP.
+    by move=> i; apply/(leq_trans (h1 i) (h2 i)).
   Qed.
 
   Definition mnm0 := nosimpl [multinom of nseq n 0%N].
@@ -440,11 +463,23 @@ Section MultinomTheory.
   Lemma addmK m: cancel (mnm_add^~ m) (mnm_sub^~ m).
   Proof. by move=> m' /=; apply/mnmP=> i; rewrite !(mnmDE, mnmBE) addnK. Qed.
 
-  Lemma submK m m': (forall i, m i <= m' i) -> (m' - m + m = m')%MM.
-  Proof. by move=> h; apply/mnmP=> i; rewrite !(mnmDE, mnmBE) subnK. Qed.
+  Lemma submK m m': (m <= m')%MM -> (m' - m + m = m')%MM.
+  Proof.
+    move=> /mnm_lepP h; apply/mnmP=> i.
+    by rewrite !(mnmDE, mnmBE) subnK.
+  Qed.
 
   Lemma submDA m1 m2 m3: (m1 - m2 - m3)%MM = (m1 - (m2 + m3))%MM.
   Proof. by apply/mnmP=> i; rewrite !(mnmBE, mnmDE) subnDA. Qed.
+
+  Lemma submBA m1 m2 m3: (m3 <= m2)%MM -> (m1 - (m2 - m3) = m1 + m3 - m2)%MM.
+  Proof.
+    move/mnm_lepP=> h; apply/mnmP=> i.
+    by rewrite !(mnmDE, mnmBE) subnBA.
+  Qed.
+
+  Lemma lem_subr m1 m2: (m1 - m2 <= m1)%MM.
+  Proof. by apply/mnm_lepP=> i; rewrite mnmBE leq_subr. Qed.
 
   Definition mnm_muln m i := nosimpl iterop _ i mnm_add m 0%MM.
 
@@ -483,7 +518,13 @@ Section MultinomTheory.
   Lemma mdegD m1 m2: mdeg (m1 + m2) = (mdeg m1 + mdeg m2)%N.
   Proof.
     case: m1 m2 => [m1] [m2]; rewrite !mdegE -big_split /=.
-    by apply: eq_bigr=> i _; rewrite [(_+_)%MM _]multinomE tnth_mktuple.
+    by apply/eq_bigr=> i _; rewrite [X in X=_]multinomE tnth_mktuple.
+  Qed.
+
+  Lemma mdegB m1 m2: mdeg (m1 - m2) <= mdeg m1.
+  Proof.
+    case: m1 m2 => [m1] [m2]; rewrite !mdegE /=; apply/leq_sum.
+    by move=> i _ /=; rewrite mnmBE leq_subr.
   Qed.
 
   Lemma mdeg_sum (I : Type) (r : seq I) P F:
@@ -503,9 +544,6 @@ Section MultinomTheory.
 
   Lemma mnm1_eq0 i: (mnmd i == 0%MM) = false.
   Proof. by rewrite -mdeg_eq0 mdeg1. Qed.
-
-  Definition mnm_le m1 m2 :=
-    [forall i, m1 i <= m2 i].
 End MultinomTheory.
 
 Notation "+%MM" := (@mnm_add _).
@@ -515,7 +553,6 @@ Notation "'U_(' n )" := (mnmd n) : multi_scope.
 Notation "m1 + m2"   := (mnm_add m1 m2) : multi_scope.
 Notation "m1 - m2"   := (mnm_sub m1 m2) : multi_scope.
 Notation "x *+ n"    := (mnm_muln x n) : multi_scope.
-Notation "m1 <= m2"  := (mnm_le m1 m2) : multi_scope.
 
 Notation "\sum_ ( i <- r | P ) F" :=
   (\big[+%MM/0%MM]_(i <- r | P%B) F%MM) : multi_scope.
@@ -1199,8 +1236,82 @@ Section MPolyRing.
     by move=> i /=; rewrite Monoid.mulmC.
   Qed.
 
+  Local Notation "m1 <= m2" := [forall i, m1%MM i <= m2%MM i] : multi_scope.
+
+  Lemma mcoeff_poly_mul_lin p q m k: !|m| < k ->
+    (p *M q)@_m = \sum_(k : 'X_{1..n < k} | (k <= m)%MM) p@_k * q@_(m-k).
+  Proof.
+    move=> lt_m_k; rewrite (mcoeff_poly_mul _ _ (k := k)) //.
+    pose P (k1 k2 : 'X_{1..n < k}) := m == (k1 + k2)%MM.
+    pose Q (k : 'X_{1..n < k}) := [forall i, k i <= m i].
+    pose F (k1 k2 : 'X_{1..n}) := p@_k1 * q@_k2.
+    rewrite -(pair_big_dep xpredT P F) (bigID Q) /= addrC.
+    (rewrite big1 ?add0r {}/P {}/Q; first apply/eq_bigr)=> /= h1.
+    + move=> le_h1_m; have pr: !|m - h1| < k.
+        by rewrite (leq_ltn_trans _ lt_m_k) // mdegB.
+      rewrite (big_pred1 (BMultinom pr)) //= => h2 /=.
+      rewrite bmeqP /=; apply/eqP/eqP=> ->.
+      * by rewrite mnm_addC addmK.
+      * by rewrite mnm_addC submK //; apply/mnm_lepP.
+    + rewrite negb_forall => /existsP /= [i Nle].
+      rewrite big_pred0 //= => h2; apply/negbTE/eqP.
+      move/mnmP/(_ i); rewrite mnmDE=> eq; move: Nle.
+      by rewrite eq leq_addr.
+  Qed.
+  Implicit Arguments mcoeff_poly_mul_lin [p q m].
+
+  Local Notation mcoeff_pml  := mcoeff_poly_mul_lin.
+
+  Lemma mcoeff_poly_mul_lin_rev p q m k: !|m| < k ->
+    (p *M q)@_m = \sum_(k : 'X_{1..n < k} | (k <= m)%MM) p@_(m-k) * q@_k.
+  Proof.
+    move=> lt; have/mcoeff_pml := lt => ->.
+    have pr (h : 'X_{1..n}) : !|m - h| < k.
+      by apply/(leq_ltn_trans (mdegB _ _)).
+    pose F (k : 'X_{1..n < k}) := BMultinom (pr k).
+    have inv_F (h : 'X_{1..n}): (h <= m)%MM -> (m - (m - h) = h)%MM.
+      by move=> le_hm; rewrite submBA // mnm_addC addmK.
+    rewrite (reindex_onto F F) //=; last first.
+      by move=> h /inv_F eqh; apply/eqP; rewrite eqE /= eqh.
+    apply/esym/eq_big; last by move=> h /inv_F ->.
+    move=> h /=; apply/esym; rewrite lem_subr eqE /=.
+    case: (boolP (h <= m)%MM); first by move/inv_F=> /eqP ->.
+    rewrite negb_forall => /existsP [/= i]; rewrite -ltnNge.
+    rewrite ltn_neqAle -subn_eq0 => /andP [ne_mhi /eqP le_mhi].
+    apply/negbTE/eqP/mnmP=> /(_ i); rewrite !mnmBE => /eqP.
+    by rewrite le_mhi subn0 (negbTE ne_mhi).
+  Qed.
+  Implicit Arguments mcoeff_poly_mul_lin_rev [p q m].
+
+  Local Notation mcoeff_pmlr := mcoeff_poly_mul_lin_rev.
+
   Lemma poly_mulA: associative mpoly_mul.
-  Proof. Admitted.
+  Proof.
+    move=> p q r; apply/mpolyP=> mi; pose_big_enough b.
+    rewrite (mcoeff_pml b) // (mcoeff_pmlr b) //. 2: by close.
+    have h m: !|mi - m| < b by apply/(leq_ltn_trans (mdegB mi m)).
+    pose coef3 mj mk := p@_mj * (q@_(mi - mj - mk)%MM * r@_mk).
+    transitivity (\sum_(mj : 'X_{1..n < b} | (mj <= mi)%MM)
+                    \sum_(mk : 'X_{1..n < b} | (mk <= mi - mj)%MM)
+                       coef3 mj mk).
+      by apply/eq_bigr=> /= mj _; rewrite (mcoeff_pmlr b) 1?big_distrr.
+    pose P (mj : 'X_{1..n < b}) := (mj <= mi)%MM.
+    rewrite (exchange_big_dep P) //= {}/P; last first.
+      by move=> mj mk _ /lepm_trans; apply; apply/lem_subr.
+    apply/eq_bigr=> /= mk /mnm_lepP le_mk_mi.
+    transitivity (\sum_(mj : 'X_{1..n < b} | (mj <= mi - mk)%MM) coef3 mj mk).
+    + apply/eq_bigl=> m /=; apply/idP/idP.
+      * case/andP=> /mnm_lepP le1 /mnm_lepP le2; apply/mnm_lepP.
+        move=> i; rewrite mnmBE /leq subnBA // addnC -subnBA //.
+        by rewrite -mnmBE; apply/le2.
+      * move=> le1; have le2: (m <= mi)%MM by rewrite (lepm_trans le1) ?lem_subr.
+        rewrite le2; apply/mnm_lepP=> i; rewrite mnmBE /leq.
+        move/mnm_lepP: le2 => le2; rewrite subnBA // addnC.
+        rewrite -subnBA // -/(leq _ _); move/mnm_lepP: le1.
+        by move/(_ i); rewrite mnmBE.
+    rewrite (mcoeff_pml b) /coef3 1?big_distrl //=.
+    by apply/eq_bigr=> mj le_mj_miBk; rewrite !mulrA !submDA mnm_addC.
+  Qed.
 
   Lemma poly_mul1m: left_id 1%:MP mpoly_mul.
   Proof.
@@ -1672,8 +1783,8 @@ Section MPolyDeriv.
       rewrite !simpm mul0rn; have [->|nz_mi] := (eqVneq (k i) 0%N).
         by rewrite !simpm.
       case: eqP=> [{1}<-|]; rewrite ?simpm //.
-      rewrite submK // => l; rewrite mnm1E; case: (i =P l) nz_mi=> //.
-      by move=> ->; rewrite -lt0n.
+      rewrite submK //; apply/mnm_lepP => l; rewrite mnm1E.
+      by case: (i =P l) nz_mi=> // ->; rewrite -lt0n.
     by close.
   Qed.
 
