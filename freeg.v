@@ -1030,7 +1030,7 @@ Section FreegIndDom.
   Variable K : choiceType.
 
   Variable F : pred K.
-  Variable P : {freeg K / R} -> Prop.
+  Variable P : {freeg K / R} -> Type.
 
   Implicit Types D : {freeg K / R}.
 
@@ -1041,7 +1041,7 @@ Section FreegIndDom.
     forall k x D, x \notin dom D -> k != 0 -> ~~ (F x) ->
       P D -> P (<< k *g x >> + D).
 
-  Lemma freeg_ind_dom D: P D.
+  Lemma freeg_rect_dom D: P D.
   Proof.
     rewrite -[D]freeg_sumE (bigID F) /=; set DR := \sum_(_ <- _ | _) _.
     have: [predI dom DR & [predC F]] =1 pred0.
@@ -1091,20 +1091,30 @@ Section FreegIndDom.
   Qed.
 End FreegIndDom.
 
+Lemma freeg_ind_dom  (R : ringType) (K : choiceType) (F : pred K):
+     forall (P : {freeg K / R} -> Prop),
+     (forall D : {freeg K / R},
+       [predI dom (G:=R) (K:=K) D & [predC F]] =1 pred0 -> P D)
+  -> (forall (k : R) (x : K) (D : {freeg K / R}),
+        x \notin dom (G:=R) (K:=K) D -> k != 0 -> ~~ F x ->
+          P D -> P (<< k *g x >> + D))
+  -> forall D : {freeg K / R}, P D.
+Proof. by move=> P; apply/(@freeg_rect_dom R K F P). Qed.
+
 (* -------------------------------------------------------------------- *)
 Section FreegIndDom0.
   Variable R : ringType.
   Variable K : choiceType.
-  Variable P : {freeg K / R} -> Prop.
+  Variable P : {freeg K / R} -> Type.
 
   Hypothesis H0: P 0.
   Hypothesis HS:
     forall k x D, x \notin dom D -> k != 0 ->
       P D -> P (<< k *g x >> + D).
 
-  Lemma freeg_ind_dom0 D: P D.
+  Lemma freeg_rect_dom0 D: P D.
   Proof.
-    apply: (@freeg_ind_dom _ _ xpred0) => {D} [D|k x D].
+    apply: (@freeg_rect_dom _ _ xpred0) => {D} [D|k x D].
     + move=> domD; have ->: D = 0; last exact: H0.
       case: (D =P 0) => [//|/eqP]; rewrite -dom_eq0.
       case: (dom D) domD => [//|p ps] /(_ p).
@@ -1112,6 +1122,15 @@ Section FreegIndDom0.
     + by move=> ?? _ ?; apply: HS.
   Qed.
 End FreegIndDom0.
+
+Lemma freeg_ind_dom0 (R : ringType) (K : choiceType):
+  forall (P : {freeg K / R} -> Prop),
+       P 0
+    -> (forall (k : R) (x : K) (D : {freeg K / R}),
+          x \notin dom (G:=R) (K:=K) D -> k != 0 -> P D ->
+            P (<< k *g x >> + D))
+    -> forall D : {freeg K / R}, P D.
+Proof. by move=> P; apply/(@freeg_rect_dom0 R K P). Qed.
 
 (*
 *** Local Variables: ***

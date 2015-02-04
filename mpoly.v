@@ -1689,20 +1689,28 @@ Section MPolyVarTheory.
     by rewrite mcoeffZ mcoeffX coeffU.
   Qed.
 
-  Lemma mpolyind (P : {mpoly R[n]} -> Prop):
+  Lemma mpolyrect (P : {mpoly R[n]} -> Type):
        P 0
     -> (forall c m p,
           m \notin msupp p -> c != 0 ->
             P p -> P (c *: 'X_[m] + p))
     -> forall p, P p.
   Proof.
-    move=> h0 hS [p] /=; elim/freeg_ind_dom0: p => /=.
+    move=> h0 hS [p] /=; elim/freeg_rect_dom0: p => /=.
       by rewrite raddf0.
     move=> c q m mdom nz_c /hS h.
     by rewrite raddfD /= MPolyU; apply h.
   Qed.
 
-  Lemma mpolyind_r (P : {mpoly R[n]} -> Prop):
+  Lemma mpolyind (P : {mpoly R[n]} -> Prop):
+       P 0
+    -> (forall c m p,
+          m \notin msupp p -> c != 0 ->
+            P p -> P (c *: 'X_[m] + p))
+    -> forall p, P p.
+  Proof. apply/(@mpolyrect P). Qed.
+
+  Lemma mpolyrect_r (P : {mpoly R[n]} -> Type):
        P 0
     -> (forall c m p,
              m \notin msupp p -> c != 0
@@ -1711,7 +1719,7 @@ Section MPolyVarTheory.
     -> forall p, P p.
   Proof.
     move=> h0 hS p; have: {subset msupp p <= msupp p} by [].
-    elim/mpolyind: p {-2}p => [p|c m p m_notin_p nz_c ih q le].
+    elim/mpolyrect: p {-2}p => [p|c m p m_notin_p nz_c ih q le].
       rewrite msupp0 => /(uniq_leq_size (msupp_uniq _)) /=.
       by rewrite leqn0 size_eq0 msupp_eq0 => /eqP->.
     case: (boolP (m \in msupp q)); last first.
@@ -3028,7 +3036,7 @@ Section MESymFundamental.
   Local Notation "m # s" := [multinom m (s i) | i < n]
     (at level 40, left associativity, format "m # s").
 
-  Definition S (m : 'X_{1..n}) := \sum_(s : 'S_n) 'X_[R, m#s].
+  Definition S (m : 'X_{1..n}) : {mpoly R[n]} := \sum_(s : 'S_n) 'X_[R, m#s].
 
   Lemma mperm_inj (s : 'S_n): injective (fun m => m#s).
   Proof.
@@ -3038,6 +3046,9 @@ Section MESymFundamental.
 
   Lemma mperm1 (m : 'X_{1..n}): m#(1 : 'S_n)%g = m.
   Proof. by apply/mnmP=> i; rewrite mnmE perm1. Qed.
+
+  Lemma mpermM (m : 'X_{1..n}) (s1 s2 : 'S_n): m#(s1 * s2)%g = m#s2#s1.
+  Proof. by apply/mnmP=> i; rewrite !mnmE permM. Qed.
 
   Lemma mpermKV (s : 'S_n):
     cancel (fun m => m#s) (fun m => m#(s^-1))%g.
@@ -3063,6 +3074,21 @@ Section MESymFundamental.
       by exists (mulg^~ s^-1)%g=> s' _; rewrite -mulgA (mulgV, mulVg) mulg1.
     apply/eq_bigr=> s' _; rewrite !mcoeff_sym; congr (p@__).
     by apply/mnmP=> i; rewrite !mnmE permM.
+  Qed.
+
+  Lemma S_sym m: S m \is symmetric.
+  Proof.
+    apply/issymP=> s; apply/mpolyP=> h; rewrite mcoeff_sym.
+    rewrite /S !raddf_sum (reindex_inj (mulgI s)%g) /=.
+    apply/eq_bigr=> s' _; rewrite !mcoeffX mpermM.
+    by rewrite (inj_eq (@mperm_inj s)).
+  Qed.
+
+  Lemma msupp_S m: {subset msupp (S m) <= [seq m#s | s : 'S_n]}.
+  Proof.
+    move=> h /msupp_sum_le /flattenP /= [xs] /mapP /=.
+    case=> s _ {xs}-> /mem_msuppXP <-; apply/mapP.
+    by exists s=>//; rewrite mem_enum.
   Qed.
 
   Lemma mpolyind_order (P : {mpoly R[n]} -> Prop):
