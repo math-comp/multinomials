@@ -2147,6 +2147,13 @@ End MPolyMorphism.
 Implicit Arguments mmapE [n R S h f p].
 
 (* -------------------------------------------------------------------- *)
+Lemma mmap1_eq n (R : ringType) (f1 f2 : 'I_n -> R) m:
+  f1 =1 f2 -> mmap1 f1 m = mmap1 f2 m.
+Proof.
+  move=> eq_f; rewrite /mmap1; apply/eq_bigr.
+  by move=> /= i _; rewrite eq_f.
+Qed.
+
 Lemma mmap1_id n (R : ringType) m:
   mmap1 (fun i => 'X_i) m = 'X_[m] :> {mpoly R[n]}.
 Proof. by rewrite mpolyXE_id. Qed.
@@ -2239,8 +2246,19 @@ Section MPolyComp.
   Lemma comp_mpolyC c lq: c%:MP \mPo lq = c%:MP.
   Proof. by rewrite /comp_mpoly mmapC. Qed.
 
+  Lemma comp_mpolyZ c p lq: (c *: p) \mPo lq = c *: (p \mPo lq).
+  Proof. by apply/linearZ. Qed.
+
   Lemma comp_mpolyX i lq: 'X_i \mPo lq = lq`_i.
   Proof. by rewrite /comp_mpoly mmapX mmap1U -tnth_nth. Qed.
+
+  Lemma comp_mpoly_id p: p \mPo [tuple 'X_i | i < n] = p.
+  Proof.
+    rewrite [p]mpolyE raddf_sum /=; apply/eq_bigr.
+    move=> m _; rewrite comp_mpolyZ; congr (_ *: _).
+    rewrite /comp_mpoly mmapX -mmap1_id; apply/mmap1_eq.
+    by move=> /= i; rewrite tnth_map tnth_ord_tuple.
+  Qed.
 End MPolyComp.
 
 (* -------------------------------------------------------------------- *)
