@@ -2287,8 +2287,20 @@ Section MEval.
   Lemma mevalMn  v k : {morph meval v: x / x *+ k} . Proof. exact: raddfMn. Qed.
   Lemma mevalMNn v k : {morph meval v: x / x *- k} . Proof. exact: raddfMNn. Qed.
 
+  Lemma mevalC v c: meval v c%:MP = c.
+  Proof. by rewrite /meval mmapC. Qed.
+
+  Lemma meval1 v: meval v 1 = 1.
+  Proof. by apply/mevalC. Qed.
+
   Lemma mevalX v i: meval v 'X_i = tnth v i.
   Proof. by rewrite /meval mmapX mmap1U. Qed.
+
+  Lemma meval_is_scalable v: scalable_for *%R (meval v).
+  Proof. by move=> /= c p; rewrite /meval mmapZ. Qed.
+
+  Lemma mevalZ v c p: meval v (c *: p) = c * (meval v p).
+  Proof. exact: meval_is_scalable. Qed.
 End MEval.
 
 Notation "p .@[ v ]" := (@meval _ _ v p).
@@ -2301,10 +2313,17 @@ Section MEvalCom.
   Implicit Types p q r : {mpoly R[n]}.
   Implicit Types v : n.-tuple R.
 
-  Lemma meval_is_multiplicative v: multiplicative (meval v).
-  Proof. by apply/mmap_is_multiplicative. Qed.
+  Lemma meval_is_lrmorphism v: lrmorphism_for *%R (meval v).
+  Proof.
+    split; first split.
+    + by apply/mmap_is_additive.
+    + by apply/mmap_is_multiplicative.
+    by move=> /= c p; rewrite /meval mmapZ /=.
+  Qed.
 
-  Canonical meval_multiplicative v := AddRMorphism (meval_is_multiplicative v).
+  Canonical meval_rmorphism  v := RMorphism (meval_is_lrmorphism v).
+  Canonical meval_linear     v := AddLinear (meval_is_lrmorphism v).
+  Canonical meval_lrmorphism v := [lrmorphism of meval v].
 
   Lemma mevalM v: {morph meval v: x y / x * y}.
   Proof. exact: rmorphM. Qed.
