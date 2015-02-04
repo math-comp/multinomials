@@ -2253,6 +2253,10 @@ Section MEval.
 
   Definition meval v p := mmap idfun (tnth v) p.
 
+  Lemma mevalE v p: meval v p =
+    \sum_(m <- msupp p) p@_m * (\prod_i (tnth v i)^+(m i)).
+  Proof. by []. Qed.
+
   Lemma meval_is_additive v: additive (meval v).
   Proof. by apply/mmap_is_additive. Qed.
 
@@ -2344,6 +2348,121 @@ Section MPolyMap.
       AddRMorphism map_mpoly_is_multiplicative.
   End Multiplicative.
 End MPolyMap.
+
+(* -------------------------------------------------------------------- *)
+Section MPolyOver.
+  Variable n : nat.
+  Variable R : ringType.
+
+  Definition mpolyOver (S : pred_class) :=
+    [qualify a p : {mpoly R[n]} | all (mem S) [seq p@_m | m <- msupp p]].
+
+  Fact mpolyOver_key S : pred_key (mpolyOver S). Proof. by []. Qed.
+  Canonical mpolyOver_keyed S := KeyedQualifier (mpolyOver_key S).
+
+  Lemma mpolyOverS (S1 S2 : pred_class) :
+    {subset S1 <= S2} -> {subset mpolyOver S1 <= mpolyOver S2}.
+  Proof.
+    move=> sS12 p /(all_nthP 0)S1p.
+    by apply/(all_nthP 0)=> i /S1p; apply: sS12.
+  Qed.
+
+  Lemma mpolyOver0 S: 0 \is a mpolyOver S.
+  Proof. by rewrite qualifE msupp0. Qed.
+
+  Lemma mpolyOver_mpoly (S : pred_class) E:
+       (forall m : 'X_{1..n}, m \in dom E -> coeff m E \in S)
+    -> [mpoly E] \is a mpolyOver S.
+  Proof.
+    move=> S_E; apply/(all_nthP 0)=> i; rewrite size_map /= => lt.
+    by rewrite (nth_map 0%MM) // mcoeff_MPoly S_E ?mem_nth.
+  Qed.
+
+  Section MPolyOverAdd.
+    Variable (S : predPredType R).
+    Variable (addS : addrPred S).
+    Variable (kS : keyed_pred addS).
+
+    Lemma mpolyOverP {p}: reflect (forall m, p@_m \in kS) (p \in mpolyOver kS).
+    Proof.
+      case: p=> E; rewrite qualifE /=; apply: (iffP allP); last first.
+        by move=> h x /mapP /= [m m_in_E] ->; apply/h.
+      move=> h m; case: (boolP (m \in msupp (MPoly E))).
+        by move=> m_in_E; apply/h/map_f.
+        by rewrite -mcoeff_eq0 => /eqP->; rewrite rpred0.
+    Qed.
+
+    Lemma mpolyOverC c: (c%:MP \in mpolyOver kS) = (c \in kS).
+    Proof.
+      rewrite qualifE msuppC; case: eqP=> [->|] //=;
+        by rewrite ?rpred0 // andbT mcoeffC eqxx mulr1.
+    Qed.
+
+    Lemma mpolyOver_addr_closed : addr_closed (mpolyOver kS).
+    Proof. 
+      split=> [|p q Sp Sq]; first exact: mpolyOver0.
+      by apply/mpolyOverP=> i; rewrite mcoeffD rpredD ?(mpolyOverP _).
+    Qed.
+
+    Canonical mpolyOver_addrPred := AddrPred mpolyOver_addr_closed.
+  End MPolyOverAdd.
+
+  Lemma mpolyOverNr S (addS : zmodPred S) (kS : keyed_pred addS) :
+    oppr_closed (mpolyOver kS).
+  Proof.
+    by move=> p /mpolyOverP Sp; apply/mpolyOverP=> i; rewrite mcoeffN rpredN.
+  Qed.
+
+  Canonical mpolyOver_opprPred S addS kS := OpprPred (@mpolyOverNr S addS kS).
+  Canonical mpolyOver_zmodPred S addS kS := ZmodPred (@mpolyOverNr S addS kS).
+
+  Section MPolyOverSemiring.
+    Variable (S : predPredType R).
+    Variable (ringS : semiringPred S).
+    Variable (kS : keyed_pred ringS).
+
+    Lemma mpolyOver_mulr_closed: mulr_closed (mpolyOver kS).
+    Proof.
+      split=> [|p q /mpolyOverP Sp /mpolyOverP Sq].
+        by rewrite mpolyOverC rpred1.
+      apply/mpolyOverP=> i; rewrite mcoeffM rpred_sum //.
+      by move=> j _; apply: rpredM.
+    Qed.
+
+    Canonical mpolyOver_mulrPred := MulrPred mpolyOver_mulr_closed.
+    Canonical pmolyOver_semiringPred := SemiringPred mpolyOver_mulr_closed.
+
+    Lemma mpolyOverZ: {in kS & mpolyOver kS, forall c p, c *: p \is a mpolyOver kS}.
+    Proof.
+      move=> c p Sc /mpolyOverP Sp; apply/mpolyOverP=> i.
+      by rewrite mcoeffZ rpredM ?Sp. 
+    Qed.
+
+    Lemma mpolyOverX m: 'X_[m] \in mpolyOver kS.
+    Proof. by rewrite qualifE msuppX /= mcoeffX eqxx rpred1. Qed.
+
+    Lemma rpred_mhorner:
+      {in mpolyOver kS, forall p (v : n.-tuple R),
+         (all [pred x | x \in kS] v) -> p.@[v] \in kS}.
+    Proof.
+      move=> p /mpolyOverP Sp v Sv; rewrite mevalE rpred_sum // => m _.
+      rewrite rpredM // rpred_prod //= => /= i _.
+      by rewrite rpredX //; move/allP: Sv; apply; apply/mem_tnth.
+    Qed.
+  End MPolyOverSemiring.
+
+  Section MPolyOverRing.
+    Variable (S : predPredType R).
+    Variable (ringS : subringPred S).
+    Variable (kS : keyed_pred ringS).
+
+    Canonical mpolyOver_smulrPred := SmulrPred (mpolyOver_mulr_closed kS).
+    Canonical mpolyOver_subringPred := SubringPred (mpolyOver_mulr_closed kS).
+
+    Lemma mpolyOverXaddC m c: ('X_[m] + c%:MP \in mpolyOver kS) = (c \in kS).
+    Proof. by rewrite rpredDl ?mpolyOverX ?mpolyOverC. Qed.
+  End MPolyOverRing.
+End MPolyOver.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyIdomain.
@@ -3089,6 +3208,25 @@ Section MESymFundamental.
     move=> h /msupp_sum_le /flattenP /= [xs] /mapP /=.
     case=> s _ {xs}-> /mem_msuppXP <-; apply/mapP.
     by exists s=>//; rewrite mem_enum.
+  Qed.
+
+  Lemma L p: p \is symmetric ->
+    {cms | p = \sum_(cm <- cms) cm.1 *: (S cm.2)}.
+  Proof.
+    elim/mpolyrect_r: p; first by exists [::]; rewrite big_nil.
+    move=> c m p m_notin_p nz_c ih sym_cXDp.
+    pose q : {mpoly R[n]} := c *: 'X_[m] + p.
+    pose r : {mpoly R[n]} := q - c *: (S m).
+    have L (s : 'S_n): q@_(m#s) = c.
+      rewrite /q -mcoeff_sym (issymP _ sym_cXDp) mcoeffD.
+      rewrite [X in _+X]memN_msupp_eq0 // addr0 mcoeffZ.
+      by rewrite mcoeffX eqxx mulr1.
+    have msupp_r: {subset msupp r <= msupp p}.
+      admit.
+    have sym_r: r \is symmetric.
+      by rewrite /r rpredB // rpredZ // S_sym.
+    case: (ih _ msupp_r sym_r)=> cms rE; exists ((c, m) :: cms).
+    by rewrite big_cons /= -rE /r addrCA subrr addr0.
   Qed.
 
   Lemma mpolyind_order (P : {mpoly R[n]} -> Prop):
