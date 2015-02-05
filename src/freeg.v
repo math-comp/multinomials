@@ -1136,6 +1136,6 @@ Proof. by move=> P; apply/(@freeg_rect_dom0 R K P). Qed.
 
 (*
 *** Local Variables: ***
-*** coq-load-path: ("ssreflect" "ssreflect-extra" ".") ***
+*** coq-load-path: ("../ssreflect" ("../3rdparty" "SsrMultinomials") ("." "SsrMultinomials")) ***
 *** End: ***
  *)

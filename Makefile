@@ -1,18 +1,15 @@
 # -*- Makefile -*-
 
 # --------------------------------------------------------------------
-INCFLAGS := -I .
-SUBDIRS  :=
+NAME     := SsrMultinomials
+INCFLAGS := -I . -I ssreflect -R 3rdparty $(NAME) -R src $(NAME)
+SUBDIRS  := ssreflect
 
-ifeq ($(SSR_TOP),)
-INCFLAGS += -I ssreflect -I ssreflect-extra 
-SUBDIRS  += ssreflect ssreflect-extra
-else
-INCFLAGS += -I ${SSR_TOP}/ssreflect/${COQBRANCH}/src -R ${SSR_TOP}/theories/ Ssreflect
-SUBDIRS  +=
-endif
-
-COQFILES = poset.v freeg.v mpoly.v
+COQFILES = \
+	$(wildcard 3rdparty/*.v) \
+	src/poset.v \
+	src/freeg.v \
+	src/mpoly.v
 
 include Makefile.common
 
@@ -33,8 +30,14 @@ get-ssr:
 	tar -C $(SSRTMP) -xof $(SSRTMP)/mathcomp-$(SSRV).tar.gz
 	cp $(SSRTMP)/ssreflect-$(SSRV)/src/* $(TOP)/ssreflect/
 	cp $(SSRTMP)/ssreflect-$(SSRV)/theories/* $(TOP)/ssreflect/
-	cd ssreflect && ../scripts/add-ssr.py ../$(SSRTMP)/mathcomp-$(SSRV)/theories ../*.v
+	cd ssreflect && ../scripts/add-ssr.py ../$(SSRTMP)/mathcomp-$(SSRV)/theories ../src/*.v
 	rm -rf ssreflect-tmp/
+
+# --------------------------------------------------------------------
+.PHONY: install
+
+install:
+	$(MAKE) -f Makefile.coq install
 
 # --------------------------------------------------------------------
 this-clean::
@@ -47,7 +50,7 @@ this-distclean::
 .PHONY: count dist
 
 # --------------------------------------------------------------------
-DISTDIR = ecssr
+DISTDIR = multinomials-ssr
 TAROPT  = --posix --owner=0 --group=0
 
 dist:

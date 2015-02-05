@@ -584,6 +584,6 @@ End BigMaxTheory.
 
 (*
 *** Local Variables: ***
-*** coq-load-path: ("ssreflect" "ssreflect-extra" ".") ***
+*** coq-load-path: ("../ssreflect" ("../3rdparty" "SsrMultinomials") ("." "SsrMultinomials")) ***
 *** End: ***
  *)
