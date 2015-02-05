@@ -2,14 +2,22 @@
 
 # --------------------------------------------------------------------
 NAME     := SsrMultinomials
-INCFLAGS := -I . -I ssreflect -R 3rdparty $(NAME) -R src $(NAME)
-SUBDIRS  := ssreflect
-
-COQFILES = \
-	$(wildcard 3rdparty/*.v) \
+SUBDIRS  :=
+COQFILES := \
 	src/poset.v \
 	src/freeg.v \
 	src/mpoly.v
+
+ifeq ($(SSR_TOP),)
+INCFLAGS := -I ssreflect -R 3rdparty $(NAME)
+SUBDIRS  += ssreflect
+COQFILES += $(wildcard 3rdparty/*.v)
+else
+INCFLAGS := -I ${SSR_TOP}/ssreflect/${COQBRANCH}/src -R ${SSR_TOP}/theories/ Ssreflect
+SUBDIRS  +=
+endif
+
+INCFLAGS += -R src $(NAME)
 
 include Makefile.common
 
