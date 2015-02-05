@@ -1,7 +1,9 @@
 (* --------------------------------------------------------------------
  * (c) Copyright 2011--2012 Microsoft Corporation and Inria.
  * (c) Copyright 2012--2014 Inria.
- * (c) Copyright 2012--2014 IMDEA Software Institute.
+ * (c) Copyright 2012--2015 IMDEA Software Institute.
+ *
+ * You may distribute this file under the terms of the CeCILL-B license
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)

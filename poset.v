@@ -1,5 +1,7 @@
 (* --------------------------------------------------------------------
- * (c) Copyright 2014 IMDEA Software Institute.
+ * (c) Copyright 2014--2015 IMDEA Software Institute.
+ *
+ * You may distribute this file under the terms of the CeCILL-B license
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
