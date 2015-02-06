@@ -3269,25 +3269,6 @@ Section MESymFundamental.
     by exists s=>//; rewrite mem_enum.
   Qed.
 
-  Lemma L p: p \is symmetric ->
-    {cms | p = \sum_(cm <- cms) cm.1 *: (S cm.2)}.
-  Proof.
-    elim/mpolyrect_r: p; first by exists [::]; rewrite big_nil.
-    move=> c m p m_notin_p nz_c ih sym_cXDp.
-    pose q : {mpoly R[n]} := c *: 'X_[m] + p.
-    pose r : {mpoly R[n]} := q - c *: (S m).
-    have L (s : 'S_n): q@_(m#s) = c.
-      rewrite /q -mcoeff_sym (issymP _ sym_cXDp) mcoeffD.
-      rewrite [X in _+X]memN_msupp_eq0 // addr0 mcoeffZ.
-      by rewrite mcoeffX eqxx mulr1.
-    have msupp_r: {subset msupp r <= msupp p}.
-      admit.
-    have sym_r: r \is symmetric.
-      by rewrite /r rpredB // rpredZ // S_sym.
-    case: (ih _ msupp_r sym_r)=> cms rE; exists ((c, m) :: cms).
-    by rewrite big_cons /= -rE /r addrCA subrr addr0.
-  Qed.
-
   Lemma mpolyind_order (P : {mpoly R[n]} -> Prop):
        P 0
     -> (forall c m p,
