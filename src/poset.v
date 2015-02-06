@@ -581,9 +581,3 @@ Section BigMaxTheory.
     i0 \in r -> F i0 <= \max_(i <- r) F i.
   Proof. move=> tot i0_in_r; exact/leo_bigmax_cond. Qed.
 End BigMaxTheory.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: ("../ssreflect" ("../3rdparty" "SsrMultinomials") ("." "SsrMultinomials")) ***
-*** End: ***
- *)

@@ -3308,9 +3308,3 @@ Section MESymFundamental.
     by move=> m' m'_in_s; rewrite (mem_s m') // in_cons m'_in_s orbT.
   Qed.
 End MESymFundamental.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: ("../ssreflect" ("../3rdparty" "SsrMultinomials") ("." "SsrMultinomials")) ***
-*** End: ***
- *)
