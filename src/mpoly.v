@@ -2885,6 +2885,18 @@ Section MElemPolySym.
     by move=> i /andP [] /eqP /cards0_eq => ->; rewrite eqxx.
   Qed.
 
+  Lemma mesym1: 's_1 = \sum_(i < n) 'X_i.
+  Proof.
+    rewrite /mesym -big_set /=; set S := [set _ | _].
+    have ->: S = [set [set i] |i : 'I_n].
+      apply/eqP; rewrite eqEcard (card_imset _ set1_inj).
+      rewrite card_draws /= !card_ord bin1 leqnn andbT.
+      apply/subsetP=> /= s; rewrite inE => /cards1P /= [i {s}->].
+      by apply/imsetP; exists i=> //.
+    rewrite big_imset /=; last by move=> i1 i2 _ _; apply/set1_inj.
+    by apply/eq_bigr=> i _; rewrite big_set1.
+  Qed.
+
   Lemma mesymnn: 's_n = \prod_(i < n) 'X_i.
   Proof.
     rewrite /mesym (bigD1 setT) ?cardsT ?card_ord //=.
@@ -3180,6 +3192,14 @@ Section MESymViete.
     rewrite /mesym; rewrite !raddf_sum /=; apply/eq_bigr.
     move=> i _; rewrite !rmorph_prod /=; apply/eq_bigr.
     by move=> j _; rewrite mmapX mmap1U mevalX.
+  Qed.
+
+  Lemma mroots_sum (R : idomainType) (n : nat) (cs : n.+1.-tuple R):
+    \sum_(c <- cs) c = - (\prod_(c <- cs) ('X - c%:P))`_n.
+  Proof.
+    move: (mroots_coeff cs) => /(_ 1); rewrite subSS subn0=> ->.
+    rewrite expr1 mulN1r opprK mesym1 raddf_sum /=.
+    by rewrite big_tuple; apply/eq_bigr=> /= i _; rewrite mevalX.
   Qed.
 End MESymViete.
 
