@@ -8,12 +8,13 @@
 
 (* -------------------------------------------------------------------- *)
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype.
-Require Import bigop ssralg ssrint generic_quotient.
+Require Import bigop ssralg ssrnum ssrint generic_quotient.
 
 Import GRing.Theory.
+Import Num.Theory.
 
-Open Local Scope ring_scope.
-Open Local Scope quotient_scope.
+Local Open Scope ring_scope.
+Local Open Scope quotient_scope.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -24,6 +25,7 @@ Local Notation simpm := Monoid.simpm.
 
 (* -------------------------------------------------------------------- *)
 Reserved Notation "{ 'freeg' K / G }" (at level 0, K, G at level 2, format "{ 'freeg'  K  /  G }").
+Reserved Notation "{ 'freeg' K }" (at level 0, K at level 2, format "{ 'freeg'  K }").
 Reserved Notation "[ 'freeg' S ]" (at level 0, S at level 2, format "[ 'freeg'  S ]").
 
 Reserved Notation "[ 'regular' 'of' R ]" (format "[ 'regular' 'of'  R ]").
@@ -145,6 +147,7 @@ Module FreegDefs.
     Notation reduced := reduced.
 
     Notation "{ 'freeg' T / G }" := (type_of (Phant G) (Phant T)).
+    Notation "{ 'freeg' T  }" := (type_of (Phant int) (Phant T)).
 
     Identity Coercion type_freeg_of : type_of >-> type.
   End Exports.
@@ -1025,6 +1028,259 @@ Section Deg.
   Lemma predeg_reduce D: predeg (reduce D) = predeg D.
   Proof. by rewrite !predegE prelift_reduce. Qed.
 End Deg.
+
+(* -------------------------------------------------------------------- *)
+Reserved Notation "D1 <=g D2" (at level 50, no associativity).
+
+Section FreegCmp.
+  Variable G : numDomainType.
+  Variable K : choiceType.
+
+  Definition fgle (D1 D2 : {freeg K / G}) :=
+    all [pred z | coeff z D1 <= coeff z D2] (dom D1 ++ dom D2).
+
+  Local Notation "D1 <=g D2" := (fgle D1 D2).
+
+  Lemma fgleP D1 D2:
+    reflect (forall z, coeff z D1 <= coeff z D2) (D1 <=g D2).
+  Proof.
+    apply: (iffP allP); last by move=> H z _; apply: H.
+    move=> lec z; case z_in_dom: (z \in (dom D1 ++ dom D2)).
+      by apply: lec.
+    move: z_in_dom; rewrite mem_cat; case/norP=> zD1 zD2.
+    by rewrite !coeff_outdom // lerr.
+  Qed.
+
+  Lemma fgposP D:
+    reflect (forall z, 0 <= coeff z D) (0 <=g D).
+  Proof.
+    apply: (iffP idP).
+    + by move=> posD z; move/fgleP/(_ z): posD; rewrite coeff0.
+    + by move=> posD; apply/fgleP=> z; rewrite coeff0.
+  Qed.
+
+  Lemma fgledd D: D <=g D.
+  Proof. by apply/fgleP=> z; rewrite lerr. Qed.
+
+  Lemma fgle_trans: transitive fgle.
+  Proof.
+    move=> D2 D1 D3 le12 le23; apply/fgleP=> z.
+    by rewrite (ler_trans (y := coeff z D2)) //; apply/fgleP.
+  Qed.
+End FreegCmp.
+
+Local Notation "D1 <=g D2" := (fgle D1 D2).
+
+(* -------------------------------------------------------------------- *)
+Section FreegCmpDom.
+  Variable K : choiceType.
+
+  Lemma dompDl (D1 D2 : {freeg K}):
+    0 <=g D1 -> 0 <=g D2 -> dom (D1 + D2) =i (dom D1) ++ (dom D2).
+  Proof.
+    move=> pos_D1 pos_D2 z; rewrite mem_cat !mem_dom !inE coeffD.
+    by rewrite paddr_eq0; first 1 [rewrite negb_and] || apply/fgposP.
+  Qed.
+End FreegCmpDom.
+
+(* -------------------------------------------------------------------- *)
+Section FreegMap.
+  Variable G : ringType.
+  Variable K : choiceType.
+  Variable P : pred K.
+  Variable f : G -> G.
+
+  Implicit Types D : {freeg K / G}.
+
+  Definition fgmap D :=
+    \sum_(z <- dom D | P z) << f (coeff z D) *g z >>.
+
+  Lemma fgmap_coeffE (D : {freeg K / G}) z:
+    z \in dom D -> coeff z (fgmap D) = (f (coeff z D)) *+ (P z).
+  Proof.
+    move=> zD; rewrite /fgmap raddf_sum /= -big_filter; case Pz: (P z).
+    + rewrite (bigD1_seq z) ?(filter_uniq, uniq_dom) //=; last first.
+        by rewrite mem_filter Pz.
+      rewrite coeffU eqxx mulr1 big1 ?addr0 //.
+      by move=> z' ne_z'z; rewrite coeffU (negbTE ne_z'z) mulr0.
+    + rewrite big_seq big1 ?mulr0 //.
+      move=> z' z'PD; rewrite coeffU; have/negbTE->: z' != z.
+        apply/eqP=> /(congr1 (fun x => x \in filter P (dom D))).
+        by rewrite z'PD mem_filter Pz.
+      by rewrite mulr0.
+  Qed.
+
+  Lemma fgmap_dom D: {subset dom (fgmap D) <= filter P (dom D)}.
+  Proof.
+    move=> z; rewrite mem_dom inE mem_filter andbC.
+    case zD: (z \in (dom D)) => /=.
+    + rewrite fgmap_coeffE //; case: (P _)=> //=.
+      by rewrite mulr0n eqxx.
+    + rewrite /fgmap raddf_sum /= big_seq_cond big1 ?eqxx //.
+      move=> z' /andP [z'D _]; rewrite coeffU.
+      have/negbTE->: z' != z; last by rewrite mulr0.
+      apply/eqP=> /(congr1 (fun x => x \in dom D)).
+      by rewrite  zD z'D.
+  Qed.
+
+  Lemma fgmap_f0_coeffE (D : {freeg K / G}) z:
+    f 0 = 0 -> coeff z (fgmap D) = (f (coeff z D)) *+ (P z).
+  Proof.
+    move=> z_f0; case zD: (z \in dom D).
+      by rewrite fgmap_coeffE.
+    rewrite !coeff_outdom ?z_f0 ?zD ?mul0rn //.
+    by apply/negP=> /fgmap_dom; rewrite mem_filter zD andbF.
+  Qed.
+End FreegMap.
+
+(* -------------------------------------------------------------------- *)
+Section FreegNorm.
+  Variable G : numDomainType.
+  Variable K : choiceType.
+
+  Implicit Types D : {freeg K / G}.
+
+  Definition fgnorm D: {freeg K / G} :=
+    fgmap xpredT Num.norm D.
+
+  Lemma fgnormE D: fgnorm D = \sum_(z <- dom D) << `|coeff z D| *g z >>.
+  Proof. by []. Qed.
+
+  Lemma coeff_fgnormE D z: coeff z (fgnorm D) = `|coeff z D|.
+  Proof. by rewrite fgmap_f0_coeffE ?mulr1n // normr0. Qed.
+End FreegNorm.
+
+(* -------------------------------------------------------------------- *)
+Section FreegPosDecomp.
+  Variable G : realDomainType.
+  Variable K : choiceType.
+
+  Implicit Types D : {freeg K / G}.
+
+  Definition fgpos D: {freeg K / G} :=
+    fgmap [pred z | coeff z D >= 0] Num.norm D.
+
+  Definition fgneg D: {freeg K / G} :=
+    fgmap [pred z | coeff z D <= 0] Num.norm D.
+
+  Lemma fgposE D:
+    fgpos D = \sum_(z <- dom D | coeff z D >= 0) << `|coeff z D| *g z >>.
+  Proof. by []. Qed.
+
+  Lemma fgnegE D:
+    fgneg D = \sum_(z <- dom D | coeff z D <= 0) << `|coeff z D| *g z >>.
+  Proof. by []. Qed.
+
+  Lemma fgposN D: fgpos (-D) = fgneg D.
+  Proof.
+    apply/eqP/freeg_eqP=> z; rewrite !fgmap_f0_coeffE ?normr0 //.
+    by rewrite inE /= !coeffN oppr_ge0 normrN.
+  Qed.
+
+  Lemma fgpos_le0 D: 0 <=g fgpos D.
+  Proof.
+    apply/fgleP=> z; rewrite coeff0 fgmap_f0_coeffE ?normr0 //.
+    by rewrite mulrn_wge0.
+  Qed.
+
+  Lemma fgneg_le0 D: 0 <=g fgneg D.
+  Proof. by rewrite -fgposN fgpos_le0. Qed.
+
+  Lemma coeff_fgposE D k: coeff k (fgpos D) = Num.max 0 (coeff k D).
+  Proof.
+    rewrite fgmap_f0_coeffE ?normr0 //inE; rewrite /Num.max.
+    rewrite lerNgt ler_eqVlt; case: eqP=> [->//|_] /=.
+      by rewrite normr0 mul0rn.
+    case: ltrP; rewrite ?(mulr0, mulr1) // => pos_zD.
+    by rewrite ger0_norm.
+  Qed.
+
+  Lemma coeff_fgnegE D k: coeff k (fgneg D) = - (Num.min 0 (coeff k D)).
+  Proof.
+    by rewrite -fgposN coeff_fgposE coeffN -{1}[0]oppr0 -oppr_min.
+  Qed.
+
+  Lemma fgpos_dom D: {subset dom (fgpos D) <= dom D}.
+  Proof.
+    by move=> x /fgmap_dom; rewrite mem_filter => /andP [_].
+  Qed.
+
+  Lemma fgneg_dom D: {subset dom (fgneg D) <= dom D}.
+  Proof.
+    by move=> k; rewrite -fgposN => /fgpos_dom; rewrite domN.
+  Qed.
+
+  Lemma fg_decomp D: D = (fgpos D) - (fgneg D).
+  Proof.
+    apply/eqP/freeg_eqP=> k; rewrite coeffB.
+    by rewrite coeff_fgposE coeff_fgnegE opprK addr_max_min add0r.
+  Qed.
+
+  Lemma fgnorm_decomp D: fgnorm D = (fgpos D) + (fgneg D).
+  Proof.
+    apply/eqP/freeg_eqP=> k; rewrite coeffD coeff_fgnormE.
+    rewrite coeff_fgposE coeff_fgnegE /Num.max /Num.min.
+    rewrite lerNgt ler_eqVlt; case: (0 =P _)=> [<-//|_] /=.
+      by rewrite ltrr subr0 normr0.
+    case: ltrP=> /=; rewrite ?(subr0, sub0r) => lt.
+    + by rewrite gtr0_norm.
+    + by rewrite ler0_norm.
+  Qed.
+End FreegPosDecomp.
+
+(* -------------------------------------------------------------------- *)
+Section PosFreegDeg.
+  Variable K : choiceType.
+
+  Lemma fgpos_eq0P (D : {freeg K}): 0 <=g D -> deg D = 0 -> D = 0.
+  Proof.
+    move=> posD; rewrite -{1}[D]freeg_sumE raddf_sum /=.
+    rewrite (eq_bigr (fun z => coeff z D)); last first.
+      by move=> i _; rewrite degU.
+    move/eqP; rewrite psumr_eq0; last by move=> i _; apply/fgposP.
+    move/allP=> zD; apply/eqP; apply/freeg_eqP=> z; rewrite coeff0.
+    case z_in_D: (z \in dom D); last first.
+      by rewrite coeff_outdom // z_in_D.
+    by apply/eqP/zD.
+  Qed.
+
+  Lemma fgneg_eq0P (D : {freeg K}): D <=g 0 -> deg D = 0 -> D = 0.
+  Proof.
+    move=> negD deg_eq0; apply/eqP; rewrite -oppr_eq0; apply/eqP.
+    apply/fgpos_eq0P; last by apply/eqP; rewrite degN oppr_eq0 deg_eq0.
+    apply/fgposP=> z; rewrite coeffN oppr_ge0.
+    by move/fgleP: negD => /(_ z); rewrite coeff0.
+  Qed.
+
+  Lemma deg1pos (D : {freeg K}):
+    0 <=g D -> deg D = 1 -> exists x, D = << x >>.
+  Proof.
+    move=> D_ge0 degD_eq1; have: D != 0.
+      by case: (D =P 0) degD_eq1 => [->|//]; rewrite deg0.
+    rewrite -dom_eq0; case DE: (dom D) => [//|p ps] _.
+    rewrite -[D]addr0 -(subrr <<p>>) addrA addrAC.
+    have: coeff p D != 0.
+      by move: (mem_dom D p); rewrite DE in_cons eqxx inE /=.
+    rewrite neqr_lt ltrNge; have/fgposP/(_ p) := D_ge0 => ->/=.
+    move=> coeffpD_gt0; have: 0 <=g (D - <<p>>).
+      apply/fgposP=> q; rewrite coeffB coeffU mul1r.
+      case: (p =P q) =>[<-/=|]; last first.
+        by move=> _; rewrite subr0; apply/fgposP.
+      by rewrite subr_ge0.
+    move/fgpos_eq0P=> ->; first by rewrite add0r; exists p.
+    by rewrite degB degU degD_eq1 subrr.
+  Qed.
+
+  Lemma deg1neg (D : {freeg K}):
+    D <=g 0 -> deg D = -1 -> exists x, D = - << x >>.
+  Proof.
+    move=> D_le0 degD_eqN1; case: (@deg1pos (-D)).
+    + apply/fgleP=> p; rewrite coeffN coeff0 oppr_ge0.
+      by move/fgleP/(_ p): D_le0; rewrite coeff0.
+    + by rewrite degN degD_eqN1 opprK.
+    + by move=> p /eqP; rewrite eqr_oppLR => /eqP->; exists p.
+  Qed.
+End PosFreegDeg.
 
 (* -------------------------------------------------------------------- *)
 Section FreegIndDom.
