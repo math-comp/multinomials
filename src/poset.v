@@ -475,9 +475,6 @@ Section MaxTheory.
 
   Local Notation max := (@maxo T) (only parsing).
 
-  Lemma max0o: left_id 0%O max.
-  Proof. by move=> x; rewrite /maxo lto_neqAle le0o andbT; case: eqP. Qed.
-
   Lemma maxo0: right_id 0%O max.
   Proof. by move=> x; rewrite /maxo lto0. Qed.
 
@@ -487,28 +484,30 @@ Section MaxTheory.
     by case: eqP=> [->|_] /=; [rewrite ltoo | case: (_ < _)].
   Qed.
 
-  Lemma maxoAC: right_commutative max.
-  Proof.
-    move=> x y z; rewrite /maxo; case: (boolP (x < y)).
-    + move=> lt_xy; case: (boolP (y < z)) => [lt_yz|].
-        by rewrite (lto_trans lt_xy lt_yz) lttNge ?ltoW.
-      rewrite -letNgt // => le_zy; case: (boolP (x < z)).
-        by move=> _; rewrite lto_neqAle le_zy andbT; case: eqP.
-      by rewrite lt_xy.
-    + rewrite -letNgt // => le_yx; case: (boolP (x < z)).
-        move=> lt_xz; rewrite lttNge // ltoW //.
-        by apply/(leo_lto_trans le_yx lt_xz).
-      by move=> _; rewrite lttNge // le_yx.
-  Qed.
+  Lemma max0o: left_id 0%O max.
+  Proof. by move=> x; rewrite maxoC maxo0. Qed.
 
   Lemma maxoA: associative max.
-  Proof. by move=> x y z; rewrite !(maxoC x) maxoAC. Qed.
+  Proof.
+    move=> x y z; rewrite /maxo; case: (boolP (y < z))=> c_yz.
+      case: (boolP (x < y))=> c_xy //.
+      by rewrite c_yz (lto_trans c_xy c_yz).
+    case: (boolP (x < y))=> c_xy; rewrite ?(negbTE c_yz) //.
+    rewrite lttNge //; move: c_xy c_yz; rewrite -!letNgt //.
+    by move=> h /leo_trans=> ->.
+  Qed.
+
+  Canonical maxo_monoid := Monoid.Law maxoA max0o maxo0.
+  Canonical maxo_comoid := Monoid.ComLaw maxoC.
+
+  Lemma maxoAC: right_commutative max.
+  Proof. by apply/Monoid.mulmAC. Qed.
 
   Lemma maxoCA: left_commutative max.
-  Proof. by move=> x y z; rewrite !maxoA (maxoC x). Qed.
+  Proof. by apply/Monoid.mulmCA. Qed.
 
   Lemma maxoACA : interchange max max.
-  Proof. by move=> x y z t; rewrite -!maxoA (maxoCA y). Qed.
+  Proof. by apply/Monoid.mulmACA. Qed.
 
   Lemma maxo_idPl {x y} : reflect (max x y = x) (x >= y).
   Proof.
