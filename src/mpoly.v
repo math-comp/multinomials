@@ -1768,6 +1768,44 @@ Section MPolyVarTheory.
     by rewrite eqm_add2l.
   Qed.
 
+  Lemma msuppMX p m:
+    perm_eq (msupp (p * 'X_[m])) [seq (m + m')%MM | m' <- msupp p].
+  Proof.
+    apply/uniq_perm_eq=> //; first rewrite map_inj_uniq //.
+      move=> m1 m2 /=; rewrite ![(m+_)%MM]Monoid.mulmC /=.
+      by apply/(can_inj (addmK _)).
+    move=> m'; apply/idP/idP; last first.
+      case/mapP=> mp mp_in_p ->; rewrite mcoeff_msupp.
+      by rewrite mcoeffMX -mcoeff_msupp.
+   move/msuppM_le; rewrite msuppX /= => /allpairsP.
+   case=> [[p1 p2]] /=; rewrite mem_seq1; case=> p1_in_p.
+   move/eqP=> <- ->; apply/mapP; exists p1=> //.
+   by rewrite Monoid.mulmC.
+  Qed.
+
+  Lemma msuppMCX c m: c != 0 -> msupp (c *: 'X_[m]) = [:: m].
+  Proof.
+    move=> nz_c; rewrite -mul_mpolyC; apply/perm_eq_small=> //.
+    rewrite (perm_eqlP (msuppMX _ _)) msuppC (negbTE nz_c) /=.
+    by rewrite Monoid.mulm1.
+  Qed.
+
+  Lemma msupp_sumX (r : seq 'X_{1..n}) (f : 'X_{1..n} -> R):
+    uniq r -> {in r, forall m, f m != 0} ->
+    perm_eq (msupp (\sum_(m <- r) (f m) *: 'X_[m])) r.
+  Proof.
+    move=> uq_r h; set F := fun m => (f m *: 'X_[m] : {mpoly R[n]}).
+    have msFm m: m \in r -> msupp (f m *: 'X_[m]) = [:: m].
+      by move=> m_in_r; rewrite msuppMCX // h.
+    rewrite (perm_eqlP (msupp_sum xpredT _ _)) //.
+      move/eq_in_map: msFm; rewrite filter_predT=> ->.
+      set s := flatten _; have ->: s = r => //.      
+      by rewrite {}/s; elim: {uq_r h} r=> //= m r ->.
+    move=> m1 m2 /h nz_fm1 /h nz_fm2 nz_m1m2 m /=.
+    rewrite !msuppMCX // !mem_seq1; case: eqP=> //= ->.
+    by rewrite (negbTE nz_m1m2).
+  Qed.
+
   Lemma mcoeff_mpoly (E : 'X_{1..n} -> R) m k: mdeg m < k ->
     (\sum_(m : 'X_{1..n < k}) (E m *: 'X_[m]))@_m = E m.
   Proof.
@@ -2758,14 +2796,6 @@ Section MPolyIdomain.
     Eval hnf in IdomainType {mpoly R[n]} mpoly_idomainAxiom.
   Canonical mpolynomial_idomainType :=
     Eval hnf in [idomainType of mpoly n R for mpoly_idomainType].
-
-  Lemma msuppZ (c : R) p:
-    perm_eq (msupp (c *: p)) (if c == 0 then [::] else msupp p).
-  Proof.
-    case: eqP=> [->|/eqP nz_c]; first by rewrite scale0r msupp0.
-    apply/uniq_perm_eq=> // m; rewrite !mcoeff_msupp.
-    by rewrite mcoeffZ mulf_eq0 (negbTE nz_c).
-  Qed.
 End MPolyIdomain.
 
 (* -------------------------------------------------------------------- *)
@@ -3015,15 +3045,16 @@ Section MElemPolySym.
       move=> i_notin_h; rewrite big1 // => j j_in_h.
       move/memPn: i_notin_h => /(_ _ j_in_h) /negbTE.
       by rewrite mnmE=> ->.
-    rewrite (perm_eq_mem (msupp_sum _ _)) /=; last first.
-      move=> /= h1 h2 ne_h1h2 {m} m /=; rewrite !msuppX !mem_seq1.
+    rewrite (perm_eq_mem (msupp_sum _ _ _)) /index_enum -enumT /=; first last.
+    + move=> /= h1 h2 _ _ ne_h1h2 {m} m /=; rewrite !msuppX !mem_seq1.
       case: eqP=> //= ->; apply/negP=> /eqP /mnmP h.
       move/eqP/setP: ne_h1h2=> [/= i]; move: (h i).
       by rewrite !mnmE; do! case: (_ \in _).
+    + by rewrite enum_uniq.
     apply/existsP/idP.
       case=> h /andP[/eqP sz_h /eqP->]; apply/flattenP; exists [:: F h].
         apply/mapP; exists h; rewrite ?msuppX //.
-        by rewrite mem_filter sz_h eqxx //= mem_enum.
+        by rewrite mem_filter sz_h eqxx mem_enum.
       by rewrite mem_seq1.
     move/flattenP=> /= [ms] /mapP[/= h]; rewrite mem_filter.
     case/andP=> sz_h _ ->; rewrite msuppX mem_seq1.
