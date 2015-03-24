@@ -13,7 +13,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import GRing.Theory BigEnough.
+Import Monoid GRing.Theory BigEnough.
 
 Local Open Scope ring_scope.
 
@@ -1044,41 +1044,84 @@ Section MPolyZMod.
 
   Lemma msuppnil0 p: msupp p = [::] -> p = 0.
   Proof. by move/eqP; rewrite msupp_eq0 => /eqP. Qed.
+
+  Lemma mpolyC_eq0 c: (c%:MP == 0 :> {mpoly R[n]}) = (c == 0).
+  Proof.
+    rewrite eqE /=; apply/idP/eqP=> [|->//].
+    by move/freeg_eqP/(_ 0%MM); rewrite !coeffU eqxx !mulr1.
+  Qed.
 End MPolyZMod.  
 
 (* -------------------------------------------------------------------- *)
-Section MSize.
+Section MMeasureDef.
+  Variable n : nat.
+
+  Structure measure := Measure {
+    mf : 'X_{1..n} -> nat;
+    _  : mf 0 = 0%N;
+    _  : {morph mf : m1 m2 / (m1 + m2)%MM >-> (m1 + m2)%N}
+  }.
+
+  Coercion mf : measure >-> Funclass.
+
+  Let measure_id (mf1 mf2 : 'X_{1..n} -> nat) := phant_id mf1 mf2.
+
+  Definition clone_measure mf :=
+    fun (mfL : measure) & measure_id mfL mf =>
+    fun mf0 mfD (mfL' := @Measure mf mf0 mfD)
+      & phant_id mfL' mfL => mfL'.
+End MMeasureDef.
+
+Notation "[ 'measure' 'of' f ]" := (@clone_measure _ f _ id _ _ id)
+  (at level 0, format"[ 'measure'  'of'  f ]") : form_scope.
+
+(* -------------------------------------------------------------------- *)
+Canonical mdeg_measure n := Eval hnf in @Measure n _ mdeg0 mdegD.
+
+(* -------------------------------------------------------------------- *)
+Section MMeasure.
+  Variable n : nat.
+  Variable R : ringType.
+
+  Implicit Types m : 'X_{1..n}.
+  Implicit Types p q : {mpoly R[n]}.
+
+  Variable mf : measure n.
+
+  Lemma mf0: mf 0%MM = 0%N.
+  Proof. by case: mf. Qed.
+
+  Lemma mfD: {morph mf : m1 m2 / (m1 + m2)%MM >-> (m1 + m2)%N}.
+  Proof. by case: mf. Qed.
+
+  Definition mmeasure p := (\max_(m <- msupp p) (mf m).+1)%N.
+
+  Lemma mmeasureE p: mmeasure p = (\max_(m <- msupp p) (mf m).+1)%N.
+  Proof. by []. Qed.
+
+  Lemma mmeasure0: mmeasure 0 = 0%N.
+  Proof. by rewrite /mmeasure msupp0 big_nil. Qed.
+
+  Lemma mmeasure_mnm_lt p m: m \in msupp p -> mf m < mmeasure p.
+  Proof.
+    move=> m_in_p; rewrite /mmeasure (bigD1_seq m) //=.
+    by rewrite leq_max ltnS leqnn.
+  Qed.
+
+  Lemma mmeasure_mnm_ge p m: mmeasure p <= mf m -> m \notin msupp p.
+  Proof.
+    move=> h; apply/negP=> /mmeasure_mnm_lt.
+    by rewrite leqNgt ltnS h.
+  Qed.
+End MMeasure.
+
+(* -------------------------------------------------------------------- *)
+Section MSuppZMod.
   Variable n : nat.
   Variable R : ringType.
 
   Implicit Types p q r : {mpoly R[n]}.
   Implicit Types D : {freeg 'X_{1..n} / R}.
-
-  Lemma mpolyC_eq0 c: (c%:MP == 0 :> {mpoly R[n]}) = (c == 0).
-  Proof. (* FIXME: coeffU1 / eqU1 *)
-    rewrite eqE /=; apply/idP/eqP=> [|->//].
-    by move/freeg_eqP/(_ 0%MM); rewrite !coeffU eqxx !mulr1.
-  Qed.
-
-  Definition msize p := \max_(m <- msupp p) (mdeg m).+1.
-
-  Lemma msize0: msize 0 = 0%N.
-  Proof. by rewrite /msize msupp0 big_nil. Qed.
-
-  Lemma msizeC c: msize c%:MP = (c != 0%R) :> nat.
-  Proof.
-    rewrite /msize msuppC; case: (_ == 0).
-    by rewrite big_nil. by rewrite big_seq1 mdeg0.
-  Qed.
-
-  Lemma msize_mdeg_lt p m: m \in msupp p -> mdeg m < msize p.
-  Proof.
-    move=> m_in_p; rewrite /msize (bigD1_seq m) //=.
-    by rewrite leq_max ltnS leqnn.
-  Qed.
-
-  Lemma msize_mdeg_ge p m: msize p <= mdeg m -> m \notin msupp p.
-  Proof. by move=> h; apply/negP=> /msize_mdeg_lt; rewrite leqNgt ltnS h. Qed.
 
   Lemma msuppN p: perm_eq (msupp (-p)) (msupp p).
   Proof. by apply/domN_perm_eq. Qed.
@@ -1122,47 +1165,129 @@ Section MSize.
       by move/memPnC: x_notin_r => /(_ _ y_in_r).
     by move=> y1 y2 y1_in_r y2_in_r; apply/h; rewrite 1?mem_behead.
   Qed.
+End MSuppZMod.
 
-  Lemma msizeD_le p q: msize (p + q) <= maxn (msize p) (msize q).
+(* -------------------------------------------------------------------- *)
+Notation msize p := (@mmeasure _ _ [measure of mdeg] p).
+
+(* -------------------------------------------------------------------- *)
+Section MWeight.
+  Context {n : nat}.
+
+  Implicit Types m : 'X_{1..n}.
+
+  Definition mnmwgt m := (\sum_i m i * i.+1)%N.
+
+  Lemma mnmwgt0: mnmwgt 0 = 0%N.
+  Proof. by rewrite /mnmwgt big1 // => /= i _; rewrite mnm0E mul0n. Qed.
+
+  Lemma mnmwgt1 i: mnmwgt U_(i) = i.+1.
   Proof.
-    rewrite {1}/msize big_tnth; apply/bigmax_leqP=> /= i _.
-    set m := tnth _ _; have: m \in msupp (p + q) by apply/mem_tnth.
-    move/msuppD_le; rewrite leq_max mem_cat.
-    by case/orP=> /msize_mdeg_lt->; rewrite !simpm.
+    rewrite /mnmwgt (bigD1 i) //= mnm1E eqxx mul1n.
+    rewrite big1 ?addn0 //= => j ne_ij; rewrite mnm1E.
+    by rewrite eq_sym (negbTE ne_ij) mul0n.
   Qed.
 
-  Lemma msize_sum (T : Type) (r : seq _) (F : T -> {mpoly R[n]}) (P : pred T):
-    msize (\sum_(i <- r | P i) F i) <= \max_(i <- r | P i) msize (F i).
+  Lemma mnmwgtD m1 m2: mnmwgt (m1 + m2) = (mnmwgt m1 + mnmwgt m2)%N.
   Proof.
-    elim/big_rec2: _ => /= [|i k p _ le]; first by rewrite msize0.
-    apply/(leq_trans (msizeD_le _ _)); rewrite geq_max.
+    rewrite /mnmwgt -big_split /=; apply/eq_bigr=> i _.
+    by rewrite mnmDE mulnDl.
+  Qed.
+End MWeight.
+
+Canonical mnmwgt_measure n := Eval hnf in @Measure n _ mnmwgt0 mnmwgtD.
+
+(* -------------------------------------------------------------------- *)
+Notation mweight p := (@mmeasure _ _ [measure of mnmwgt] p).
+
+Section MSize.
+  Variable n : nat.
+  Variable R : ringType.
+
+  Implicit Types m : 'X_{1..n}.
+  Implicit Types p : {mpoly R[n]}.
+
+  Lemma msizeE p: msize p = (\max_(m <- msupp p) (mdeg m).+1)%N.
+  Proof. by apply/mmeasureE. Qed.
+
+  Definition msize0 := mmeasure0 R [measure of @mdeg n].
+
+  Lemma msize_mdeg_lt p m: m \in msupp p -> mdeg m < msize p.
+  Proof. by apply/mmeasure_mnm_lt. Qed.
+
+  Lemma msize_mdeg_ge p m: msize p <= mdeg m -> m \notin msupp p.
+  Proof. by apply/mmeasure_mnm_ge. Qed.
+End MSize.
+
+(* -------------------------------------------------------------------- *)
+Section MMeasureZMod.
+  Variable n : nat.
+  Variable R : ringType.
+
+  Implicit Types c : R.
+  Implicit Types m : 'X_{1..n}.
+  Implicit Types p q : {mpoly R[n]}.
+
+  Variable mf : measure n.
+
+  Local Notation mmeasure := (@mmeasure n R mf).
+
+  Lemma mmeasureC c: mmeasure c%:MP = (c != 0%R) :> nat.
+  Proof.
+    rewrite mmeasureE msuppC; case: (_ == 0)=> /=.
+    by rewrite big_nil. by rewrite big_seq1 mf0.
+  Qed.
+
+  Lemma mmeasureD_le p q:
+    mmeasure (p + q) <= maxn (mmeasure p) (mmeasure q).
+  Proof.
+    rewrite {1}mmeasureE big_tnth; apply/bigmax_leqP=> /= i _.
+    set m := tnth _ _; have: m \in msupp (p + q) by apply/mem_tnth.
+    move/msuppD_le; rewrite leq_max mem_cat.
+    by case/orP=> /mmeasure_mnm_lt->; rewrite !simpm.
+  Qed.
+
+  Lemma mmeasure_sum (T : Type) (r : seq _) (F : T -> {mpoly R[n]}) (P : pred T):
+    mmeasure (\sum_(i <- r | P i) F i) <= \max_(i <- r | P i) mmeasure (F i).
+  Proof.
+    elim/big_rec2: _ => /= [|i k p _ le]; first by rewrite mmeasure0.
+    apply/(leq_trans (mmeasureD_le _ _)); rewrite geq_max.
     by rewrite leq_maxl /= leq_max le orbC.
   Qed.
 
-  Lemma msizeN p: msize (-p) = msize p. 
-  Proof. by rewrite /msize (eq_big_perm _ (msuppN _)). Qed.
+  Lemma mmeasureN p: mmeasure (-p) = mmeasure p. 
+  Proof. by rewrite mmeasureE (eq_big_perm _ (msuppN _)). Qed.
 
-  Lemma msize_poly_eq0 p: (msize p == 0%N) = (p == 0).
+  Lemma mmeasure_poly_eq0 p: (mmeasure p == 0%N) = (p == 0).
   Proof.
-    apply/idP/eqP=> [z_p|->]; last by rewrite msize0.
-    apply/mpoly_eqP; move: z_p; rewrite /msize.
+    apply/idP/eqP=> [z_p|->]; last by rewrite mmeasure0.
+    apply/mpoly_eqP; move: z_p; rewrite mmeasureE.
     rewrite {2}[p]freeg_mpoly; case: (msupp p).
       by rewrite !big_nil /= freegU0.
     by move=> m q; rewrite !big_cons -leqn0 geq_max.
   Qed.
 
-  Lemma mpolySpred p : p != 0 -> msize p = (msize p).-1.+1.
-  Proof. by rewrite -msize_poly_eq0 -lt0n => /prednK. Qed.
+  Lemma mpolySpred p : p != 0 -> mmeasure p = (mmeasure p).-1.+1.
+  Proof. by rewrite -mmeasure_poly_eq0 -lt0n => /prednK. Qed.
 
-  Lemma msize_msupp0 (p : {mpoly R[n]}):
-    (msize p == 0%N) = (msupp p == [::]).
+  Lemma mmeasure_msupp0 (p : {mpoly R[n]}):
+    (mmeasure p == 0%N) = (msupp p == [::]).
   Proof.
-    rewrite /msize; case: (msupp _) => [|m s].
+    rewrite mmeasureE; case: (msupp _) => [|m s].
       by rewrite big_nil !eqxx.
     rewrite big_cons /= -[_::_==_]/false; apply/negbTE.
     by rewrite -lt0n leq_max.
   Qed.
-End MSize.
+End MMeasureZMod.
+
+(* -------------------------------------------------------------------- *)
+Definition msizeC    n R := @mmeasureC n R [measure of mdeg].
+Definition msizeD_le n R := @mmeasureD_le n R [measure of mdeg].
+Definition msize_sum n R := @mmeasure_sum n R [measure of mdeg].
+Definition msizeN    n R := @mmeasureN n R [measure of mdeg].
+
+Definition msize_poly_eq0 n R := @mmeasure_poly_eq0 n R [measure of mdeg].
+Definition msize_msupp0   n R := @mmeasure_msupp0 n R [measure of mdeg].
 
 (* -------------------------------------------------------------------- *)
 Section IterPoly.
@@ -1557,8 +1682,11 @@ Section MPolyRing.
   Lemma mpolyCM: {morph mpolyC n (R := _): p q / p * q}.
   Proof. exact: rmorphM. Qed.
 
+  Lemma mmeasure1 mf: mmeasure mf 1 = 1%N.
+  Proof. by rewrite mmeasureC oner_eq0. Qed.
+
   Lemma msize1: msize 1 = 1%N.
-  Proof. by rewrite msizeC oner_eq0. Qed.
+  Proof. by apply/mmeasure1. Qed.
 
   Lemma mpoly_scaleAl c p q: c *: (p * q) = (c *: p) * q.
   Proof. by rewrite -!mul_mpolyC mulrA. Qed.
@@ -1629,8 +1757,11 @@ Section MPolyVarTheory.
   Lemma mcoeffX m k: 'X_[m]@_k = (m == k)%:R.
   Proof. by rewrite unlock /mpolyX_def mcoeff_MPoly coeffU mul1r. Qed.
 
-  Lemma msizeX m: msize (n := n) 'X_[R, m] = (mdeg m).+1.
-  Proof. by rewrite /msize msuppX big_seq1. Qed.
+  Lemma mmeasureX mf m: mmeasure mf 'X_[R, m] = (mf m).+1.
+  Proof. by rewrite mmeasureE msuppX big_seq1. Qed.
+
+  Lemma msizeX m: msize 'X_[R, m] = (mdeg m).+1.
+  Proof. by apply/mmeasureX. Qed.
 
   Lemma msupp_rem (p : {mpoly R[n]}) m:
     perm_eq (msupp (p - p@_m *: 'X_[m])) (rem m (msupp p)).
@@ -1885,7 +2016,7 @@ Section MPolyLead.
 
   Lemma mlead_deg p: p != 0 -> (mdeg (mlead p)).+1 = msize p.
   Proof.
-    move=> /mlead_supp lc_in_p; rewrite /mlead /msize mdeg_bigmax.
+    move=> /mlead_supp lc_in_p; rewrite /mlead msizeE mdeg_bigmax.
     have: msupp p != [::] by case: (msupp p) lc_in_p.
     elim: (msupp p)=> [|m [|m' r] ih] // _; first by rewrite !big_seq1.
     by rewrite big_cons -maxnSS {}ih // !big_cons.
@@ -2728,7 +2859,7 @@ Section MPolyIdomain.
   Proof.
     move=> z_pq; apply/norP; case=> [nz_p nz_q].
     move/eqP: (msizeM nz_p nz_q); rewrite eq_sym z_pq.
-    by rewrite msize0 (mpolySpred nz_p) (mpolySpred nz_q) addnS.
+    by rewrite msize0 (mpolySpred _ nz_p) (mpolySpred _ nz_q) addnS.
   Qed.
 
   Definition mpoly_unit : pred {mpoly R[n]} :=
@@ -2767,7 +2898,7 @@ Section MPolyIdomain.
       by rewrite qp1 msize1.
     have [-> | nz_p] := eqVneq p 0; first by rewrite mulr0 msize0.
     have [-> | nz_q] := eqVneq q 0; first by rewrite mul0r msize0.
-    rewrite msizeM // (mpolySpred nz_p) (mpolySpred nz_q).
+    rewrite msizeM // (mpolySpred _ nz_p) (mpolySpred _ nz_q).
     by rewrite addnS addSn !eqSS addn_eq0 => /andP[] _ /eqP->.
   Qed.
 
@@ -2797,6 +2928,29 @@ Section MPolyIdomain.
   Canonical mpolynomial_idomainType :=
     Eval hnf in [idomainType of mpoly n R for mpoly_idomainType].
 End MPolyIdomain.
+
+(* -------------------------------------------------------------------- *)
+Section MWeightTheory.
+  Variable n : nat.
+  Variable R : ringType.
+
+  Implicit Types m : 'X_{1..n}.
+  Implicit Types p : {mpoly R[n]}.
+
+  Lemma leq_mdeg_mnmwgt m: mdeg m <= mnmwgt m.
+  Proof.
+    rewrite /mnmwgt mdegE leq_sum //= => i _.
+    by apply/leq_pmulr.
+  Qed.
+
+  Lemma leq_msize_meight p: msize p <= mweight p.
+  Proof.
+    rewrite !mmeasureE; elim: (msupp p)=> [|m r ih].
+      by rewrite !big_nil.
+    rewrite !big_cons geq_max !leq_max !ltnS.
+    by rewrite leq_mdeg_mnmwgt /= ih orbT.
+  Qed.
+End MWeightTheory.
 
 (* -------------------------------------------------------------------- *)
 Section MPolySym.
