@@ -2513,9 +2513,12 @@ Section MPolyComp.
 
   Local Notation "p \mPo lq" := (comp_mpoly lq p).
 
-  Lemma comp_mpolyE p lq:
-    p \mPo lq = \sum_(m <- msupp p) (p@_m *: \prod_(i < n) (tnth lq i)^+(m i)).
-  Proof. by apply/eq_bigr=> i _; rewrite mul_mpolyC. Qed.
+  Lemma comp_mpolyE p lq w: msize p <= w -> p \mPo lq =
+    \sum_(m : 'X_{1..n < w}) (p@_m *: \prod_(i < n) (tnth lq i)^+(m i)).
+  Proof.
+    move=> le_szp_w; rewrite /comp_mpoly (mmapE w) //=.
+    by apply/eq_bigr=> m _; rewrite mul_mpolyC.
+  Qed.
 
   Lemma comp_mpoly_is_additive lq : additive (comp_mpoly lq).
   Proof. by move=> p q; rewrite /comp_mpoly -mmapB. Qed.
@@ -2953,6 +2956,45 @@ Section MWeightTheory.
 End MWeightTheory.
 
 (* -------------------------------------------------------------------- *)
+Section MPerm.
+  Variable n : nat.
+  Variable R : ringType.
+
+  Implicit Types p q : {mpoly R[n]}.
+  Implicit Types m : 'X_{1..n}.
+
+  Local Notation "m # s" := [multinom m (s i) | i < n]
+    (at level 40, left associativity, format "m # s").
+
+  Lemma mperm_inj (s : 'S_n): injective (fun m => m#s).
+  Proof.
+    move=> m1 m2 /= /mnmP h; apply/mnmP=> i.
+    by move: (h (s^-1 i)%g); rewrite !mnmE permKV.
+  Qed.
+
+  Lemma mperm1 (m : 'X_{1..n}): m#(1 : 'S_n)%g = m.
+  Proof. by apply/mnmP=> i; rewrite mnmE perm1. Qed.
+
+  Lemma mpermM (m : 'X_{1..n}) (s1 s2 : 'S_n): m#(s1 * s2)%g = m#s2#s1.
+  Proof. by apply/mnmP=> i; rewrite !mnmE permM. Qed.
+
+  Lemma mpermKV (s : 'S_n):
+    cancel (fun m => m#s) (fun m => m#(s^-1))%g.
+  Proof. by move=> m /=; apply/mnmP=> i; rewrite !mnmE permKV. Qed.
+
+  Lemma mpermK (s : 'S_n):
+    cancel (fun m => m#(s^-1))%g (fun m => m#s).
+  Proof. by move=> m /=; apply/mnmP=> i; rewrite !mnmE permK. Qed.
+
+  Lemma mdeg_mperm m (s : 'S_n): mdeg (m#s) = mdeg m.
+  Proof.
+    rewrite !mdegE (reindex_inj (h := s^-1))%g /=; last first.
+      by apply/perm_inj.
+    by apply/eq_bigr=> j _; rewrite !mnmE permKV.
+  Qed.
+End MPerm.
+
+(* -------------------------------------------------------------------- *)
 Section MPolySym.
   Variable n : nat.
   Variable R : ringType.
@@ -3103,55 +3145,16 @@ Section MPolySym.
     by congr (_@__); apply/mnmP=> i /=; rewrite !mnmE permKV.     
   Qed.
 
-  Lemma mcomp_sym (p : {mpoly R[n]}) (t : n.-tuple {mpoly R[n]}):
-       (forall i, tnth t i \is symmetric)
-    -> p \mPo t \is symmetric.
+  Lemma msym1m p: msym 1 p = p.
+  Proof. by apply/mpolyP=> m; rewrite mcoeff_sym mperm1. Qed.
+
+  Lemma msymMm p (s1 s2 : 'S_n): msym (s1 * s2)%g p = msym s2 (msym s1 p).
+  Proof. by apply/mpolyP=> m; rewrite !mcoeff_sym mpermM. Qed.
+
+  Lemma inj_msym (s : 'S_n): injective (msym s).
   Proof.
-    move=> h; apply/issymP=> s; rewrite comp_mpolyE raddf_sum /=.
-    apply/eq_bigr=> i _; rewrite msymZ rmorph_prod /=.
-    congr (_ *: _); apply/eq_bigr=> j _; rewrite rmorphX /=.
-    by move/issymP: (h j)=> ->.
-  Qed.
-End MPolySym.
-
-Implicit Arguments symmetric [n R].
-
-(* -------------------------------------------------------------------- *)
-Section MPerm.
-  Variable n : nat.
-  Variable R : ringType.
-
-  Implicit Types p q : {mpoly R[n]}.
-  Implicit Types m : 'X_{1..n}.
-
-  Local Notation "m # s" := [multinom m (s i) | i < n]
-    (at level 40, left associativity, format "m # s").
-
-  Lemma mperm_inj (s : 'S_n): injective (fun m => m#s).
-  Proof.
-    move=> m1 m2 /= /mnmP h; apply/mnmP=> i.
-    by move: (h (s^-1 i)%g); rewrite !mnmE permKV.
-  Qed.
-
-  Lemma mperm1 (m : 'X_{1..n}): m#(1 : 'S_n)%g = m.
-  Proof. by apply/mnmP=> i; rewrite mnmE perm1. Qed.
-
-  Lemma mpermM (m : 'X_{1..n}) (s1 s2 : 'S_n): m#(s1 * s2)%g = m#s2#s1.
-  Proof. by apply/mnmP=> i; rewrite !mnmE permM. Qed.
-
-  Lemma mpermKV (s : 'S_n):
-    cancel (fun m => m#s) (fun m => m#(s^-1))%g.
-  Proof. by move=> m /=; apply/mnmP=> i; rewrite !mnmE permKV. Qed.
-
-  Lemma mpermK (s : 'S_n):
-    cancel (fun m => m#(s^-1))%g (fun m => m#s).
-  Proof. by move=> m /=; apply/mnmP=> i; rewrite !mnmE permK. Qed.
-
-  Lemma mdeg_mperm m (s : 'S_n): mdeg (m#s) = mdeg m.
-  Proof.
-    rewrite !mdegE (reindex_inj (h := s^-1))%g /=; last first.
-      by apply/perm_inj.
-    by apply/eq_bigr=> j _; rewrite !mnmE permKV.
+    move=> p q; move/(congr1 (msym s^-1)%g).
+    by rewrite -!msymMm mulgV !msym1m.
   Qed.
 
   Lemma mlead_msym_sorted (p : {mpoly R[n]}): p \is symmetric ->
@@ -3168,7 +3171,54 @@ Section MPerm.
     have: ms \in msupp p by rewrite issym_msupp // mlead_supp.
     by move/msupp_le_mlead/leoNgt/negbTE=> ->.
   Qed.
-End MPerm.
+End MPolySym.
+
+Implicit Arguments inj_msym [n R].
+Implicit Arguments symmetric [n R].
+
+(* -------------------------------------------------------------------- *)
+Section MPolySymComp.
+  Variable n : nat.
+  Variable R : ringType.
+
+  Lemma mcomp_sym k (p : {mpoly R[n]}) (t : n.-tuple {mpoly R[k]}):
+       (forall i : 'I_n, t`_i \is symmetric)
+    -> p \mPo t \is symmetric.
+  Proof.
+    move=> sym_t; pose_big_enough l.
+      rewrite (comp_mpolyE _ (w := l)) //. 2: by close.
+    apply/rpred_sum=> m _; apply/rpredZ/rpred_prod=> i _.
+    by rewrite (tnth_nth 0); apply/rpredX/sym_t.
+  Qed.
+End MPolySymComp.
+
+(* -------------------------------------------------------------------- *)
+Section MPolySymCompCom.
+  Variable n : nat.
+  Variable R : comRingType.
+
+  Lemma msym_comp_poly k (p : {mpoly R[n]}) (t : n.-tuple {mpoly R[k]}):
+       p \is symmetric
+    -> (forall s : 'S_k, perm_eq t [tuple (msym s t`_i) | i < n])
+    -> p \mPo t \is symmetric.
+  Proof.
+    move=> sym_p sym_t; apply/issymP=> s; pose_big_enough l.
+      rewrite (comp_mpolyE _ (w := l)) //. 2: by close.
+    case/tuple_perm_eqP: (sym_t s^-1)%g => s' tE.
+    pose F (m : 'X_{1..n < l}) := insubd m [multinom m (s' i) | i < n].
+    have FE m: F m = [multinom m (s' i) | i < n] :> 'X_{1..n}.
+      by rewrite insubdK // -topredE /= mdeg_mperm ?bmdeg.
+    rewrite raddf_sum {1}(reindex_inj (h := F)) /=; last first.
+      move=> m1 m2 /(congr1 (@bmnm _ _)); rewrite !FE.
+      by move/mperm_inj=> /val_inj.
+    apply/eq_bigr=> m _; rewrite linearZ /= FE msym_coeff //.
+    rewrite rmorph_prod /= (reindex_inj (perm_inj (s := s'^-1))) /=.
+    congr (_ *: _); apply/eq_bigr=> i _; rewrite rmorphX /=.
+    rewrite mnmE permKV (tnth_nth 0) {1}tE -!tnth_nth.
+    rewrite !tnth_map !tnth_ord_tuple permKV -msymMm.
+    by rewrite mulVg msym1m -tnth_nth.
+  Qed.
+End MPolySymCompCom.
 
 (* -------------------------------------------------------------------- *)
 Section MElemPolySym.
