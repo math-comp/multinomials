@@ -28,6 +28,19 @@ Local Notation esnd := (@snd _ _) (only parsing).
 
 (* -------------------------------------------------------------------- *)
 (* FIXME: move me or replace me                                         *)
+Lemma lreg_prod (T : eqType) (R : ringType) (r : seq T) (P : pred T) (F : T -> R):
+      (forall x, x \in r -> P x -> GRing.lreg (F x))
+   -> GRing.lreg (\prod_(x <- r | P x) F x).
+Proof.
+  elim: r => [|x r ih] h; first by rewrite !big_nil; apply/lreg1.
+  rewrite big_cons; set X := \prod_(_ <- _ | _) _.
+  have lreg_X: GRing.lreg X.
+    by apply/ih=> y y_in_r; apply: (h y); rewrite mem_behead.
+  by case Px: (P x)=> //; apply/lregM=> //; apply/h; rewrite ?mem_head.
+Qed.
+
+(* -------------------------------------------------------------------- *)
+(* FIXME: move me or replace me                                         *)
 Lemma subnB (T : Type) (r : seq T) (a b : T -> nat) (P : pred T):
   (forall i, P i -> b i <= a i) ->
        (\sum_(i <- r | P i) (a i - b i))%N
@@ -621,6 +634,15 @@ Notation "\sum_ ( i 'in' A | P ) F" :=
   (\big[+%MM/0%MM]_(i in A | P%B) F%MM) : multi_scope.
 Notation "\sum_ ( i 'in' A ) F" :=
   (\big[+%MM/0%MM]_(i in A) F%MM) : multi_scope.
+
+(* -------------------------------------------------------------------- *)
+Section MnmSum.
+  Variable n : nat.
+
+  Lemma sum_mnm_const (I : finType) (A : pred I) (m : 'X_{1..n}):
+    (\sum_(i in A) m = m *+ #|A|)%MM.
+  Proof. by rewrite big_const -iteropE. Qed.
+End MnmSum.
 
 (* -------------------------------------------------------------------- *)
 Section MultinomOrder.
@@ -1611,6 +1633,9 @@ Section MPolyRing.
   Canonical mpolynomial_ringType :=
     Eval hnf in RingType (mpoly n R) mpoly_ringMixin.
 
+  Lemma mcoeff1 m: 1@_m = (m == 0%MM)%:R.
+  Proof. by rewrite mcoeffC mul1r. Qed.
+
   Lemma mcoeffM p q m:
     (p * q)@_m =
       \sum_(k : 'X_{1..n < !|m|.+1, !|m|.+1} | m == (k.1 + k.2)%MM)
@@ -2004,7 +2029,7 @@ Section MPolyLead.
   Definition mlead1: mlead 1 = 0%MM.
   Proof. by rewrite mleadC. Qed.
 
-  Lemma mleadX m: mlead 'X_[m] = m.
+  Lemma mleadXm m: mlead 'X_[m] = m.
   Proof. by rewrite /mlead msuppX big_seq1 //; apply/lem_total. Qed.
 
   Lemma mlead_supp p: p != 0 -> mlead p \in msupp p.
@@ -2025,10 +2050,34 @@ Section MPolyLead.
   Lemma msupp_le_mlead p m: m \in msupp p -> (m <= mlead p)%O.
   Proof. by move=> m_in_p; apply/(leo_bigmax id)=> //; apply/lem_total. Qed.
 
+  Lemma mleadN p: mlead (-p) = mlead p.
+  Proof.
+    have [->|nz_p] := eqVneq p 0; first by rewrite oppr0.
+    by rewrite /mlead (eq_big_perm _ (msuppN p)) //; apply/lem_total.
+  Qed.
+
+  Lemma mleadD_le p q: (mlead (p + q) <= maxo (mlead p) (mlead q))%O.
+  Proof.
+    have [->|] := eqVneq (p+q) 0; first by rewrite mlead0 le0o.
+    move/mlead_supp/msuppD_le; rewrite mem_cat.
+    rewrite leo_max; last by apply/lem_total. case/orP.
+    + by move/msupp_le_mlead=> ->; rewrite orTb.
+    + by move/msupp_le_mlead=> ->; rewrite orbT.
+  Qed.    
+
+  Lemma mleadB_le p q: (mlead (p - q) <= maxo (mlead p) (mlead q))%O.
+  Proof. by rewrite -(mleadN q); apply/mleadD_le. Qed.
+
   Lemma mleadc_eq0 p: (p@_(mlead p) == 0) = (p == 0).
   Proof.
     apply/idP/idP => [|/eqP->]; last by rewrite mcoeff0.
     by case: (p =P 0) => // /eqP /mlead_supp; rewrite mcoeff_eq0 => ->.
+  Qed.
+
+  Lemma mcoeff_gt_mlead p m: (mlead p < m)%O -> p@_m = 0.
+  Proof.
+    move=> lt_lcp_m; apply/eqP; rewrite mcoeff_eq0; apply/negP.
+    by move/msupp_le_mlead/leoNgt; rewrite lt_lcp_m.
   Qed.
 
   Lemma mleadM_le p q: (mlead (p * q) <= (mlead p + mlead q)%MM)%O.
@@ -2036,6 +2085,13 @@ Section MPolyLead.
     have [->|] := eqVneq (p * q) 0; first by rewrite mlead0 le0o.
     move/mlead_supp/msuppM_le/allpairsP => [[m1 m2] /=] [m1_in_p m2_in_q ->].
     by apply/lem_add; apply/msupp_le_mlead.
+  Qed.
+
+  Lemma mlead_prod_le T (r : seq T) (P : pred T) F:
+    (mlead (\prod_(p <- r | P p) F p) <= (\sum_(p <- r | P p) mlead (F p))%MM)%O.
+  Proof.
+    elim/big_rec2: _ => /= [|x m p Px ih]; first by rewrite mlead1.
+    by apply/(leo_trans (mleadM_le (F x) p)); apply/lem_add.
   Qed.
 
   Notation mleadc p := (p@_(mlead p)).
@@ -2069,6 +2125,29 @@ Section MPolyLead.
     by move/lto_eqF=> ->; rewrite mulr0.
   Qed.
 
+  Lemma mleadcMW p q (mp mq : 'X_{1..n}):
+       (mlead p <= mp)%O -> (mlead q <= mq)%O
+    -> (p * q)@_(mp + mq)%MM = p@_mp * q@_mq.
+  Proof.
+    move=> lep leq; case: (boolP ((mlead p < mp) || (mlead q < mq)))%O.
+      move=> lt_lm; have lt_lmD: ((mlead p + mlead q)%MM < (mp + mq)%MM)%O.
+        by case/orP: lt_lm=> lt; [apply/ltm_lem_add | apply/lem_ltm_add].
+      move/(leo_lto_trans (mleadM_le p q))/mcoeff_gt_mlead: lt_lmD.
+      by case/orP: lt_lm=> /mcoeff_gt_mlead ->; rewrite ?(mul0r, mulr0).
+    case/norP; rewrite -!letNgt // => gep geq.
+    move: (eqo_leq (mlead p) mp) (eqo_leq (mlead q) mq).
+    by rewrite lep leq gep geq=> /= /eqP<- /eqP<-; apply/mleadcM.
+  Qed.    
+
+  Lemma mleadc_prod T (r : seq T) (P : pred T) (F : T -> {mpoly R[n]}):
+       (\prod_(p <- r | P p) F p)@_(\sum_(p <- r | P p) mlead (F p))%MM
+    =  \prod_(p <- r | P p) (mleadc (F p)).
+  Proof.
+    elim: r => [|p r ih]; first by rewrite !big_nil mcoeff1 eqxx.
+    rewrite !big_cons; case: (P p)=> //; rewrite mleadcMW //.
+      by rewrite ih. by apply/mlead_prod_le.
+  Qed.    
+
   Lemma mleadcZ c p: (c *: p)@_(mlead p) = c * (mleadc p).
   Proof. by rewrite mcoeffZ. Qed.
 
@@ -2078,7 +2157,72 @@ Section MPolyLead.
     move: (mleadM_le p q); rewrite leo_eqVlt; case/orP=> [/eqP->//|].
     rewrite -mleadcM mcoeff_eq0 negbK => ltm /msupp_le_mlead lem.
     by move: (lto_leo_trans ltm lem); rewrite ltoo.
-  Qed.    
+  Qed.
+
+  Lemma mleadcM_proper p q: mleadc p * mleadc q != 0 ->
+    mleadc (p * q) = mleadc p * mleadc q.
+  Proof. by move/mleadM_proper=> ->; rewrite mleadcM. Qed.
+
+  Lemma lreg_mleadc p: GRing.lreg (mleadc p) -> GRing.lreg p.
+  Proof.
+    move/mulrI_eq0=> reg_p; apply/mulrI0_lreg=> q /eqP.
+    apply/contraTeq => nz_q; rewrite -mleadc_eq0.
+    by rewrite mleadcM_proper reg_p mleadc_eq0.
+  Qed.
+
+  Section MLeadProd.
+    Variable T : eqType.
+    Variable r : seq T.
+    Variable P : pred T.
+    Variable F : T -> {mpoly R[n]}.
+
+    Lemma mlead_prod_proper:
+           (forall x, x \in r -> P x -> GRing.lreg (mleadc (F x)))
+      ->   mlead (\prod_(p <- r | P p) F p)
+         = (\sum_(p <- r | P p) mlead (F p))%MM.
+    Proof.
+      pose Q (s : seq T) := forall x, x \in s -> P x -> GRing.lreg (mleadc (F x)).
+      rewrite -/(Q r); elim: r => [|x s ih] h; first by rewrite !big_nil mleadC.
+      have lreg_s: Q s.
+        by move=> y y_in_s; apply: (h y); rewrite mem_behead.
+      rewrite !big_cons; case: (boolP (P x))=> Px; last by apply/ih.
+      have lreg_x := (h x (mem_head _ _) Px).
+      rewrite mleadM_proper; first by rewrite ih.
+      by rewrite mulrI_eq0 ?ih // mleadc_prod; apply/lreg_neq0/lreg_prod.
+    Qed.    
+
+    Lemma mleadc_prod_proper:
+           (forall x, x \in r -> P x -> GRing.lreg (mleadc (F x)))
+      ->   mleadc (\prod_(p <- r | P p) F p)
+         = \prod_(p <- r | P p) mleadc (F p).
+    Proof. by move/mlead_prod_proper=> ->; rewrite mleadc_prod. Qed.
+  End MLeadProd.
+
+  Lemma mleadX_le p k: (mlead (p ^+ k) <= (mlead p *+ k)%MM)%O.
+  Proof.
+    rewrite -[k](card_ord k) -prodr_const -sum_mnm_const.
+    by apply/mlead_prod_le.
+  Qed.
+
+  Lemma mleadcX p k: (p ^+ k)@_(mlead p *+ k) = (mleadc p) ^+ k.
+  Proof.
+    rewrite -[k](card_ord k) -prodr_const -sum_mnm_const.
+    by rewrite mleadc_prod prodr_const.
+  Qed.
+
+  Lemma mleadX_proper p k: GRing.lreg (mleadc p) ->
+    mlead (p ^+ k) = (mlead p *+ k)%MM.
+  Proof.
+    move=> h; rewrite -[k](card_ord k) -prodr_const -sum_mnm_const.
+    by apply/mlead_prod_proper=> /= i _ _.
+  Qed.
+
+  Lemma mleadcX_proper p k: GRing.lreg (mleadc p) ->
+    mleadc (p ^+ k) = mleadc p ^+ k.
+  Proof.
+    move=> h; rewrite -[k](card_ord k) -!prodr_const.
+    by apply/mleadc_prod_proper=> /= i _ _.
+  Qed.
 
   Lemma msizeM_le (p q : {mpoly R[n]}):
     msize (p * q) <= (msize p + msize q).+1.
@@ -2830,6 +2974,23 @@ Section MPolyIdomain.
     by rewrite mulf_neq0 // mleadc_eq0.
   Qed.
 
+  Lemma mlead_prod (T : eqType) (r : seq T) (P : pred T) (F : T -> {mpoly R[n]}):
+       (forall x, x \in r -> P x -> F x != 0)
+    ->   mlead (\prod_(p <- r | P p) F p)
+       = (\sum_(p <- r | P p) mlead (F p))%MM.
+  Proof.
+    move=> nz_Fr; rewrite mlead_prod_proper //.
+    move=> x x_in_r Px; apply/lregP; rewrite mleadc_eq0.
+    by apply/nz_Fr.
+  Qed.
+
+  Lemma mleadX p k: p != 0 ->
+    mlead (p ^+ k) = (mlead p *+ k)%MM.
+  Proof.
+    move=> nz_p; rewrite mleadX_proper //.
+    by apply/lregP; rewrite mleadc_eq0.
+  Qed.
+
   Lemma mleadZ c p: c != 0 -> mlead (c *: p) = mlead p.
   Proof.
     move=> nz_c; have [->|nz_p] := eqVneq p 0.
@@ -3406,6 +3567,18 @@ Section MElemPolySym.
       by rewrite subsetT cardsT card_ord leqnn.
     by apply/eq_big=> //= x; rewrite in_setT.
   Qed.
+
+  Lemma mesym_neq0 k: k <= n ->
+    's_k != 0 :> {mpoly R[n]}.
+  Proof. admit. Qed.
+
+  Lemma mlead_mesym k: k <= n ->
+    mlead 's_k = [multinom (i <= k : nat) | i < n].
+  Proof. admit. Qed.
+
+  Lemma mleadc_mesym k: k <= n ->
+    mleadc 's_k = 1.
+  Proof. admit. Qed.
 End MElemPolySym.
 
 Local Notation "''s_' ( K , n , k )" := (@mesym n K k).
@@ -3716,7 +3889,71 @@ Section MESymFundamental.
   Local Notation "m # s" := [multinom m (s i) | i < n]
     (at level 40, left associativity, format "m # s").
 
-  Goal forall p, p \is symmetric ->
+  Lemma mleadrect (P : {mpoly R[n]} -> Type):
+    (forall p, (forall q, (mlead q < mlead p)%O -> P q) -> P p) ->
+    forall p, P p.
+  Proof. admit. Qed.
+
+  Lemma sym_fundamental p: p \is symmetric ->
     { t | t \mPo [tuple 's_(n, i) | i < n] = p }.
-  Proof. Abort.
+  Proof.
+    set S := [tuple 's_(n, i) | i < n].
+    elim/mleadrect: p=> p ih sym_p; have [->|nz_p] := eqVneq p 0.
+      by exists 0; rewrite comp_mpoly0.
+    pose m := mlead p; pose c i := nth 0%N m i.
+    pose F := fun i => (c i - c i.+1)%N; pose l := F#val.
+    have lk k: (m k = \sum_(j : 'I_n | k <= j) l j)%N.
+      transitivity (\sum_(k <= j < n) F j)%N; last first.
+        rewrite (eq_bigr (F \o val))=> [|i]; last by rewrite mnmE.
+        rewrite -big_mkord (@big_cat_nat _ _ _ k 0) // 1?ltnW //=.
+        apply/esym; rewrite big_nat_cond big1 ?add0n; last first.
+          by move=> i /andP[/andP[_]]; rewrite ltnNge => /negbTE->.
+        rewrite big_mkcond /= !big_seq; apply/eq_bigr=> /=.
+        by move=> i; rewrite mem_iota=> /andP[->].
+      rewrite -[val k]add0n big_addn /= sumn_range.
+        rewrite add0n subnK 1?ltnW // /c -tnth_nth.
+        by rewrite nth_default ?subn0 // size_tuple.
+      move=> i j; rewrite ltnS => /andP[le_ij].
+      rewrite -(leq_add2r k) subnK ?[k<=_]ltnW //.
+      rewrite leq_eqVlt; case/orP => [/eqP->|].
+        by rewrite {1}/c nth_default // size_tuple.
+      move=> lt_jDk_n; rewrite -(leq_add2r k) in le_ij.
+      have/(leq_ltn_trans) := le_ij => /(_ _ lt_jDk_n) => lt_iDk_n.
+      pose i' := Ordinal lt_iDk_n; pose j' := Ordinal lt_jDk_n.
+      move: (mlead_msym_sorted sym_p (i := i') (j := j') le_ij).
+      by rewrite /fun_of_multinom !(tnth_nth 0%N).
+    pose q := p - p@_m *: ('X_[l] \mPo S); have [z_q|nz_q] := eqVneq q 0.
+      exists (p@_m *: 'X_[l]); move/eqP: z_q; rewrite /q subr_eq0.
+      by move/eqP/esym; rewrite comp_mpolyZ.
+    elim: (ih q); first last.
+    + rewrite /q rpredB // rpredZ // mcomp_sym // => i.
+      by rewrite -tnth_nth tnth_map mesym_sym.
+    + have mE: mlead ('X_[l] \mPo S) = m.
+        rewrite comp_mpolyX mlead_prod_proper /=; last first.
+          move=> i _ _; rewrite tnth_map tnth_ord_tuple.
+          rewrite mleadX ?mesym_neq0 1?ltnW // mleadcX; apply/lregX.
+          by apply/lregP; rewrite mleadc_eq0 mesym_neq0 1?ltnW.
+        apply/mnmP=> i; pose C (x : 'I_n) := if i <= x then l x else 0%N.
+        rewrite mnm_sum (eq_bigr C)=> [|j _]; last first.
+          rewrite tnth_map tnth_ord_tuple mleadX ?mesym_neq0 1?ltnW //.
+          rewrite mlead_mesym 1?ltnW // mnmMn mnmE /C /=.
+          by case: (i <= j); rewrite ?(muln1, muln0) // mnmE.
+        by rewrite {}/C /= -big_mkcond /= lk.
+      rewrite lto_neqAle; apply/andP; split; last first.
+        have := mleadB_le p (p@_m *: ('X_[l] \mPo S)).
+        by rewrite mleadZ ?mleadc_eq0 // mE maxoo //; apply/lem_total.
+      apply/eqP=> eq_lm_pq; have := nz_q; rewrite -mleadc_eq0.
+        rewrite eq_lm_pq /q mcoeffB mcoeffZ -/m -{3}mE.
+        rewrite comp_mpolyX mlead_prod ?mleadc_prod; last first.
+          move=> i _ _; rewrite tnth_map tnth_ord_tuple.
+          by rewrite expf_neq0 // mesym_neq0 1?ltnW.
+        rewrite (eq_bigr (fun _ => 1)) /=; last first.
+          move=> i _; rewrite tnth_map tnth_ord_tuple.
+          rewrite mleadX ?mesym_neq0 1?ltnW // mleadcX.
+          by rewrite mleadc_mesym 1?ltnW // expr1n.
+        by rewrite prodr_const expr1n mulr1 subrr eqxx.
+    move=> t /esym qE; exists (t + p@_m *: 'X_[l]).
+    rewrite comp_mpolyD comp_mpolyZ -qE /q.
+    by rewrite addrAC -addrA subrr addr0.
+  Qed.
 End MESymFundamental.
