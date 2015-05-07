@@ -3979,9 +3979,6 @@ Section MESymFundamental.
   Variable n : nat.
   Variable R : idomainType.
 
-  Implicit Types p q : {mpoly R[n]}.
-  Implicit Types m : 'X_{1..n}.
-
   Local Notation "m # s" := [multinom m (s i) | i < n]
     (at level 40, left associativity, format "m # s").
 
@@ -3990,22 +3987,14 @@ Section MESymFundamental.
     forall p, P p.
   Proof. admit. Qed.
 
-  Lemma sym_fundamental p: p \is symmetric ->
-    { t | t \mPo [tuple 's_(n, i.+1) | i < n] = p }.
+  Let layout (m : 'X_{1..n}):
+    let c i := nth 0%N m i in
+    let F i := (c i - c i.+1)%N in
+
+       (forall i j : 'I_n, i <= j -> m j <= m i)
+    -> forall k, m k = (\sum_(j : 'I_n | k <= j) (F#val) j)%N.
   Proof.
-    set S := [tuple 's_(n, i.+1) | i < n].
-    elim/mleadrect: p=> p ih sym_p; have [->|nz_p] := eqVneq p 0.
-      by exists 0; rewrite comp_mpoly0.
-    pose m := mlead p; pose c i := nth 0%N m i.
-    pose F := fun i => (c i - c i.+1)%N; pose l := F#val.
-    have lk k: (m k = \sum_(j : 'I_n | k <= j) l j)%N.
-      transitivity (\sum_(k <= j < n) F j)%N; last first.
-        rewrite (eq_bigr (F \o val))=> [|i]; last by rewrite mnmE.
-        rewrite -big_mkord (@big_cat_nat _ _ _ k 0) // 1?ltnW //=.
-        apply/esym; rewrite big_nat_cond big1 ?add0n; last first.
-          by move=> i /andP[/andP[_]]; rewrite ltnNge => /negbTE->.
-        rewrite big_mkcond /= !big_seq; apply/eq_bigr=> /=.
-        by move=> i; rewrite mem_iota=> /andP[->].
+    move=> c F srt_m k; transitivity (\sum_(k <= j < n) F j)%N.
       rewrite -[val k]add0n big_addn /= sumn_range.
         rewrite add0n subnK 1?ltnW // /c -tnth_nth.
         by rewrite nth_default ?subn0 // size_tuple.
@@ -4016,38 +4005,62 @@ Section MESymFundamental.
       move=> lt_jDk_n; rewrite -(leq_add2r k) in le_ij.
       have/(leq_ltn_trans) := le_ij => /(_ _ lt_jDk_n) => lt_iDk_n.
       pose i' := Ordinal lt_iDk_n; pose j' := Ordinal lt_jDk_n.
-      move: (mlead_msym_sorted sym_p (i := i') (j := j') le_ij).
-      by rewrite /fun_of_multinom !(tnth_nth 0%N).
+      by move: (srt_m i' j' le_ij); rewrite /fun_of_multinom !(tnth_nth 0%N).
+    rewrite (eq_bigr (F \o val))=> [|i]; last by rewrite mnmE.
+    rewrite -big_mkord (@big_cat_nat _ _ _ k 0) // 1?ltnW //=.
+    apply/esym; rewrite big_nat_cond big1 ?add0n; last first.
+      by move=> i /andP[/andP[_]]; rewrite ltnNge => /negbTE->.
+    rewrite big_mkcond /= !big_seq; apply/eq_bigr=> /=.
+    by move=> i; rewrite mem_iota=> /andP[->].
+  Qed.
+
+  Let mlead_layout (m : 'X_{1..n}):
+    let c i := nth 0%N m i in
+    let F i := (c i - c i.+1)%N in
+
+       (forall i j : 'I_n, i <= j -> m j <= m i)
+    -> mlead ('X_[R, F#val] \mPo [tuple 's_(n, i.+1) | i < n]) = m.
+  Proof.
+    move=> c F srt_m. rewrite comp_mpolyX mlead_prod_proper /=; last first.
+      move=> i _ _; rewrite tnth_map tnth_ord_tuple.
+      rewrite mleadX ?mesym_neq0 // mleadcX; apply/lregX.
+      by apply/lregP; rewrite mleadc_eq0 mesym_neq0.
+    apply/mnmP=> i; pose C (x : 'I_n) := if i <= x then (F#val) x else 0%N.
+    rewrite mnm_sum (eq_bigr C)=> [|j _]; last first.
+      rewrite tnth_map tnth_ord_tuple mleadX ?mesym_neq0 //.
+      rewrite mlead_mesym // mnmMn !mnmE /C /= ltnS.
+      by case: (i <= j); rewrite ?(muln1, muln0) // mnmE.
+    by rewrite {}/C /= -big_mkcond /= layout.
+  Qed.
+
+  Lemma sym_fundamental (p : {mpoly R[n]}):
+    p \is symmetric -> { t | t \mPo [tuple 's_(n, i.+1) | i < n] = p }.
+  Proof.
+    set S := [tuple 's_(n, i.+1) | i < n].
+    elim/mleadrect: p=> p ih sym_p; have [->|nz_p] := eqVneq p 0.
+      by exists 0; rewrite comp_mpoly0.
+    set m := mlead p; pose c := nth 0%N m.
+    pose F i := (c i - c i.+1)%N; pose l := F#val.
     pose q := p - p@_m *: ('X_[l] \mPo S); have [z_q|nz_q] := eqVneq q 0.
       exists (p@_m *: 'X_[l]); move/eqP: z_q; rewrite /q subr_eq0.
       by move/eqP/esym; rewrite comp_mpolyZ.
     elim: (ih q); first last.
     + rewrite /q rpredB // rpredZ // mcomp_sym // => i.
       by rewrite -tnth_nth tnth_map mesym_sym.
-    + have mE: mlead ('X_[l] \mPo S) = m.
-        rewrite comp_mpolyX mlead_prod_proper /=; last first.
-          move=> i _ _; rewrite tnth_map tnth_ord_tuple.
-          rewrite mleadX ?mesym_neq0 // mleadcX; apply/lregX.
-          by apply/lregP; rewrite mleadc_eq0 mesym_neq0.
-        apply/mnmP=> i; pose C (x : 'I_n) := if i <= x then l x else 0%N.
-        rewrite mnm_sum (eq_bigr C)=> [|j _]; last first.
-          rewrite tnth_map tnth_ord_tuple mleadX ?mesym_neq0 //.
-          rewrite mlead_mesym // mnmMn mnmE /C /= ltnS.
-          by case: (i <= j); rewrite ?(muln1, muln0) // mnmE.
-        by rewrite {}/C /= -big_mkcond /= lk.
-      rewrite lto_neqAle; apply/andP; split; last first.
-        have := mleadB_le p (p@_m *: ('X_[l] \mPo S)).
-        by rewrite mleadZ ?mleadc_eq0 // mE maxoo //.
+    + have mE := (mlead_layout (mlead_msym_sorted sym_p)).
+      rewrite -/m -/c -/l -/S in mE; rewrite lto_neqAle andbC.
+      have := mleadB_le p (p@_m *: ('X_[l] \mPo S)).
+      rewrite mleadZ ?mleadc_eq0 // ?mE ?maxoo // => -> /=.
       apply/eqP=> eq_lm_pq; have := nz_q; rewrite -mleadc_eq0.
-        rewrite eq_lm_pq /q mcoeffB mcoeffZ -/m -{3}mE.
-        rewrite comp_mpolyX mlead_prod ?mleadc_prod; last first.
-          move=> i _ _; rewrite tnth_map tnth_ord_tuple.
-          by rewrite expf_neq0 // mesym_neq0.
-        rewrite (eq_bigr (fun _ => 1)) /=; last first.
-          move=> i _; rewrite tnth_map tnth_ord_tuple.
-          rewrite mleadX ?mesym_neq0 // mleadcX.
-          by rewrite mleadc_mesym // expr1n.
-        by rewrite prodr_const expr1n mulr1 subrr eqxx.
+      rewrite eq_lm_pq /q mcoeffB mcoeffZ -/m -{3}mE.
+      rewrite comp_mpolyX mlead_prod ?mleadc_prod; last first.
+        move=> i _ _; rewrite tnth_map tnth_ord_tuple.
+        by rewrite expf_neq0 // mesym_neq0.
+      rewrite (eq_bigr (fun _ => 1)) /=; last first.
+        move=> i _; rewrite tnth_map tnth_ord_tuple.
+        rewrite mleadX ?mesym_neq0 // mleadcX.
+        by rewrite mleadc_mesym // expr1n.
+      by rewrite prodr_const expr1n mulr1 subrr eqxx.
     move=> t /esym qE; exists (t + p@_m *: 'X_[l]).
     rewrite comp_mpolyD comp_mpolyZ -qE /q.
     by rewrite addrAC -addrA subrr addr0.
