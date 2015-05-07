@@ -41,6 +41,12 @@ Qed.
 
 (* -------------------------------------------------------------------- *)
 (* FIXME: move me or replace me                                         *)
+Lemma flatten_seq1 (T : Type) (r : seq T):
+  flatten [seq [:: x] | x <- r] = r.
+Proof. by elim: r=> /= [|x r ->]. Qed.
+
+(* -------------------------------------------------------------------- *)
+(* FIXME: move me or replace me                                         *)
 Lemma subnB (T : Type) (r : seq T) (a b : T -> nat) (P : pred T):
   (forall i, P i -> b i <= a i) ->
        (\sum_(i <- r | P i) (a i - b i))%N
@@ -692,7 +698,7 @@ Section MultinomOrder.
   Lemma lem_total: total (@le multinom_posetType).
   Proof. exact/lemc_total. Qed.
 
-  Hint Resolve lem_total.
+  Local Hint Resolve lem_total.
 
   Definition multinom_CPOMixin :=
     CPOMixin le0m.
@@ -790,7 +796,10 @@ Section MultinomOrder.
   Qed.
 End MultinomOrder.
 
-Hint Resolve lem_total.
+Lemma poset_lem_total n: @total [posetType of 'X_{1..n}] <=%O.
+Proof. by apply/lem_total. Qed.
+
+Hint Extern 0 (total _) => by apply/poset_lem_total.
 
 (* -------------------------------------------------------------------- *)
 Section DegBoundMultinom.
@@ -2030,7 +2039,7 @@ Section MPolyLead.
   Proof. by rewrite mleadC. Qed.
 
   Lemma mleadXm m: mlead 'X_[m] = m.
-  Proof. by rewrite /mlead msuppX big_seq1 //; apply/lem_total. Qed.
+  Proof. by rewrite /mlead msuppX big_seq1. Qed.
 
   Lemma mlead_supp p: p != 0 -> mlead p \in msupp p.
   Proof.
@@ -2048,19 +2057,19 @@ Section MPolyLead.
   Qed.
 
   Lemma msupp_le_mlead p m: m \in msupp p -> (m <= mlead p)%O.
-  Proof. by move=> m_in_p; apply/(leo_bigmax id)=> //; apply/lem_total. Qed.
+  Proof. by move=> m_in_p; apply/(leo_bigmax id). Qed.
 
   Lemma mleadN p: mlead (-p) = mlead p.
   Proof.
     have [->|nz_p] := eqVneq p 0; first by rewrite oppr0.
-    by rewrite /mlead (eq_big_perm _ (msuppN p)) //; apply/lem_total.
+    by rewrite /mlead (eq_big_perm _ (msuppN p)).
   Qed.
 
   Lemma mleadD_le p q: (mlead (p + q) <= maxo (mlead p) (mlead q))%O.
   Proof.
     have [->|] := eqVneq (p+q) 0; first by rewrite mlead0 le0o.
     move/mlead_supp/msuppD_le; rewrite mem_cat.
-    rewrite leo_max; last by apply/lem_total. case/orP.
+    rewrite leo_max //; case/orP.
     + by move/msupp_le_mlead=> ->; rewrite orTb.
     + by move/msupp_le_mlead=> ->; rewrite orbT.
   Qed.    
@@ -3387,6 +3396,7 @@ Section MElemPolySym.
   Variable R : ringType.
 
   Implicit Types p q r : {mpoly R[n]}.
+  Implicit Types h : {set 'I_n}.
 
   Definition mesym (k : nat): {mpoly R[n]} :=
     \sum_(h : {set 'I_n} | #|h| == k) \prod_(i in h) 'X_i.
@@ -3396,36 +3406,226 @@ Section MElemPolySym.
   Local Notation "m # s" := [multinom m (s i) | i < n]
     (at level 40, left associativity, format "m # s").
 
-  Lemma msupp_mesymP (k : nat) m:
-      [exists h : {set 'I_n},
-         (#|h| == k) && (m == [multinom (i \in h : nat) | i < n])]
-    = (m \in msupp 's_k).
+  Definition mesym1 (h : {set 'I_n}) :=
+    [multinom (i \in h : nat) | i < n].
+
+  Lemma mesym1_set0: mesym1 set0 = 0%MM.
+  Proof. by apply/mnmP=> i; rewrite mnmE mnm0E in_set0. Qed.
+
+  Lemma mesym1_set1 i: mesym1 [set i] = U_(i)%MM.
+  Proof. by apply/mnmP=> j; rewrite mnmE in_set1 mnmE eq_sym. Qed.
+
+  Lemma mesym1_setT: mesym1 setT = (\sum_(i < n) U_(i))%MM.
   Proof.
-    pose F (h : {set 'I_n}) := [multinom (i \in h : nat) | i < n].
-    have ->: 's_k = \sum_(h : {set 'I_n} | #|h| == k) 'X_[F h].
-      apply/eq_bigr=> /= h _; rewrite mprodXE; congr 'X_[_].
-      apply/mnmP=> i; rewrite mnmE mnm_sum; case: (boolP (i \in h)).
-        move/(bigD1 _)=> -> /=; rewrite mnm1E eqxx big1 ?addn0 //.
-        by move=> j /andP[_]; rewrite mnm1E=> /negbTE->.
-      move=> i_notin_h; rewrite big1 // => j j_in_h.
-      move/memPn: i_notin_h => /(_ _ j_in_h) /negbTE.
-      by rewrite mnmE=> ->.
-    rewrite (perm_eq_mem (msupp_sum _ _ _)) /index_enum -enumT /=; first last.
-    + move=> /= h1 h2 _ _ ne_h1h2 {m} m /=; rewrite !msuppX !mem_seq1.
-      case: eqP=> //= ->; apply/negP=> /eqP /mnmP h.
-      move/eqP/setP: ne_h1h2=> [/= i]; move: (h i).
-      by rewrite !mnmE; do! case: (_ \in _).
-    + by rewrite enum_uniq.
-    apply/existsP/idP.
-      case=> h /andP[/eqP sz_h /eqP->]; apply/flattenP; exists [:: F h].
-        apply/mapP; exists h; rewrite ?msuppX //.
-        by rewrite mem_filter sz_h eqxx mem_enum.
-      by rewrite mem_seq1.
-    move/flattenP=> /= [ms] /mapP[/= h]; rewrite mem_filter.
-    case/andP=> sz_h _ ->; rewrite msuppX mem_seq1.
-    by move/eqP->; exists h; rewrite sz_h eqxx.
+    apply/mnmP=> i; rewrite mnmE mnm_sum in_setT /=.
+    rewrite (bigD1 i) //= mnmE eqxx big1 ?addn0 //.
+    by move=> j; rewrite mnmE => /negbTE->.
   Qed.
 
+  Lemma mesymE k: 's_k = \sum_(h : {set 'I_n} | #|h| == k) 'X_[mesym1 h].
+  Proof.
+    apply/eq_bigr=> /= h _; rewrite mprodXE; congr 'X_[_].
+    apply/mnmP=> i; rewrite mnmE mnm_sum big_mkcond /=.
+    rewrite (bigD1 i) //= mnmE eqxx /= big1 ?addn0 // => j ne_ji.
+    by case: (_ \in _)=> //; rewrite mnmE (negbTE ne_ji).
+  Qed.
+
+  Lemma mdeg_mesym1 h: mdeg (mesym1 h) = #|h|.
+  Proof.
+    rewrite mdegE (bigID (mem h)) /= addnC big1 ?add0n; last first.
+      by move=> i i_notin_h; rewrite mnmE (negbTE i_notin_h).
+    rewrite (eq_bigr (fun _ => 1%N)) ?sum1_card //.
+    by move=> i i_in_h; rewrite mnmE i_in_h.
+  Qed.
+
+  Lemma inj_mesym1: injective mesym1.
+  Proof.
+    move=> h1 h2 /mnmP eqh; apply/setP=> /= i.
+    by have := eqh i; rewrite !mnmE; do! case: (_ \in _).
+  Qed.
+
+  Local Hint Resolve inj_mesym1.
+
+  Lemma msupp_mesym k:
+    perm_eq
+      (msupp 's_k)
+      [seq mesym1 h | h : {set 'I_n} <- enum {set 'I_n} & #|h| == k].
+  Proof.
+    rewrite mesymE; apply/(perm_eq_trans (msupp_sum _ _ _))=> /=.
+    + by rewrite /index_enum -enumT enum_uniq.
+    + move=> h1 h2 _ _ ne_h1h2 m /=; rewrite !msuppX !mem_seq1.
+      apply/negbTE/negP=> /andP[/eqP->] /eqP /inj_mesym1.
+      by move/eqP; rewrite (negbTE ne_h1h2).
+    rewrite /index_enum -enumT /= (eq_map (fun h => msuppX _ (mesym1 h))).
+    by rewrite (map_comp (cons^~ [::])) flatten_seq1.
+  Qed.
+
+  Lemma msupp_mesymP (k : nat) m:
+      (m \in msupp 's_k)
+    = [exists h : {set 'I_n}, (#|h| == k) && (m == mesym1 h)].
+  Proof.
+    rewrite (perm_eq_mem (msupp_mesym _)); apply/idP/existsP=> /=.
+    + case/mapP=> /= h; rewrite mem_filter=> /andP[/eqP<- _ ->].
+      by exists h; rewrite !eqxx.
+    + case=> h /andP[/eqP<- /eqP->]; apply/mapP; exists h=> //.
+      by rewrite mem_filter eqxx /= mem_enum.
+  Qed.
+
+  Definition mechar k (m : 'X_{1..n}) :=
+    (mdeg m == k) && [forall i, m i <= 1%N].
+
+  Lemma mecharP k m:
+    mechar k m = [exists h : {set 'I_n}, (m == mesym1 h) && (#|h| == k)].
+  Proof.
+    apply/idP/existsP=> /=; last first.
+      case=> h /andP[/eqP-> /eqP<-]; rewrite /mechar.
+      rewrite mdeg_mesym1 eqxx /=; apply/forallP=> /= i.
+      by rewrite mnmE leq_b1.
+    case/andP=> /eqP<- /forallP /= mE; exists [set i | m i != 0%N].
+    apply/andP; split; [apply/eqP/mnmP=> i|apply/eqP].
+      by rewrite mnmE inE; have := mE i; case: (m i)=> [|[|]].
+    rewrite mdegE (bigID (fun i => m i == 0%N)) /=.
+    rewrite big1 ?add0n; last by move=> i /eqP->.
+    rewrite (eq_bigr (fun _ => 1%N)) ?sum1_card ?cardsE //.
+    by move=> i; have := mE i; case: (m i) => [|[|]].
+  Qed.
+
+  Lemma mcoeff_mesym (k : nat) m: ('s_k)@_m = (mechar k m)%:R.
+  Proof.
+    rewrite mecharP; case: (boolP [exists _, _]) => /=.
+    + case/existsP=> /= h /andP[/eqP-> /eqP<-]; rewrite mesymE.
+      rewrite raddf_sum (bigD1 h) //= mcoeffX eqxx big1 ?addr0 //.
+      move=> h' /andP[_ ne_h]; rewrite mcoeffX -[0]/0%:R.
+      by congr _%:R; apply/eqP; rewrite eqb0 inj_eq.
+    rewrite negb_exists=> /forallP /= ne; rewrite mesymE.
+    rewrite raddf_sum big1 //= => h cardh; have := ne h.
+    by rewrite cardh andbT mcoeffX eq_sym => /negbTE->.
+  Qed.
+
+  Lemma mem_msupp_mesym k m: m \in msupp 's_k = mechar k m.
+  Proof.
+    rewrite mcoeff_msupp mcoeff_mesym.
+    by case: (mechar _ _); rewrite ?eqxx // oner_eq0.
+  Qed.
+
+  Lemma mperm_mechar k (m : 'X_{1..n}) (s : 'S_n):
+    mechar k (m#s) = mechar k m.
+  Proof.
+    rewrite /mechar mdeg_mperm; congr (_ && _).
+    apply/forallP/forallP=> //=.
+    + by move=> h i; move/(_ (s^-1 i))%g: h; rewrite mnmE permKV.
+    + by move=> h i; rewrite mnmE; apply/h.
+  Qed.
+
+  Lemma mesym_sym k: 's_k \is symmetric.
+  Proof.
+    apply/issymP=> s; apply/mpolyP=> m.
+    by rewrite mcoeff_sym !mcoeff_mesym mperm_mechar.
+  Qed.    
+
+  Lemma mem_mesym1_mesym h: mesym1 h \in msupp 's_#|h|.
+  Proof.
+    rewrite mem_msupp_mesym mecharP; apply/existsP.
+    by exists h; rewrite !eqxx.
+  Qed.
+
+  Lemma mesym0E: 's_0 = 1.
+  Proof.
+    rewrite mesymE (bigD1 set0) ?cards0 //= mesym1_set0 mpolyX0.
+    by rewrite big1 ?addr0 // => i /andP[/eqP/cards0_eq->]; rewrite eqxx.
+  Qed.
+
+  Lemma mesym1E: 's_1 = \sum_(i < n) 'X_i.
+  Proof.
+    rewrite mesymE -big_set /=; set S := [set _ | _].
+    have ->: S = [set [set i] | i : 'I_n].
+      apply/eqP; rewrite eqEcard (card_imset _ set1_inj).
+      rewrite card_draws /= !card_ord bin1 leqnn andbT.
+      apply/subsetP=> /= s; rewrite inE => /cards1P /= [i {s}->].
+      by apply/imsetP; exists i=> //.
+    rewrite big_imset /=; last by move=> i1 i2 _ _; apply/set1_inj.
+    by apply/eq_bigr=> i _; rewrite mesym1_set1.
+  Qed.
+
+  Lemma mesymnnE: 's_n = \prod_(i < n) 'X_i.
+  Proof.
+    rewrite mesymE (bigD1 setT) ?cardsT ?card_ord //=.
+    rewrite [X in _+X]big1 ?addr0; last first.
+      move=> i /andP []; rewrite eqEcard => /eqP ->.
+      by rewrite subsetT cardsT card_ord leqnn.
+    by rewrite mprodXE mesym1_setT.
+  Qed.
+
+  Definition mesymlmnm k : {set 'I_n} := [set i : 'I_n | i < k].
+  Definition mesymlm   k : 'X_{1..n}  := mesym1 (mesymlmnm k).
+
+  Let card_mesymlmnm k (le_kn : k <= n): #|mesymlmnm k| = k.
+  Proof.
+    rewrite -sum1dep_card -(big_ord_widen _ (fun _ => 1%N)) //=.
+    by rewrite sum1_card card_ord.
+  Qed.
+
+  Let mesymlmE k: mesymlm k = [multinom (i < k : nat) | i < n].
+  Proof. by apply/mnmP=> i; rewrite !mnmE in_set. Qed.
+
+  Let mesymlm_max (h : {set 'I_n}): #|h| <= n -> (mesym1 h <= mesymlm #|h|)%O.
+  Proof.                        (* FIXME: far too convoluted *)
+    move=> le_Ch_n; pose P := [exists i : 'I_n, (i < #|h|) && (i \notin h)].
+    case: (boolP P)=> [/existsP[/= i /andP[lt_ih i_notin_h]]|hNP]; last first.
+      suff ->: h = mesymlmnm #|h|; first by rewrite card_mesymlmnm.
+      move: hNP; rewrite negb_exists => /forallP /= {P} hNP.
+      have eq1: forall i : 'I_n, i < #|h| -> i \in h.
+        move=> i lt_i_Ch; move: (hNP i); rewrite negb_and.
+        by rewrite lt_i_Ch /= negbK.
+      have eq2: forall i : 'I_n, i >= #|h| -> i \notin h.
+        move=> i le_Ch_i; apply/negP=> i_in_h; move: (leqnn #|h|).
+        rewrite -{1}sum1_card; pose P (j : 'I_n) := j < #|h|.
+        rewrite (bigID P) big_andbC (eq_bigl P) {}/P /=; last first.
+          move=> j /=; apply/andb_idr=> lt_j_Ch; have := hNP j.
+          by rewrite lt_j_Ch /= negbK.
+        rewrite -(big_ord_widen _ (fun _ => 1%N)) // sum1_card card_ord.
+        rewrite -[X in _<=X]addn0 leq_add2l leqn0; apply/eqP.
+        by rewrite (bigD1 i) // -leqNgt le_Ch_i andbT.
+      apply/setP=> i; rewrite in_set; case: (leqP #|h| i).
+        by move/eq2/negbTE. by move/eq1.
+    pose i0 : 'I_n := [arg min_(j < i | j \notin h) j].
+    apply/ltoW/lemP; first by rewrite !mdeg_mesym1 card_mesymlmnm.
+    exists i0; rewrite {}/i0; case: arg_minP => //=.
+    + move=> i0 i0_notin_h i0_min j lt_j_i0; rewrite !mnmE in_set.
+      rewrite (@ltn_trans i) // 1?(@leq_trans i0) // ?i0_min //.
+      by case: (boolP (j \in h))=> // /i0_min; rewrite leqNgt lt_j_i0.
+    + move=> i0 i0_notin_h i0_min; rewrite !mnmE in_set.
+      by rewrite (negbTE i0_notin_h) lt0n // (@leq_ltn_trans i) // i0_min.
+  Qed.
+
+  Lemma mesym_neq0 k (le_kn : k <= n): 's_k != 0 :> {mpoly R[n]}.
+  Proof.
+    apply/eqP=> z_sk; pose h : {set 'I_n} := mesymlmnm k.
+    have := mem_mesym1_mesym h; rewrite card_mesymlmnm //.
+    by rewrite mcoeff_msupp z_sk mcoeff0 eqxx.
+  Qed.
+
+  Lemma mlead_mesym k (le_kn : k <= n):
+    mlead 's_k = [multinom (i < k : nat) | i < n].
+  Proof.
+    rewrite -mesymlmE /mesymlm /mlead; set m := mesym1 _.
+    rewrite (bigD1_seq (mesymlm k)) //=; last first.
+      rewrite mem_msupp_mesym mecharP; apply/existsP.
+      by exists (mesymlmnm k); rewrite card_mesymlmnm ?eqxx.
+    apply/maxo_idPl=> //; apply/bigmax_leoP=> //=.
+    move=> {m} m; rewrite msupp_mesymP => /existsP[/=].
+    move=> h /andP[/eqP Chk /eqP->] _; rewrite -Chk.
+    by apply/mesymlm_max; rewrite Chk.
+  Qed.
+
+  Lemma mleadc_mesym k (le_kn : k <= n):
+    mleadc 's_k = 1.
+  Proof.
+    rewrite mcoeff_mesym; case: (boolP (mechar _ _))=> //=.
+    by rewrite -mem_msupp_mesym mlead_supp // mesym_neq0.
+  Qed.
+
+  (* ------------------------------------------------------------------ *)
   Definition tmono (n : nat) (h : seq 'I_n) :=
     sorted ltn (map val h).
 
@@ -3475,110 +3675,6 @@ Section MElemPolySym.
     case: i => i sz_i /= tmono_i; rewrite (eq_bigl (mem i)) //=.
     by rewrite !mprodXE big_uniq //; apply/uniq_tmono.
   Qed.
-
-  Definition mechar k (m : 'X_{1..n}) :=
-    (mdeg m == k) && [forall i, m i <= 1%N].
-
-  Lemma mcoeff_mesym (k : nat) m: ('s_k)@_m = (mechar k m)%:R.
-  Proof.
-    pose P (h : {set 'I_n}) := (\sum_(i in h) U_(i))%MM.
-    have PE h i: P h i = (i \in h).
-      rewrite mnm_sum (eq_bigr (fun x => (x == i : nat))); last first.
-        by move=> /= j _; rewrite mnm1E.
-      case mem_ih: (i \in h).
-        by rewrite (bigD1 i) //= eqxx big1 // => j /andP [_ /negbTE ->].
-      rewrite big1 // => j mem_jh; case: eqP=> //= eq_ji.
-      by move: mem_ih mem_jh; rewrite eq_ji => ->.
-    have mdeg_P h: mdeg (P h) = #|h|.
-      rewrite /P mdeg_sum (eq_bigr (fun _ => 1%N)) ?sum1_card //.
-      by move=> /= i _; rewrite mdeg1.
-    have inj_P: injective P.
-      move=> h1 h2 /mnmP eq; apply/setP=> /= i.
-      by move/(_ i): eq; rewrite !PE; do! case: (_ \in _).
-    rewrite /mesym raddf_sum (eq_bigr (fun h => (P h == m)%:R)); last first.
-      by move=> h _ /=; rewrite mprodXE mcoeffX.
-    rewrite /mechar; case: (mdeg m =P k) => /=; last first.
-      move/eqP=> ne_m_k; rewrite big1 // => i eq_i_k.
-      case: eqP=> //= /(congr1 mdeg); rewrite mdeg_P (eqP eq_i_k).
-      by move/eqP; rewrite eq_sym (negbTE ne_m_k).
-    move=> eq_m_k; case: forallP => [/= mx_le1|/forallP]; last first.
-      rewrite negb_forall => /existsP /= [i Nle_mi_1].
-      rewrite big1 // => j _; case: eqP=> //= /mnmP.
-      move/(_ i); rewrite PE => /esym miE; move: Nle_mi_1.
-      by rewrite miE; case: (_ \in _).
-    pose h := [set i | m i != 0%N]; have cardh: #|h| = k.
-      pose Pm := [pred i | m i == 0%N].
-      rewrite -sum1dep_card -eq_m_k mdegE; apply/esym.
-      rewrite (bigID Pm) /= big1 ?add0n; last by move=> i /eqP ->.
-      by apply/eq_bigr=> i; move/(_ i): mx_le1; case: (m i)=> [|[]].
-    have PhE: P h = m; first apply/mnmP=> i.
-      by rewrite PE inE; move/(_ i): mx_le1; case: (m i)=> [|[]].
-    rewrite (bigD1 h) ?cardh //= PhE eqxx big1 ?addr0 //.
-    move=> i /andP [_ ne_i_h]; rewrite -PhE; case: eqP=> //=.
-    by move/inj_P/eqP; rewrite (negbTE ne_i_h).
-  Qed.      
-
-  Lemma msupp_mesym k m: m \in msupp 's_k = mechar k m.
-  Proof.
-    rewrite mcoeff_msupp mcoeff_mesym.
-    by case: (mechar _ _); rewrite ?eqxx // oner_eq0.
-  Qed.
-
-  Lemma mesym_sym k: 's_k \is symmetric.
-  Proof.
-    apply/issymP=> s; apply/mpolyP=> m; rewrite mcoeff_sym.
-    rewrite !mcoeff_mesym /mechar; rewrite {1}mdegE.
-    rewrite (reindex [eta s^-1]%g) /=; last first.
-      by exists s=> i _; rewrite (permK, permKV).
-    rewrite (eq_bigr (fun i => m i))=> [|i _]; last first.
-      by rewrite mnmE permKV.
-    rewrite -mdegE; case: eqP=> //= _; congr (_%:R).
-    case: (boolP [forall i, m i <= 1]).
-    + move/forallP=> h /=; apply/eqP; rewrite eqb1.
-      by apply/forallP=> /= i; rewrite mnmE (h (s i)).
-    + rewrite negb_forall => /existsP [/= i h].
-      apply/eqP; rewrite eqb0; rewrite negb_forall.
-      by apply/existsP; exists (s^-1 i)%g; rewrite mnmE permKV.
-  Qed.
-
-  Lemma mesym0: 's_0 = 1.
-  Proof.
-    rewrite /mesym (bigD1 set0) ?cards0 //= big_set0 big1 ?addr0 //.
-    by move=> i /andP [] /eqP /cards0_eq => ->; rewrite eqxx.
-  Qed.
-
-  Lemma mesym1: 's_1 = \sum_(i < n) 'X_i.
-  Proof.
-    rewrite /mesym -big_set /=; set S := [set _ | _].
-    have ->: S = [set [set i] |i : 'I_n].
-      apply/eqP; rewrite eqEcard (card_imset _ set1_inj).
-      rewrite card_draws /= !card_ord bin1 leqnn andbT.
-      apply/subsetP=> /= s; rewrite inE => /cards1P /= [i {s}->].
-      by apply/imsetP; exists i=> //.
-    rewrite big_imset /=; last by move=> i1 i2 _ _; apply/set1_inj.
-    by apply/eq_bigr=> i _; rewrite big_set1.
-  Qed.
-
-  Lemma mesymnn: 's_n = \prod_(i < n) 'X_i.
-  Proof.
-    rewrite /mesym (bigD1 setT) ?cardsT ?card_ord //=.
-    rewrite [X in _+X]big1 ?addr0; last first.
-      move=> i /andP []; rewrite eqEcard => /eqP ->.
-      by rewrite subsetT cardsT card_ord leqnn.
-    by apply/eq_big=> //= x; rewrite in_setT.
-  Qed.
-
-  Lemma mesym_neq0 k: k <= n ->
-    's_k != 0 :> {mpoly R[n]}.
-  Proof. admit. Qed.
-
-  Lemma mlead_mesym k: k <= n ->
-    mlead 's_k = [multinom (i <= k : nat) | i < n].
-  Proof. admit. Qed.
-
-  Lemma mleadc_mesym k: k <= n ->
-    mleadc 's_k = 1.
-  Proof. admit. Qed.
 End MElemPolySym.
 
 Local Notation "''s_' ( K , n , k )" := (@mesym n K k).
@@ -3810,13 +3906,13 @@ Section MESymViete.
       :> {poly {mpoly int[n]}}.
   Proof.
     elim => [|n ih].
-      by rewrite !big_ord0 big_ord1 mesym0 expr0 !scale1r.
+      by rewrite !big_ord0 big_ord1 mesym0E expr0 !scale1r.
     pose F n k : {poly {mpoly int[n]}} :=
       (-1)^+k *: ('s_(n, k) *: 'X^(n-k)).
     have Fn0 l: F l 0%N = 'X^l.
-      by rewrite /F expr0 mesym0 !scale1r subn0.
+      by rewrite /F expr0 mesym0E !scale1r subn0.
     have Fnn l: F l l = (-1)^+l *: \prod_(i < l) ('X_i)%:P.
-      by rewrite /F mesymnn subnn expr0 alg_polyC rmorph_prod.
+      by rewrite /F mesymnnE subnn expr0 alg_polyC rmorph_prod.
     rewrite big_ord_recr /=; set p := (\prod_(_ < _) _).
     have {p}->: p = mpw (\prod_(i < n) ('X - ('X_i)%:P)).
       rewrite /mpwiden rmorph_prod /=; apply/eq_bigr.
@@ -3873,7 +3969,7 @@ Section MESymViete.
     \sum_(c <- cs) c = - (\prod_(c <- cs) ('X - c%:P))`_n.
   Proof.
     move: (mroots_coeff cs) => /(_ 1); rewrite subSS subn0=> ->.
-    rewrite expr1 mulN1r opprK mesym1 raddf_sum /=.
+    rewrite expr1 mulN1r opprK mesym1E raddf_sum /=.
     by rewrite big_tuple; apply/eq_bigr=> /= i _; rewrite mevalX.
   Qed.
 End MESymViete.
@@ -3895,9 +3991,9 @@ Section MESymFundamental.
   Proof. admit. Qed.
 
   Lemma sym_fundamental p: p \is symmetric ->
-    { t | t \mPo [tuple 's_(n, i) | i < n] = p }.
+    { t | t \mPo [tuple 's_(n, i.+1) | i < n] = p }.
   Proof.
-    set S := [tuple 's_(n, i) | i < n].
+    set S := [tuple 's_(n, i.+1) | i < n].
     elim/mleadrect: p=> p ih sym_p; have [->|nz_p] := eqVneq p 0.
       by exists 0; rewrite comp_mpoly0.
     pose m := mlead p; pose c i := nth 0%N m i.
@@ -3931,26 +4027,26 @@ Section MESymFundamental.
     + have mE: mlead ('X_[l] \mPo S) = m.
         rewrite comp_mpolyX mlead_prod_proper /=; last first.
           move=> i _ _; rewrite tnth_map tnth_ord_tuple.
-          rewrite mleadX ?mesym_neq0 1?ltnW // mleadcX; apply/lregX.
-          by apply/lregP; rewrite mleadc_eq0 mesym_neq0 1?ltnW.
+          rewrite mleadX ?mesym_neq0 // mleadcX; apply/lregX.
+          by apply/lregP; rewrite mleadc_eq0 mesym_neq0.
         apply/mnmP=> i; pose C (x : 'I_n) := if i <= x then l x else 0%N.
         rewrite mnm_sum (eq_bigr C)=> [|j _]; last first.
-          rewrite tnth_map tnth_ord_tuple mleadX ?mesym_neq0 1?ltnW //.
-          rewrite mlead_mesym 1?ltnW // mnmMn mnmE /C /=.
+          rewrite tnth_map tnth_ord_tuple mleadX ?mesym_neq0 //.
+          rewrite mlead_mesym // mnmMn mnmE /C /= ltnS.
           by case: (i <= j); rewrite ?(muln1, muln0) // mnmE.
         by rewrite {}/C /= -big_mkcond /= lk.
       rewrite lto_neqAle; apply/andP; split; last first.
         have := mleadB_le p (p@_m *: ('X_[l] \mPo S)).
-        by rewrite mleadZ ?mleadc_eq0 // mE maxoo //; apply/lem_total.
+        by rewrite mleadZ ?mleadc_eq0 // mE maxoo //.
       apply/eqP=> eq_lm_pq; have := nz_q; rewrite -mleadc_eq0.
         rewrite eq_lm_pq /q mcoeffB mcoeffZ -/m -{3}mE.
         rewrite comp_mpolyX mlead_prod ?mleadc_prod; last first.
           move=> i _ _; rewrite tnth_map tnth_ord_tuple.
-          by rewrite expf_neq0 // mesym_neq0 1?ltnW.
+          by rewrite expf_neq0 // mesym_neq0.
         rewrite (eq_bigr (fun _ => 1)) /=; last first.
           move=> i _; rewrite tnth_map tnth_ord_tuple.
-          rewrite mleadX ?mesym_neq0 1?ltnW // mleadcX.
-          by rewrite mleadc_mesym 1?ltnW // expr1n.
+          rewrite mleadX ?mesym_neq0 // mleadcX.
+          by rewrite mleadc_mesym // expr1n.
         by rewrite prodr_const expr1n mulr1 subrr eqxx.
     move=> t /esym qE; exists (t + p@_m *: 'X_[l]).
     rewrite comp_mpolyD comp_mpolyZ -qE /q.

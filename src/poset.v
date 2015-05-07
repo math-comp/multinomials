@@ -579,4 +579,17 @@ Section BigMaxTheory.
   Lemma leo_bigmax (r : seq T) i0: total (@le U) ->
     i0 \in r -> F i0 <= \max_(i <- r) F i.
   Proof. move=> tot i0_in_r; exact/leo_bigmax_cond. Qed.
+
+  Lemma bigmax_leoP (r : seq T) (P : pred T) (m : U): total (@le U) ->
+    reflect
+      (forall i, i \in r -> P i -> F i <= m)
+      (\max_(i <- r | P i) F i <= m).
+  Proof.
+    move=> tot; apply: (iffP idP)=> leFm => [i ri Pi|].
+      by apply: leo_trans leFm; apply/leo_bigmax_cond.
+    rewrite big_seq_cond; elim/big_ind: _ => //.
+      by apply/le0o.
+      by move=> m1 m2; rewrite geo_max // => -> ->.
+      by move=> x /andP []; apply/leFm.
+  Qed.
 End BigMaxTheory.
