@@ -1400,9 +1400,3 @@ Lemma freeg_ind_dom0 (R : ringType) (K : choiceType):
             P (<< k *g x >> + D))
     -> forall D : {freeg K / R}, P D.
 Proof. by move=> P; apply/(@freeg_rect_dom0 R K P). Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: ("../ssreflect" ("../3rdparty" "SsrMultinomials") ("." "SsrMultinomials")) ***
-*** End: ***
- *)
