@@ -794,6 +794,25 @@ Section MultinomOrder.
     + case=> i h1 h2; apply/ltxP; exists i.
        by apply/h1. by rewrite ltnP; apply/h2.
   Qed.
+
+  Section WF.
+    Variable P : 'X_{1..n} -> Type.
+
+    Lemma ltmwf:
+         (forall m1, (forall m2, (m2 < m1)%O -> P m2) -> P m1)
+      -> forall m, P m.
+    Proof.
+      move=> ih m; move: {2}(_::_) (erefl (mdeg m :: m))=> t.
+      elim/ltxwf: t m=> //=; last first.
+        move=> t wih m Em; apply/ih=> m' lt_m'm.
+        by apply/(wih (mdeg m' :: m'))=> //; rewrite -Em -ltm_ltx.
+      move=> Q {ih} ih x; elim: x {-2}x (leqnn x).
+        move=> x; rewrite leqn0=> /eqP->; apply/ih.
+        by move=> y; rewrite ltnP ltn0.
+      move=> k wih l le_l_Sk; apply/ih=> y; rewrite ltnP=> lt_yl.
+      by apply/wih; have := leq_trans lt_yl le_l_Sk; rewrite ltnS.
+    Qed.
+  End WF.
 End MultinomOrder.
 
 Lemma poset_lem_total n: @total [posetType of 'X_{1..n}] <=%O.
@@ -2072,7 +2091,7 @@ Section MPolyLead.
     rewrite leo_max //; case/orP.
     + by move/msupp_le_mlead=> ->; rewrite orTb.
     + by move/msupp_le_mlead=> ->; rewrite orbT.
-  Qed.    
+  Qed.
 
   Lemma mleadB_le p q: (mlead (p - q) <= maxo (mlead p) (mlead q))%O.
   Proof. by rewrite -(mleadN q); apply/mleadD_le. Qed.
@@ -2285,6 +2304,16 @@ Section MPolyLead.
     rewrite mlead_deg //; pose m := (mlead p); apply/negP.
     move/eqP/(congr1 (mcoeff m)); rewrite mcoeffZ mcoeff0.
     by move/eqP; rewrite (negbTE h).
+  Qed.
+
+  Lemma mleadrect (P : {mpoly R[n]} -> Type):
+       (forall p, (forall q, (mlead q < mlead p)%O -> P q) -> P p)
+    -> forall p, P p.
+  Proof.
+    move=> ih p; move: {2}(mlead p) (leoo (mlead p))=> m.
+    elim/(ltmwf (n := n)): m p=> m1 wih p lt_pm1.
+    apply/ih=> q lt_pq; apply/(wih (mlead q))=> //.
+    by apply/(lto_leo_trans lt_pq).
   Qed.
 End MPolyLead.
 
@@ -3981,11 +4010,6 @@ Section MESymFundamental.
 
   Local Notation "m # s" := [multinom m (s i) | i < n]
     (at level 40, left associativity, format "m # s").
-
-  Lemma mleadrect (P : {mpoly R[n]} -> Type):
-    (forall p, (forall q, (mlead q < mlead p)%O -> P q) -> P p) ->
-    forall p, P p.
-  Proof. admit. Qed.
 
   Let layout (m : 'X_{1..n}):
     let c i := nth 0%N m i in

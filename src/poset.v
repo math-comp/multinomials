@@ -229,15 +229,25 @@ Section LexOrder.
    by rewrite orbC -leo_eqVlt.
   Qed.
 
-  Hypothesis le_total: total (<=%O : rel T).
+  Definition ltx (x y : seq T) := (x != y) && (lex x y).
 
-  Lemma lex_total: total lex.
+  Lemma lex_eqVlt (x y : seq T): lex x y = (x == y) || (ltx x y).
   Proof.
-    elim=> [|x sx ih] [|y sy] //=; case: (boolP (x < y))=> //=.
-    rewrite -letNgt // leo_eqVlt; case/orP=> [/eqP->|].
-      by rewrite !eqxx ltoo /= ih.
-    by move=> lt; rewrite [x==y]eq_sym (lto_eqF lt) /= orbF.
+    rewrite /ltx orb_andr orbN /= orb_idl //.
+    by move/eqP=> ->; rewrite lex_refl.
   Qed.
+
+  Section Total.
+    Hypothesis le_total: total (<=%O : rel T).
+  
+    Lemma lex_total: total lex.
+    Proof.
+      elim=> [|x sx ih] [|y sy] //=; case: (boolP (x < y))=> //=.
+      rewrite -letNgt // leo_eqVlt; case/orP=> [/eqP->|].
+        by rewrite !eqxx ltoo /= ih.
+      by move=> lt; rewrite [x==y]eq_sym (lto_eqF lt) /= orbF.
+    Qed.
+  End Total.
 
   Lemma ltxP_seq (x : T) (s1 s2 : seq T): size s1 = size s2 ->
     reflect
@@ -283,16 +293,40 @@ Section LexOrder.
       split=> // j lt_ji; move: (h1 (Ordinal (ltn_trans lt_ji p)) lt_ji).
       by rewrite !(tnth_nth x).
   Qed.
+
+  Section WF.
+    Variable P : seq T -> Type.
+
+    Hypothesis wf: forall (P : T -> Type),
+         (forall x, (forall y, y < x -> P y) -> P x)
+      -> forall x, P x.
+
+    Hypothesis ih: forall x, (forall y, ltx y x -> P y) -> P x.
+
+    Lemma ltxwf x: P x.
+    Proof using wf ih. admit. Qed.
+  End WF.
+
+  Section WFTuple.
+    Variable n : nat.
+    Variable P : n.-tuple T -> Type.
+
+    Implicit Types t : n.-tuple T.
+
+    Hypothesis wf: forall (P : T -> Type),
+         (forall x, (forall y, y < x -> P y) -> P x)
+      -> forall x, P x.
+
+    Hypothesis ih: forall t1, (forall t2, ltx t2 t1 -> P t2) -> P t1.
+
+    Lemma ltxwf_tuple t: P t.
+    Proof.
+      move: {2}(val t) (erefl (val t))=> s; elim/ltxwf: s t=> //.
+      move=> x wih t Et; apply/ih=> t' lt_t't.
+      by apply/(wih (val t'))=> //; rewrite -Et.
+    Qed.
+  End WFTuple.
 End LexOrder.
-
-Definition ltx (T : posetType) (x y : seq T) := (x != y) && (lex x y).
-
-Lemma lex_eqVlt (T : posetType) (x y : seq T):
-  lex x y = (x == y) || (ltx x y).
-Proof.
-  rewrite /ltx orb_andr orbN /= orb_idl //.
-  by move/eqP=> ->; rewrite lex_refl.
-Qed.
 
 (* -------------------------------------------------------------------- *)
 Lemma ltx_lex_nat_sum (k : nat) (s1 s2 r1 r2: k.-tuple nat):
