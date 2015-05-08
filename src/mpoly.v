@@ -802,10 +802,11 @@ Section MultinomOrder.
          (forall m1, (forall m2, (m2 < m1)%O -> P m2) -> P m1)
       -> forall m, P m.
     Proof.
-      move=> ih m; move: {2}(_::_) (erefl (mdeg m :: m))=> t.
+      pose tof m := [tuple of mdeg m :: m].
+      move=> ih m; move: {2}(tof _) (erefl (tof m))=> t.
       elim/ltxwf: t m=> //=; last first.
         move=> t wih m Em; apply/ih=> m' lt_m'm.
-        by apply/(wih (mdeg m' :: m'))=> //; rewrite -Em -ltm_ltx.
+        by apply/(wih (tof m'))=> //; rewrite -Em -ltm_ltx.
       move=> Q {ih} ih x; elim: x {-2}x (leqnn x).
         move=> x; rewrite leqn0=> /eqP->; apply/ih.
         by move=> y; rewrite ltnP ltn0.
@@ -818,7 +819,7 @@ End MultinomOrder.
 Lemma poset_lem_total n: @total [posetType of 'X_{1..n}] <=%O.
 Proof. by apply/lem_total. Qed.
 
-Hint Extern 0 (total _) => by apply/poset_lem_total.
+Local Hint Extern 0 (total _) => by apply/poset_lem_total.
 
 (* -------------------------------------------------------------------- *)
 Section DegBoundMultinom.

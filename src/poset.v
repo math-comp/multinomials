@@ -294,19 +294,6 @@ Section LexOrder.
       by rewrite !(tnth_nth x).
   Qed.
 
-  Section WF.
-    Variable P : seq T -> Type.
-
-    Hypothesis wf: forall (P : T -> Type),
-         (forall x, (forall y, y < x -> P y) -> P x)
-      -> forall x, P x.
-
-    Hypothesis ih: forall x, (forall y, ltx y x -> P y) -> P x.
-
-    Lemma ltxwf x: P x.
-    Proof using wf ih. admit. Qed.
-  End WF.
-
   Section WFTuple.
     Variable n : nat.
     Variable P : n.-tuple T -> Type.
@@ -319,11 +306,23 @@ Section LexOrder.
 
     Hypothesis ih: forall t1, (forall t2, ltx t2 t1 -> P t2) -> P t1.
 
-    Lemma ltxwf_tuple t: P t.
+    Lemma ltxwf t: P t.
     Proof.
-      move: {2}(val t) (erefl (val t))=> s; elim/ltxwf: s t=> //.
-      move=> x wih t Et; apply/ih=> t' lt_t't.
-      by apply/(wih (val t'))=> //; rewrite -Et.
+      elim: n P ih t => [|k wih] Pn kih t.
+        by rewrite tuple0; apply/kih=> t2; rewrite tuple0.
+      rewrite [t]tuple_eta; move: (thead t) => a; elim/wf: a t.
+      move=> a iha t; apply/kih=> t'; rewrite [t']tuple_eta /=.
+      move: (thead t') => a'; rewrite /ltx andbC => /andP[/=].
+      case: (boolP (a' < a)) => /= [/iha/(_ t')//|_].
+      pose Q (t : k.-tuple T) := Pn [tuple of a :: t].
+      case/andP=> /eqP {a'}-> _ _; apply/(wih Q)=> {t t'}.
+      rewrite {}/Q; move=> t iht; apply/kih=> t'.
+      rewrite [t']tuple_eta; move: (thead t') => a'.
+      rewrite /ltx andbC => /andP[/=]; case: (boolP (a' < a)).
+        by move=> /iha/(_ t').
+      move=> _ /= /andP[/eqP {a'}->]; rewrite eqseq_cons eqxx /=.
+      move=> le ne; have {le ne} lt: ltx (behead t') t.
+        by rewrite /ltx le ne. by apply/iht.
     Qed.
   End WFTuple.
 End LexOrder.
