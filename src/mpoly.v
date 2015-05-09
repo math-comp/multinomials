@@ -69,6 +69,33 @@ Proof.
   by rewrite big_nat_recl ?big_nat_recr //= subnDA addnK.
 Qed.
 
+Lemma sumn_wgt_range (k : nat) (c : nat -> nat):
+     (forall i j, i <= j < k.+1 -> c j <= c i)
+  -> (  \sum_(i < k) (c i - c i.+1) * i.+1
+      = \sum_(i < k) c i - k * (c k))%N.
+Proof.
+  pose F i := ((c i) * i.+1 - (c i.+1) * i.+1)%N.
+  rewrite (eq_bigr (F \o val)) /=; first last.
+    by move=> i _; rewrite mulnBl.
+  rewrite [(k*_)%N]mulnC; elim: k=> [|k ih] h.
+    by rewrite !big_ord0 muln0 subn0.
+  rewrite !big_ord_recr /= ih; last first.
+    move=> i j /andP[le_ij lt_jSk]; apply/h.
+    by rewrite le_ij ltnS ltnW.
+  rewrite {ih}/F addnBA ?leq_mul //; last first.
+    by apply/h; rewrite leqnn ltnW.
+  congr (_ - _)%N; rewrite addnC addnBA 1?addnC -?addnBA.
+  + by rewrite -mulnBr subSnn muln1.
+  + by rewrite leq_mul.
+  elim: k h => [|k ih] h; first by rewrite muln0.
+  rewrite big_ord_recr //= mulnS addnC leq_add //; last first. 
+    by apply/h; rewrite !ltnS !leqnSn.
+  apply/(@leq_trans (c k * k)); last apply/ih.
+    by rewrite leq_mul=> //; apply/h; rewrite !ltnS !leqnSn.
+  move=> i j /andP[le_ij lt_jSSk]; apply/h.
+  by rewrite le_ij !ltnS ltnW.
+Qed.
+
 (* -------------------------------------------------------------------- *)
 (* FIXME: move me or replace me                                         *)
 Section BigUncond.
@@ -3044,18 +3071,17 @@ Section MPolyIdomain.
       by rewrite mleadc_eq0. by rewrite mleadc_eq0.
   Qed.
 
-  Lemma msizeZ c p: c != 0 -> msize (c *: p) = msize p.
-  Proof.
-    have [->|nz_p] := eqVneq p 0; first by rewrite scaler0.
-    move=> nz_c; rewrite msizeZ_proper // mulf_neq0 //.
-    by rewrite mleadc_eq0.
-  Qed.
-
   Lemma msuppZ c p: c != 0 -> perm_eq (msupp (c *: p)) (msupp p).
   Proof.
     move=> nz_c; apply/uniq_perm_eq=> // m.
     by rewrite !mcoeff_msupp mcoeffZ mulf_eq0 (negbTE nz_c).
   Qed.
+
+  Lemma mmeasureZ c p mf: c != 0 -> mmeasure mf (c *: p) = mmeasure mf p.
+  Proof. by move=> nz_c; rewrite !mmeasureE; apply/eq_big_perm/msuppZ. Qed.
+
+  Lemma msizeZ c p: c != 0 -> msize (c *: p) = msize p.
+  Proof. by apply/mmeasureZ. Qed.
 
   Lemma mpoly_idomainAxiom p q:
     p * q = 0 -> (p == 0) || (q == 0).
@@ -4058,21 +4084,43 @@ Section MESymFundamental.
     by rewrite {}/C /= -big_mkcond /= layout.
   Qed.
 
-  Lemma sym_fundamental (p : {mpoly R[n]}):
-    p \is symmetric -> { t | t \mPo [tuple 's_(n, i.+1) | i < n] = p }.
+  Let mweight_layout (m : 'X_{1..n}):
+    let c i := nth 0%N m i in
+    let F i := (c i - c i.+1)%N in
+
+       (forall i j : 'I_n, i <= j -> m j <= m i)
+    -> mweight 'X_[R, F#val] = (mdeg m).+1.
+  Proof.
+    move=> c F srt_m; rewrite mmeasureX /mnmwgt /=; congr _.+1.
+    rewrite (eq_bigr (fun i : 'I_n => (F i) * i.+1))%N; last first.
+      by move=> i _; rewrite mnmE.
+    rewrite mdegE sumn_wgt_range; last first.
+      move=> i j /andP[le_ij]; rewrite ltnS leq_eqVlt.
+      case/orP=> [/eqP->|].
+        by rewrite {1}/c nth_default // size_tuple.
+      move=> lt_jn; have lt_in: i < n.
+        by apply (leq_ltn_trans le_ij).
+      have /(_ le_ij) := (srt_m (Ordinal lt_in) (Ordinal lt_jn)).
+      by rewrite /fun_of_multinom !(tnth_nth 0%N).
+    rewrite {2}/c nth_default ?size_tuple // muln0 subn0.
+    by apply/eq_bigr=> /= i _; rewrite /fun_of_multinom (tnth_nth 0%N).
+  Qed.
+
+  Lemma sym_fundamental (p : {mpoly R[n]}): p \is symmetric ->
+    { t |  t \mPo [tuple 's_(n, i.+1) | i < n] = p /\ mweight t <= msize p}.
   Proof.
     set S := [tuple 's_(n, i.+1) | i < n].
     elim/mleadrect: p=> p ih sym_p; have [->|nz_p] := eqVneq p 0.
-      by exists 0; rewrite comp_mpoly0.
+      by exists 0; rewrite comp_mpoly0 mmeasure0.
     set m := mlead p; pose c := nth 0%N m.
     pose F i := (c i - c i.+1)%N; pose l := F#val.
     pose q := p - p@_m *: ('X_[l] \mPo S); have [z_q|nz_q] := eqVneq q 0.
       exists (p@_m *: 'X_[l]); move/eqP: z_q; rewrite /q subr_eq0.
-      by move/eqP/esym; rewrite comp_mpolyZ.
-    elim: (ih q); first last.
-    + rewrite /q rpredB // rpredZ // mcomp_sym // => i.
-      by rewrite -tnth_nth tnth_map mesym_sym.
-    + have mE := (mlead_layout (mlead_msym_sorted sym_p)).
+      move/eqP/esym; rewrite comp_mpolyZ=> ->; split=> //.
+      rewrite mmeasureZ -?mlead_deg ?mleadc_eq0 //.
+      by rewrite (mweight_layout (mlead_msym_sorted sym_p)).
+    have lt_pq: (mlead q < mlead p)%O.
+      have mE := (mlead_layout (mlead_msym_sorted sym_p)).
       rewrite -/m -/c -/l -/S in mE; rewrite lto_neqAle andbC.
       have := mleadB_le p (p@_m *: ('X_[l] \mPo S)).
       rewrite mleadZ ?mleadc_eq0 // ?mE ?maxoo // => -> /=.
@@ -4086,8 +4134,17 @@ Section MESymFundamental.
         rewrite mleadX ?mesym_neq0 // mleadcX.
         by rewrite mleadc_mesym // expr1n.
       by rewrite prodr_const expr1n mulr1 subrr eqxx.
-    move=> t /esym qE; exists (t + p@_m *: 'X_[l]).
+    elim: (ih q)=> //; first last.
+      rewrite /q rpredB // rpredZ // mcomp_sym // => i.
+      by rewrite -tnth_nth tnth_map mesym_sym.
+    move=> t [/esym qE] wgt_t; exists (t + p@_m *: 'X_[l]).
     rewrite comp_mpolyD comp_mpolyZ -qE /q.
-    by rewrite addrAC -addrA subrr addr0.
+    rewrite addrAC -addrA subrr addr0; split=> //.
+    apply/(leq_trans (mmeasureD_le _ _ _)).
+    rewrite geq_max mmeasureZ ?mleadc_eq0 -?{2}mlead_deg //.
+    rewrite (mweight_layout (mlead_msym_sorted sym_p)).
+    rewrite leqnn (leq_trans wgt_t) // -!mlead_deg //.
+    by rewrite ltnS lem_mdeg // ltoW.
   Qed.
 End MESymFundamental.
+
