@@ -3811,6 +3811,19 @@ Section MESymFundamental.
     by apply/eq_bigr=> /= i _; rewrite /fun_of_multinom (tnth_nth 0%N).
   Qed.
 
+  Let mlead_value l: mleadc ('X_[l] \mPo S) = 1.
+  Proof.
+    rewrite comp_mpolyX mlead_prod_proper ?mleadc_prod; last first.
+      move=> /= i _ _; rewrite tnth_map tnth_ord_tuple.
+      rewrite mleadX_proper // ?mleadcX ?mleadc_mesym //.
+        by apply/lregX/lreg1. by apply/lreg1.
+    rewrite (eq_bigr (fun _ => 1)) /=; last first.
+      move=> i _; rewrite tnth_map tnth_ord_tuple.
+      rewrite mleadX_proper ?mleadcX ?mleadc_mesym //.
+        by rewrite expr1n. by apply/lreg1.
+    by rewrite prodr_const expr1n.
+  Qed.
+
   Lemma sym_fundamental (p : {mpoly R[n]}): p \is symmetric ->
     { t |  t \mPo [tuple 's_(n, i.+1) | i < n] = p /\ mweight t <= msize p}.
   Proof.
@@ -3831,26 +3844,10 @@ Section MESymFundamental.
       have := mleadB_le p (p@_m *: ('X_[l] \mPo S)).
       rewrite mleadZ_proper ?mE ?maxoo // => [->/=|]; last first.
         rewrite mulrC mulrI_eq0 ?mleadc_eq0 // -mE.
-        rewrite comp_mpolyX mlead_prod_proper ?mleadc_prod; last first.
-          move=> /= i _ _; rewrite tnth_map tnth_ord_tuple.
-          rewrite mleadX_proper // ?mleadcX ?mleadc_mesym //.
-            by apply/lregX/lreg1. by apply/lreg1.
-        rewrite (eq_bigr (fun _ => 1)) /=; last first.
-          move=> i _; rewrite tnth_map tnth_ord_tuple.
-          rewrite mleadX_proper ?mleadcX ?mleadc_mesym //.
-            by rewrite expr1n. by apply/lreg1.
-        by rewrite prodr_const expr1n; apply/lreg1.
+        rewrite mlead_value; apply/lreg1.
       apply/eqP=> eq_lm_pq; have := nz_q; rewrite -mleadc_eq0.
-      rewrite eq_lm_pq /q mcoeffB mcoeffZ -/m -{3}mE.
-      rewrite comp_mpolyX mlead_prod_proper ?mleadc_prod; last first.
-        move=> /= i _ _; rewrite tnth_map tnth_ord_tuple.
-        rewrite mleadX_proper // ?mleadcX ?mleadc_mesym //.
-          by apply/lregX/lreg1. by apply/lreg1.
-      rewrite (eq_bigr (fun _ => 1)) /=; last first.
-        move=> i _; rewrite tnth_map tnth_ord_tuple.
-        rewrite mleadX_proper ?mleadcX ?mleadc_mesym //.
-          by rewrite expr1n. by apply/lreg1.
-      by rewrite prodr_const expr1n mulr1 subrr eqxx.
+      rewrite eq_lm_pq /q mcoeffB mcoeffZ -/m -{3}mE mlead_value.
+      by rewrite mulr1 subrr eqxx.
     elim: (ih q)=> //; first last.
       rewrite /q rpredB // rpredZ // mcomp_sym // => i.
       by rewrite -tnth_nth tnth_map mesym_sym.
