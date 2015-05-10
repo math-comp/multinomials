@@ -1466,6 +1466,14 @@ Section MPolyRing.
   Lemma msize1: msize 1 = 1%N.
   Proof. by apply/mmeasure1. Qed.
 
+  Lemma mmeasureZ_le mf (p : {mpoly R[n]}) c:
+    mmeasure mf (c *: p) <= mmeasure mf p.
+  Proof.
+    rewrite {1}mmeasureE big_tnth; apply/bigmax_leqP=> /= i _.
+    set m := tnth _ _; have: m \in msupp (c *: p) by apply/mem_tnth.
+    by move/msuppZ_le=> /mmeasure_mnm_lt->.
+  Qed.
+
   Lemma mpoly_scaleAl c p q: c *: (p * q) = (c *: p) * q.
   Proof. by rewrite -!mul_mpolyC mulrA. Qed.
 
@@ -2014,11 +2022,7 @@ Section MPolyLead.
   Qed.    
 
   Lemma msizeZ_le (p : {mpoly R[n]}) c: msize (c *: p) <= msize p.
-  Proof.
-    have [->|nz_p ] := eqVneq p 0; first by rewrite scaler0.
-    have [->|nc_cp] := eqVneq (c *: p) 0; first by rewrite msize0.
-    by rewrite -!mlead_deg // ltnS lem_mdeg // mleadZ_le.
-  Qed.
+  Proof. by apply/mmeasureZ_le. Qed.
 
   Lemma msizeZ_proper (p : {mpoly R[n]}) c:
     c * mleadc p != 0 -> msize (c *: p) = msize p.
@@ -3730,10 +3734,12 @@ End MESymViete.
 (* -------------------------------------------------------------------- *)
 Section MESymFundamental.
   Variable n : nat.
-  Variable R : idomainType.
+  Variable R : comRingType.
 
   Local Notation "m # s" := [multinom m (s i) | i < n]
     (at level 40, left associativity, format "m # s").
+
+  Local Notation S := [tuple 's_(R, n, i.+1) | i < n].
 
   Let layout (m : 'X_{1..n}):
     let c i := nth 0%N m i in
@@ -3767,15 +3773,17 @@ Section MESymFundamental.
     let F i := (c i - c i.+1)%N in
 
        (forall i j : 'I_n, i <= j -> m j <= m i)
-    -> mlead ('X_[R, F#val] \mPo [tuple 's_(n, i.+1) | i < n]) = m.
+    -> mlead ('X_[R, F#val] \mPo S) = m.
   Proof.
-    move=> c F srt_m. rewrite comp_mpolyX mlead_prod_proper /=; last first.
-      move=> i _ _; rewrite tnth_map tnth_ord_tuple.
-      rewrite mleadX ?mesym_neq0 // mleadcX; apply/lregX.
-      by apply/lregP; rewrite mleadc_eq0 mesym_neq0.
+    move=> c F srt_m; rewrite comp_mpolyX.
+    rewrite mlead_prod_proper /=; last first.
+      move=> i _ _; move: (F#_)=> m'; rewrite tnth_map tnth_ord_tuple.
+      rewrite mleadX_proper /= ?mleadc_mesym //; last by apply/lreg1.
+      by rewrite mleadcX ?mleadc_mesym //; apply/lregX/lreg1.
     apply/mnmP=> i; pose C (x : 'I_n) := if i <= x then (F#val) x else 0%N.
     rewrite mnm_sum (eq_bigr C)=> [|j _]; last first.
-      rewrite tnth_map tnth_ord_tuple mleadX ?mesym_neq0 //.
+      rewrite tnth_map tnth_ord_tuple mleadX_proper; last first.
+        by rewrite mleadc_mesym //; apply/lreg1.
       rewrite mlead_mesym // mnmMn !mnmE /C /= ltnS.
       by case: (i <= j); rewrite ?(muln1, muln0) // mnmE.
     by rewrite {}/C /= -big_mkcond /= layout.
@@ -3814,22 +3822,34 @@ Section MESymFundamental.
     pose q := p - p@_m *: ('X_[l] \mPo S); have [z_q|nz_q] := eqVneq q 0.
       exists (p@_m *: 'X_[l]); move/eqP: z_q; rewrite /q subr_eq0.
       move/eqP/esym; rewrite comp_mpolyZ=> ->; split=> //.
-      rewrite mmeasureZ -?mlead_deg ?mleadc_eq0 //.
+      rewrite (@leq_trans (mweight 'X_[R, l])) ?mmeasureZ_le //.
+      rewrite -?mlead_deg ?mleadc_eq0 //.
       by rewrite (mweight_layout (mlead_msym_sorted sym_p)).
     have lt_pq: (mlead q < mlead p)%O.
       have mE := (mlead_layout (mlead_msym_sorted sym_p)).
       rewrite -/m -/c -/l -/S in mE; rewrite lto_neqAle andbC.
       have := mleadB_le p (p@_m *: ('X_[l] \mPo S)).
-      rewrite mleadZ ?mleadc_eq0 // ?mE ?maxoo // => -> /=.
+      rewrite mleadZ_proper ?mE ?maxoo // => [->/=|]; last first.
+        rewrite mulrC mulrI_eq0 ?mleadc_eq0 // -mE.
+        rewrite comp_mpolyX mlead_prod_proper ?mleadc_prod; last first.
+          move=> /= i _ _; rewrite tnth_map tnth_ord_tuple.
+          rewrite mleadX_proper // ?mleadcX ?mleadc_mesym //.
+            by apply/lregX/lreg1. by apply/lreg1.
+        rewrite (eq_bigr (fun _ => 1)) /=; last first.
+          move=> i _; rewrite tnth_map tnth_ord_tuple.
+          rewrite mleadX_proper ?mleadcX ?mleadc_mesym //.
+            by rewrite expr1n. by apply/lreg1.
+        by rewrite prodr_const expr1n; apply/lreg1.
       apply/eqP=> eq_lm_pq; have := nz_q; rewrite -mleadc_eq0.
       rewrite eq_lm_pq /q mcoeffB mcoeffZ -/m -{3}mE.
-      rewrite comp_mpolyX mlead_prod ?mleadc_prod; last first.
-        move=> i _ _; rewrite tnth_map tnth_ord_tuple.
-        by rewrite expf_neq0 // mesym_neq0.
+      rewrite comp_mpolyX mlead_prod_proper ?mleadc_prod; last first.
+        move=> /= i _ _; rewrite tnth_map tnth_ord_tuple.
+        rewrite mleadX_proper // ?mleadcX ?mleadc_mesym //.
+          by apply/lregX/lreg1. by apply/lreg1.
       rewrite (eq_bigr (fun _ => 1)) /=; last first.
         move=> i _; rewrite tnth_map tnth_ord_tuple.
-        rewrite mleadX ?mesym_neq0 // mleadcX.
-        by rewrite mleadc_mesym // expr1n.
+        rewrite mleadX_proper ?mleadcX ?mleadc_mesym //.
+          by rewrite expr1n. by apply/lreg1.
       by rewrite prodr_const expr1n mulr1 subrr eqxx.
     elim: (ih q)=> //; first last.
       rewrite /q rpredB // rpredZ // mcomp_sym // => i.
@@ -3837,11 +3857,11 @@ Section MESymFundamental.
     move=> t [/esym qE] wgt_t; exists (t + p@_m *: 'X_[l]).
     rewrite comp_mpolyD comp_mpolyZ -qE /q.
     rewrite addrAC -addrA subrr addr0; split=> //.
-    apply/(leq_trans (mmeasureD_le _ _ _)).
-    rewrite geq_max mmeasureZ ?mleadc_eq0 -?{2}mlead_deg //.
-    rewrite (mweight_layout (mlead_msym_sorted sym_p)).
-    rewrite leqnn (leq_trans wgt_t) // -!mlead_deg //.
-    by rewrite ltnS lem_mdeg // ltoW.
+    apply/(leq_trans (mmeasureD_le _ _ _)); rewrite geq_max.
+    rewrite (leq_trans (mmeasureZ_le _ _ _)) ?andbT.
+      rewrite (leq_trans wgt_t) // -!mlead_deg //.
+      by rewrite ltnS lem_mdeg // ltoW.
+    rewrite mweight_layout -?mlead_deg //.
+    by apply/mlead_msym_sorted.
   Qed.
 End MESymFundamental.
-
