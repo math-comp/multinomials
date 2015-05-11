@@ -1841,6 +1841,59 @@ Section MPolyLead.
     by move/msupp_le_mlead/leoNgt; rewrite lt_lcp_m.
   Qed.
 
+  Lemma mleadDr (p1 p2 : {mpoly R[n]}):
+    (mlead p1 < mlead p2)%O -> mlead (p1 + p2) = mlead p2.
+  Proof.
+    move=> lt_p1p2; apply/eqP; rewrite eqo_leq.
+    move: (mleadD_le p1 p2); rewrite /maxo lt_p1p2=> ->/=.
+    rewrite letNgt //; apply/negP=> /mcoeff_gt_mlead.
+    rewrite mcoeffD mcoeff_gt_mlead // add0r => /eqP.
+    rewrite mleadc_eq0=> /eqP z_p2; move: lt_p1p2.
+    by rewrite z_p2 mlead0 lto0.
+  Qed.
+
+  Lemma mleadDl (p1 p2 : {mpoly R[n]}):
+    (mlead p2 < mlead p1)%O -> mlead (p1 + p2) = mlead p1.
+  Proof. by move/mleadDr; rewrite addrC => ->. Qed.
+
+  Lemma mleadD (p1 p2 : {mpoly R[n]}): mlead p1 != mlead p2 ->
+    mlead (p1 + p2) = maxo (mlead p1) (mlead p2).
+  Proof.
+    move=> ne_p1p2; rewrite /maxo; case: (boolP (_ < _))%O.
+      by move/mleadDr.
+    rewrite lttNge // negbK leo_eqVlt eq_sym (negbTE ne_p1p2).
+    by move/mleadDl.
+  Qed.
+
+  Lemma mlead_sum_le (T : Type) (r : seq T) (P : pred T) (F : T -> {mpoly R[n]}):
+    (mlead (\sum_(p <- r | P p) F p) <= \max_(p <- r | P p) (mlead (F p)))%O.
+  Proof.
+    elim/big_rec2: _ => /= [|x m p Px le]; first by rewrite mlead0.
+    apply/(leo_trans (mleadD_le _ _)); rewrite geo_max //.
+    by rewrite leo_maxl //= leo_max // le orbT.
+  Qed.
+
+  Lemma mlead_sum (T : Type) (r : seq T) (P : pred T) (F : T -> {mpoly R[n]}):
+       (uniq [seq mlead (F p) | p <- r & P p])
+    -> (mlead (\sum_(p <- r | P p) F p) = \max_(p <- r | P p) (mlead (F p)))%O.
+  Proof.                        (* FIXME: far too convoluted *)
+    elim: r=> [|p r ih]; first by rewrite !big_nil mlead0.
+    rewrite !big_cons /=; case: (P p)=> //= /andP[Fp_ml uq_ml].
+    pose Q i := P (nth p r i); rewrite !(big_nth p) -!(big_filter _ Q).
+    set itg := [seq _ <- _ | _]; have [|nz_szr] := eqVneq (size itg) 0%N.
+      by move/size0nil=> ->; rewrite !big_nil maxo0 addr0.
+    move: {ih}(ih uq_ml); rewrite !(big_nth p) -!(big_filter _ Q) -/itg.
+    move=> ih; rewrite mleadD ih //; pose G i := mlead (F (nth p r i)).
+    case: (eq_bigmaxo G (r := itg)); first by rewrite -size_eq0.
+    move=> /= x /andP[]; rewrite {1}/itg mem_filter=> /andP[Px].
+    rewrite mem_iota add0n subn0 {}/G=> /andP[_ lt_x_szr] /eqP->.
+    apply/contra: Fp_ml=> /eqP-> {Q itg uq_ml nz_szr ih}.
+    elim: r x Px lt_x_szr=> [|y r ih] [|x] //=.
+      by move=> -> /=; rewrite mem_head.
+    rewrite ltnS=> Px lt_x_szr; case: (P y)=> /=.
+      by rewrite 1?mem_behead //=; apply/ih. by apply/ih.
+  Qed.
+
   Lemma mleadM_le p q: (mlead (p * q) <= (mlead p + mlead q)%MM)%O.
   Proof.
     have [->|] := eqVneq (p * q) 0; first by rewrite mlead0 le0o.
