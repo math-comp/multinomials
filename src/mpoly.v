@@ -141,6 +141,12 @@ Section MultinomTheory.
   Implicit Types t : n.-tuple nat.
   Implicit Types m : 'X_{1..n}.
 
+  Lemma mnm_tnth m j: m j = tnth m j.
+  Proof. by []. Qed.
+
+  Lemma mnm_nth x0 m j: m j = nth x0 m j.
+  Proof. by rewrite mnm_tnth (tnth_nth x0). Qed.
+
   Lemma mnmE E j: [multinom E i | i < n] j = E j.
   Proof. by rewrite multinomE tnth_mktuple. Qed.
 
@@ -477,7 +483,7 @@ Section MultinomOrder.
       rewrite (nth_map (0, 0)%N) ?sz_mm' //=.
       rewrite nth_zip ?size_tuple //=.
       rewrite (nth_map (Ordinal lt_in)) ?size_enum_ord //.
-      by rewrite /fun_of_multinom !(tnth_nth 0%N) !nth_enum_ord.
+      by rewrite !(mnm_nth 0%N) !nth_enum_ord.
     rewrite /le /= /mnmc_le ltm_ltx => ltx1 lex2.
     have := (ltx_lex_nat_sum ltx1 lex2) => /= lt.
     by rewrite ltm_ltx /= !mdegD -!eq.
@@ -3527,7 +3533,7 @@ Section MWiden.
     rewrite !nth_rcons size_map size_enum_ord !size_tuple !if_same.
     case h: (i < n); last by rewrite addn0.
     rewrite (nth_map (Ordinal h)) ?size_enum_ord //.
-    by rewrite /fun_of_multinom !(tnth_nth 0%N) /= !nth_enum_ord.
+    by rewrite !(mnm_nth 0%N) /= !nth_enum_ord.
   Qed.
 
   Lemma mnmwiden_sum (I : Type) (r : seq I) P F:
@@ -3794,55 +3800,91 @@ Section MESymFundamental.
 
   Local Notation S := [tuple 's_(R, n, i.+1) | i < n].
 
-  Let layout (m : 'X_{1..n}):
-    let c i := nth 0%N m i in
-    let F i := (c i - c i.+1)%N in
+  Implicit Types m : 'X_{1..n}.
 
-       (forall i j : 'I_n, i <= j -> m j <= m i)
-    -> forall k, m k = (\sum_(j : 'I_n | k <= j) (F#val) j)%N.
+  Let mlead_XS:
+    forall m,
+        mlead ('X_[R, m] \mPo S)
+      = [multinom \sum_(j : 'I_n | i <= j) (m j) | i < n]%N.
   Proof.
-    move=> c F srt_m k; transitivity (\sum_(k <= j < n) F j)%N.
-      rewrite -[val k]add0n big_addn /= sumn_range.
-        rewrite add0n subnK 1?ltnW // /c -tnth_nth.
-        by rewrite nth_default ?subn0 // size_tuple.
-      move=> i j; rewrite ltnS => /andP[le_ij].
-      rewrite -(leq_add2r k) subnK ?[k<=_]ltnW //.
-      rewrite leq_eqVlt; case/orP => [/eqP->|].
-        by rewrite {1}/c nth_default // size_tuple.
-      move=> lt_jDk_n; rewrite -(leq_add2r k) in le_ij.
-      have/(leq_ltn_trans) := le_ij => /(_ _ lt_jDk_n) => lt_iDk_n.
-      pose i' := Ordinal lt_iDk_n; pose j' := Ordinal lt_jDk_n.
-      by move: (srt_m i' j' le_ij); rewrite /fun_of_multinom !(tnth_nth 0%N).
-    rewrite (eq_bigr (F \o val))=> [|i]; last by rewrite mnmE.
-    rewrite -big_mkord (@big_cat_nat _ _ _ k 0) // 1?ltnW //=.
-    apply/esym; rewrite big_nat_cond big1 ?add0n; last first.
-      by move=> i /andP[/andP[_]]; rewrite ltnNge => /negbTE->.
-    rewrite big_mkcond /= !big_seq; apply/eq_bigr=> /=.
-    by move=> i; rewrite mem_iota=> /andP[->].
+    move=> m; rewrite comp_mpolyX mlead_prod_proper=> /=; last first.
+      move=> i _ _; rewrite tnth_map tnth_ord_tuple.
+      rewrite mleadX_proper /= ?mleadc_mesym //; last by apply/lreg1.
+      by rewrite mleadcX ?mleadc_mesym //; apply/lregX/lreg1.
+    pose F (i : 'I_n) := [multinom (j <= i) * (m i) | j < n]%N.
+    rewrite (eq_bigr F) {}/F=> [|i _]; last first.
+      rewrite tnth_map tnth_ord_tuple mleadX_proper.
+        rewrite mlead_mesym //; apply/mnmP=> j.
+        by rewrite mnmMn !mnmE mulnC ltnS.
+      by rewrite mleadc_mesym //; apply/lreg1.
+    apply/mnmP=> i; apply/esym; rewrite mnm_sum mnmE big_mkcond /=.
+    apply/eq_bigr=> j _; rewrite mnmE; case: leqP=> _.
+      by rewrite mul1n. by rewrite mul0n.
   Qed.
 
-  Let mlead_layout (m : 'X_{1..n}):
+  Let mleadc_XS l: mleadc ('X_[l] \mPo S) = 1.
+  Proof.
+    rewrite comp_mpolyX mlead_prod_proper ?mleadc_prod; last first.
+      move=> /= i _ _; rewrite tnth_map tnth_ord_tuple.
+      rewrite mleadX_proper // ?mleadcX ?mleadc_mesym //.
+        by apply/lregX/lreg1. by apply/lreg1.
+    rewrite (eq_bigr (fun _ => 1)) /=; last first.
+      move=> i _; rewrite tnth_map tnth_ord_tuple.
+      rewrite mleadX_proper ?mleadcX ?mleadc_mesym //.
+        by rewrite expr1n. by apply/lreg1.
+    by rewrite prodr_const expr1n.
+  Qed.
+
+  Let free_XS m1 m2: m1 != m2 ->
+    mlead ('X_[R, m1] \mPo S) != mlead ('X_[R, m2] \mPo S).
+  Proof.
+    move=> ne_m1m2; apply/negP=> /eqP eqXS.
+    pose F m i := (\sum_(j : 'I_n | i <= j) (m j))%N.
+    have {eqXS} eqF i: F m1 i = F m2 i.
+      case: (ssrnat.ltnP i n)=> [lt_in|le_ni]; last first.
+        rewrite /F !big1 //= => j /(leq_trans le_ni);
+        by rewrite leqNgt ltn_ord.
+      by move/mnmP/(_ (Ordinal lt_in)): eqXS; rewrite !mlead_XS !mnmE.
+    apply/negP: ne_m1m2; rewrite negbK; apply/eqP/mnmP=> i.
+    rewrite -[i in m1 i]rev_ordK -[i in m2 i]rev_ordK.
+    pose G m i := nth 0%N m (n-i.+1); rewrite !(mnm_nth 0%N) /=.
+    apply/(@psumn_eq n (G m1) (G m2)); rewrite ?subnSK ?leq_subr //.
+    move=> j le_jn; have Geq m: (\sum_(i < n | i < j) G m i = F m (n-j))%N.
+      rewrite (reindex_inj rev_ord_inj) /= /F; apply/eq_big=> l /=.
+      + by rewrite subnSK // !leq_subLR addnC.
+      + by move=> _; rewrite /G subnS subKn //= (mnm_nth 0%N).
+    by rewrite !Geq.
+  Qed.
+
+  Let mlead_XLS (m : 'X_{1..n}):
     let c i := nth 0%N m i in
     let F i := (c i - c i.+1)%N in
 
        (forall i j : 'I_n, i <= j -> m j <= m i)
     -> mlead ('X_[R, F#val] \mPo S) = m.
   Proof.
-    move=> c F srt_m; rewrite comp_mpolyX.
-    rewrite mlead_prod_proper /=; last first.
-      move=> i _ _; move: (F#_)=> m'; rewrite tnth_map tnth_ord_tuple.
-      rewrite mleadX_proper /= ?mleadc_mesym //; last by apply/lreg1.
-      by rewrite mleadcX ?mleadc_mesym //; apply/lregX/lreg1.
-    apply/mnmP=> i; pose C (x : 'I_n) := if i <= x then (F#val) x else 0%N.
-    rewrite mnm_sum (eq_bigr C)=> [|j _]; last first.
-      rewrite tnth_map tnth_ord_tuple mleadX_proper; last first.
-        by rewrite mleadc_mesym //; apply/lreg1.
-      rewrite mlead_mesym // mnmMn !mnmE /C /= ltnS.
-      by case: (i <= j); rewrite ?(muln1, muln0) // mnmE.
-    by rewrite {}/C /= -big_mkcond /= layout.
+    move=> c F srt_m; rewrite mlead_XS; apply/mnmP=> i.
+    rewrite mnmE; rewrite (eq_bigr (F \o val)); last first.
+      by move=> /= j _; rewrite mnmE.
+    rewrite -big_mkord (big_cat_nat _ (n := i%N)) // 1?ltnW //=.
+    rewrite big_nat_cond big_pred0 ?add0n; last first.
+      by move=> j /=; rewrite ltnNge andNb.
+    rewrite big_nat_cond (eq_bigl (fun j => i <= j < n)); last first.
+      by move=> j /=; apply/andb_idr=> /andP[].
+    rewrite -big_nat; rewrite sumn_range 1?ltnW //.
+      rewrite /c [X in (_-X)%N]nth_default ?size_tuple //.
+      by rewrite subn0 (mnm_nth 0%N).
+    move=> j1 j2; rewrite ltnS=> /andP[le_j1j2].
+    rewrite leq_eqVlt ltn_subRL; case/orP=> [/eqP->|].
+      rewrite subnK ?[i <= _]ltnW // /c nth_default //.
+      by rewrite size_tuple.
+    rewrite addnC=> lt_j2Di_n; have lt_j1Di_n: j1 + i < n.
+      by apply/(@leq_ltn_trans (j2+i))=> //; rewrite leq_add2r.
+    have /= := srt_m (Ordinal lt_j1Di_n) (Ordinal lt_j2Di_n).
+    by rewrite !(mnm_nth 0%N) /=; apply; rewrite leq_add2r.
   Qed.
 
-  Let mweight_layout (m : 'X_{1..n}):
+  Let mweight_XLS (m : 'X_{1..n}):
     let c i := nth 0%N m i in
     let F i := (c i - c i.+1)%N in
 
@@ -3864,21 +3906,8 @@ Section MESymFundamental.
     by apply/eq_bigr=> /= i _; rewrite /fun_of_multinom (tnth_nth 0%N).
   Qed.
 
-  Let mlead_value l: mleadc ('X_[l] \mPo S) = 1.
-  Proof.
-    rewrite comp_mpolyX mlead_prod_proper ?mleadc_prod; last first.
-      move=> /= i _ _; rewrite tnth_map tnth_ord_tuple.
-      rewrite mleadX_proper // ?mleadcX ?mleadc_mesym //.
-        by apply/lregX/lreg1. by apply/lreg1.
-    rewrite (eq_bigr (fun _ => 1)) /=; last first.
-      move=> i _; rewrite tnth_map tnth_ord_tuple.
-      rewrite mleadX_proper ?mleadcX ?mleadc_mesym //.
-        by rewrite expr1n. by apply/lreg1.
-    by rewrite prodr_const expr1n.
-  Qed.
-
   Lemma sym_fundamental (p : {mpoly R[n]}): p \is symmetric ->
-    { t |  t \mPo [tuple 's_(n, i.+1) | i < n] = p /\ mweight t <= msize p}.
+    { t | t \mPo S = p /\ mweight t <= msize p}.
   Proof.
     set S := [tuple 's_(n, i.+1) | i < n].
     elim/mleadrect: p=> p ih sym_p; have [->|nz_p] := eqVneq p 0.
@@ -3890,16 +3919,16 @@ Section MESymFundamental.
       move/eqP/esym; rewrite comp_mpolyZ=> ->; split=> //.
       rewrite (@leq_trans (mweight 'X_[R, l])) ?mmeasureZ_le //.
       rewrite -?mlead_deg ?mleadc_eq0 //.
-      by rewrite (mweight_layout (mlead_msym_sorted sym_p)).
+      by rewrite (mweight_XLS (mlead_msym_sorted sym_p)).
     have lt_pq: (mlead q < mlead p)%O.
-      have mE := (mlead_layout (mlead_msym_sorted sym_p)).
+      have mE := (mlead_XLS (mlead_msym_sorted sym_p)).
       rewrite -/m -/c -/l -/S in mE; rewrite lto_neqAle andbC.
       have := mleadB_le p (p@_m *: ('X_[l] \mPo S)).
       rewrite mleadZ_proper ?mE ?maxoo // => [->/=|]; last first.
         rewrite mulrC mulrI_eq0 ?mleadc_eq0 // -mE.
-        rewrite mlead_value; apply/lreg1.
+        rewrite mleadc_XS; apply/lreg1.
       apply/eqP=> eq_lm_pq; have := nz_q; rewrite -mleadc_eq0.
-      rewrite eq_lm_pq /q mcoeffB mcoeffZ -/m -{3}mE mlead_value.
+      rewrite eq_lm_pq /q mcoeffB mcoeffZ -/m -{3}mE mleadc_XS.
       by rewrite mulr1 subrr eqxx.
     elim: (ih q)=> //; first last.
       rewrite /q rpredB // rpredZ // mcomp_sym // => i.
@@ -3911,7 +3940,7 @@ Section MESymFundamental.
     rewrite (leq_trans (mmeasureZ_le _ _ _)) ?andbT.
       rewrite (leq_trans wgt_t) // -!mlead_deg //.
       by rewrite ltnS lem_mdeg // ltoW.
-    rewrite mweight_layout -?mlead_deg //.
+    rewrite mweight_XLS -?mlead_deg //.
     by apply/mlead_msym_sorted.
   Qed.
 End MESymFundamental.

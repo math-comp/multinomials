@@ -47,17 +47,32 @@ Proof.
   by congr (_ - _)%N; rewrite addnC addnBA 1?addnC // h.
 Qed.
 
-Lemma sumn_range (k : nat) (c : nat -> nat):
-     (forall i j, i <= j < k.+1 -> c j <= c i)
-  -> (\sum_(0 <= i < k) (c i - c i.+1) = c 0 - c k)%N.
+(* -------------------------------------------------------------------- *)
+Lemma sumn_range (k1 k2 : nat) (c : nat -> nat): k1 <= k2 ->
+     (forall i j, i <= j < (k2-k1).+1 -> c (j+k1) <= c (i+k1))%N
+  -> (\sum_(k1 <= i < k2) (c i - c i.+1) = c k1 - c k2)%N.
 Proof.
-  case: k => [|k] h; first by rewrite big_geq 1?subnn.
+  rewrite leq_eqVlt; case/orP=> [/eqP<- h|].
+    by rewrite big_geq // subnn.
+  rewrite -subn_gt0=> gt0_k2Bk1 h; rewrite -{1}[k1]add0n big_addn.
+  case k1Bk2E: (k2-k1)%N  gt0_k2Bk1 h => [|n] // _ h.
   rewrite big_nat subnB -?big_nat; last first.
-    move=> i /andP[_] lt_iSk; apply/h.
-    by rewrite ltnS lt_iSk andbT.
-  by rewrite big_nat_recl ?big_nat_recr //= subnDA addnK.
+    move=> i /andP[_]; rewrite ltnS -addSn => le_in.
+    by apply/h; rewrite leqnSn /= !ltnS.
+  rewrite big_nat_recl ?big_nat_recr //= subnDA addnK.
+  rewrite add0n -addSn -k1Bk2E subnK // leqNgt; apply/negP.
+  by move/ltnW; rewrite -subn_eq0 k1Bk2E.
 Qed.
 
+Lemma sum0n_range (k : nat) (c : nat -> nat):
+     (forall i j, i <= j < k.+1 -> c j <= c i)%N
+  -> (\sum_(0 <= i < k) (c i - c i.+1) = c 0 - c k)%N.
+Proof.
+  move=> h; apply/sumn_range; rewrite ?subn0=> // i j le.
+  by rewrite !addn0; apply/h.
+Qed.
+
+(* -------------------------------------------------------------------- *)
 Lemma sumn_wgt_range (k : nat) (c : nat -> nat):
      (forall i j, i <= j < k.+1 -> c j <= c i)
   -> (  \sum_(i < k) (c i - c i.+1) * i.+1
@@ -83,6 +98,25 @@ Proof.
     by rewrite leq_mul=> //; apply/h; rewrite !ltnS !leqnSn.
   move=> i j /andP[le_ij lt_jSSk]; apply/h.
   by rewrite le_ij !ltnS ltnW.
+Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma psumn_eq k (F1 F2 : nat -> nat):
+     (forall j, j <= k ->
+          \sum_(i < k | i < j) F1 i
+        = \sum_(i < k | i < j) F2 i)%N
+  -> forall j, j < k -> F1 j = F2 j.
+Proof.
+  pose rw := (big_ord_narrow, big_ord_recr).
+  move=> h j; elim: j {-2}j (leqnn j)=> [|j ih] l.
+    rewrite leqn0=> /eqP-> lt; have := h 1%N lt.
+    by rewrite !rw !big_ord0 /= !add0n=> ->.
+  rewrite leq_eqVlt ltnS; case/orP=>[/eqP->|]; last by apply/ih.
+  move: {-2}j.+1 (leqnn j.+1)=> x le_xSj lt; have := h _ lt.
+  rewrite !rw /=; set S1 := bigop _ _ _; set S2 := bigop _ _ _.
+  suff <-: S1 = S2 by move/addnI. apply/eq_bigr=> /=.
+  case=> /= i lt_ix _; apply/ih; last by apply/(ltn_trans lt_ix).
+  by rewrite -ltnS; apply/(leq_trans lt_ix).
 Qed.
 
 (* -------------------------------------------------------------------- *)
