@@ -2483,7 +2483,11 @@ Section MPolyComp.
 
   Local Notation "p \mPo lq" := (comp_mpoly lq p).
 
-  Lemma comp_mpolyE p lq w: msize p <= w -> p \mPo lq =
+  Lemma comp_mpolyE p lq:
+    p \mPo lq = \sum_(m <- msupp p) p@_m *: \prod_(i < n) (tnth lq i)^+(m i).
+  Proof. by apply/eq_bigr=> m _; rewrite -mul_mpolyC. Qed.
+
+  Lemma comp_mpolywE p lq w: msize p <= w -> p \mPo lq =
     \sum_(m : 'X_{1..n < w}) (p@_m *: \prod_(i < n) (tnth lq i)^+(m i)).
   Proof.
     move=> le_szp_w; rewrite /comp_mpoly (mmapE w) //=.
@@ -2525,6 +2529,10 @@ Section MPolyComp.
   Lemma comp_mpolyX m lq:
     'X_[m] \mPo lq = \prod_(i < n) (tnth lq i)^+(m i).
   Proof. by rewrite /comp_mpoly mmapX. Qed.
+
+  Lemma comp_mpolyEX p lq:
+    p \mPo lq = \sum_(m <- msupp p) (p@_m *: ('X_[m] \mPo lq)).
+  Proof. by apply/eq_bigr=> m _; rewrite mul_mpolyC comp_mpolyX. Qed.
 End MPolyComp.
 
 Notation "p \mPo lq" := (@comp_mpoly _ _ _ lq p).
@@ -3172,7 +3180,7 @@ Section MPolySymComp.
     -> p \mPo t \is symmetric.
   Proof.
     move=> sym_t; pose_big_enough l.
-      rewrite (comp_mpolyE _ (w := l)) //. 2: by close.
+      rewrite (comp_mpolywE _ (w := l)) //. 2: by close.
     apply/rpred_sum=> m _; apply/rpredZ/rpred_prod=> i _.
     by rewrite (tnth_nth 0); apply/rpredX/sym_t.
   Qed.
@@ -3189,7 +3197,7 @@ Section MPolySymCompCom.
     -> p \mPo t \is symmetric.
   Proof.
     move=> sym_p sym_t; apply/issymP=> s; pose_big_enough l.
-      rewrite (comp_mpolyE _ (w := l)) //. 2: by close.
+      rewrite (comp_mpolywE _ (w := l)) //. 2: by close.
     case/tuple_perm_eqP: (sym_t s^-1)%g => s' tE.
     pose F (m : 'X_{1..n < l}) := insubd m [multinom m (s' i) | i < n].
     have FE m: F m = [multinom m (s' i) | i < n] :> 'X_{1..n}.
@@ -3942,5 +3950,39 @@ Section MESymFundamental.
       by rewrite ltnS lem_mdeg // ltoW.
     rewrite mweight_XLS -?mlead_deg //.
     by apply/mlead_msym_sorted.
+  Qed.
+
+  Local Notation XS m := ('X_[R, m] \mPo S) (only parsing).
+
+  Lemma msym_fundamental_un0 (t : {mpoly R[n]}):
+    t \mPo S = 0 -> t = 0.
+  Proof.
+    set S := S; move/eqP; apply/contraTeq=> nz_t; rewrite -mleadc_eq0.
+    have h m: m \in msupp t -> mlead (t@_m *: (XS m)) = mlead (XS m).
+      move=> m_in_t; rewrite mleadZ_proper // mleadc_XS.
+      by rewrite mulr1 mcoeff_eq0 m_in_t.
+    rewrite comp_mpolyEX mlead_sum ?filter_predT; last first.
+      rewrite (iffLR (eq_in_map _ _ _) h) -/S.
+      apply/(@uniq_nth _ 0%MM) => i j; rewrite size_map.
+      move=> lti ltj ne_ij; rewrite !(nth_map 0%MM) //.
+      by apply/free_XS; rewrite nth_uniq.
+    rewrite big_seq (eq_bigr _ h) -big_seq.
+    case: (eq_bigmaxo (fun m => mlead (XS m)) (r := msupp t)).
+      by rewrite msupp_eq0.
+    move=> /= m /andP[m_in_t /eqP/esym]; rewrite -/S=> lmm.
+    rewrite -lmm raddf_sum /= (bigD1_seq m) //= mcoeffZ.
+    rewrite mleadc_XS mulr1 big_seq_cond big1.
+      by rewrite addr0 mcoeff_eq0 m_in_t.
+    move=> /= m' /andP[m'_in_t ne_m'm]; rewrite mcoeffZ.
+    rewrite [X in _*X]mcoeff_gt_mlead ?mulr0 //.
+    rewrite lto_neqAle free_XS //= lmm.
+    by apply (leo_bigmax (fun m => mlead (XS m))).
+  Qed.
+
+  Lemma msym_fundamental_un (t1 t2 : {mpoly R[n]}):
+    t1 \mPo S = t2 \mPo S -> t1 = t2.
+  Proof.
+    move/eqP; rewrite -subr_eq0 -raddfB /= => /eqP.
+    by move/msym_fundamental_un0/eqP; rewrite subr_eq0=> /eqP.
   Qed.
 End MESymFundamental.

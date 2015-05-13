@@ -36,6 +36,21 @@ Lemma flatten_seq1 (T : Type) (r : seq T):
 Proof. by elim: r=> /= [|x r ->]. Qed.
 
 (* -------------------------------------------------------------------- *)
+Lemma uniq_nth (T : eqType) (x0 : T) s:
+     (forall i j, i < size s -> j < size s ->
+        i != j -> nth x0 s i != nth x0 s j)
+  -> uniq s.
+Proof.
+  elim: s=> [//|x s ih] h /=; apply/andP; split.
+    apply/(nthP x0)=> h_nth; absurd false=> //.
+    case: h_nth => i lt_i_szs /esym xE.
+    have := h 0%N i.+1; rewrite xE eqxx /=.
+    by rewrite !ltnS /= leq0n lt_i_szs=> ->.
+  apply/ih=> i j lti ltj ne_ij; have /= := h i.+1 j.+1.
+  by move/(_ lti ltj ne_ij).
+Qed.
+
+(* -------------------------------------------------------------------- *)
 Lemma subnB (T : Type) (r : seq T) (a b : T -> nat) (P : pred T):
   (forall i, P i -> b i <= a i) ->
        (\sum_(i <- r | P i) (a i - b i))%N
