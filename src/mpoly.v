@@ -3448,57 +3448,6 @@ Section MElemPolySym.
     rewrite mcoeff_mesym; case: (boolP (mechar _ _))=> //=.
     by rewrite -mem_msupp_mesym mlead_supp // mesym_neq0.
   Qed.
-
-  (* ------------------------------------------------------------------ *)
-  Definition tmono (n : nat) (h : seq 'I_n) :=
-    sorted ltn (map val h).
-
-  Lemma uniq_tmono (h : seq 'I_n): tmono h -> uniq h.
-  Proof.
-    rewrite /tmono => /sorted_uniq; rewrite (map_inj_uniq val_inj).
-    by apply; [apply/ltn_trans | move=> ?; rewrite /ltn /= ltnn].
-  Qed.
-
-  Lemma eq_tmono (h1 h2 : seq 'I_n):
-    tmono h1 -> tmono h2 -> h1 =i h2 -> h1 = h2.
-  Proof.
-    move=> tm1 tm2 h; apply/(inj_map val_inj).
-    apply/(eq_sorted_irr (leT := ltn))=> //.
-      by apply/ltn_trans.
-      by move=> ?; rewrite /ltn /= ltnn.
-    move=> m; apply/mapP/mapP; case=> /= x;
-      by rewrite (h, =^~ h)=> {h} h ->; exists x.
-  Qed.
-
-  Lemma mesym_tupleE (k : nat): 's_k =
-    \sum_(h : k.-tuple 'I_n | tmono h) \prod_(i <- h) 'X_i.
-  Proof.
-    have tval_tcast T k1 k2 (eq : k1 = k2) (x : k1.-tuple T):
-      tval (tcast eq x) = tval x.
-    + by rewrite /tcast; case: k2 / eq.
-    pose t2s (t : k.-tuple 'I_n) := [set x | x \in t].
-    rewrite /mesym -[X in X=_]big_set -[X in _=X]big_set /=.
-    set E := [set t2s x | x in [pred t | tmono (tval t)]].
-    have h: E = [set i : {set 'I_n} | #|i| == k].
-      apply/setP=> /= h; rewrite inE; apply/imsetP/idP=> /=.
-      + case=> t; rewrite inE => tmono_t -> /=; rewrite /t2s.
-        rewrite cardsE /= -[X in _==X](size_tuple t).
-        by apply/eqP/card_uniqP/uniq_tmono.
-      + move/eqP=> eq_sz; exists (tcast eq_sz [tuple of (enum h)]).
-        * rewrite inE /tmono tval_tcast /=; pose I := enum 'I_n.
-          apply/(subseq_sorted _ (s2 := [seq val i | i <- I])).
-            by apply/ltn_trans.
-            by apply/map_subseq; rewrite /enum_mem -enumT; apply/filter_subseq.
-            by rewrite val_enum_ord iota_ltn_sorted.
-        * by apply/setP=> i; rewrite !(inE, memtE) tval_tcast mem_enum.
-    rewrite -h {h}/E big_imset 1?big_set /=; last first.
-      move=> t1 t2; rewrite !inE => tmono_t1 tmono_t2 /setP eq.
-      apply/eqP; rewrite eqE /=; apply/eqP/eq_tmono => // i.
-      by move/(_ i): eq; rewrite /t2s !inE.
-    apply/eq_big=> // i; rewrite inE 1?big_set /=.
-    case: i => i sz_i /= tmono_i; rewrite (eq_bigl (mem i)) //=.
-    by rewrite !mprodXE big_uniq //; apply/uniq_tmono.
-  Qed.
 End MElemPolySym.
 
 Local Notation "''s_' ( K , n , k )" := (@mesym n K k).
@@ -3660,67 +3609,97 @@ End MWiden.
 
 (* -------------------------------------------------------------------- *)
 Section MESymViete.
-  Definition twiden n k (t : k.-tuple 'I_n) := [tuple of map widen t].
-
-  Lemma inj_widen n: injective (widen : 'I_n -> _).
-  Proof. by move=> x y /eqP; rewrite eqE /= val_eqE => /eqP. Qed.
-
   Local Notation mw  := mwiden.
   Local Notation mpw := mpwiden.
 
+  Local Notation swiden h :=
+    [set widen x | x in h : {set 'I__}]
+    (only parsing).
+
+  Local Notation S1 n k :=
+    [set swiden h | h in {set 'I_n} & #|h| == k.+1]
+    (only parsing).
+
+  Local Notation S2 n k :=
+    [set ord_max |: swiden h | h in {set 'I_n} & #|h| == k]
+    (only parsing).
+
+  Let inj_widen n: injective (widen : 'I_n -> _).
+  Proof. by move=> x y /eqP; rewrite eqE /= val_eqE => /eqP. Qed.
+
   Local Hint Resolve inj_widen.
+
+  Let inj_swiden n: injective (fun h : {set 'I_n} => swiden h).
+  Proof.
+    have h m (x : 'I_n): (widen x \in swiden m) = (x \in m).
+      apply/imsetP/idP=> /= [[y y_in_m /inj_widen ->//]|].
+      by move=> x_in_m; exists x.
+    move=> m1 m2 /= /setP eq; apply/setP=> /= x.
+    by have := eq (widen x); rewrite !h.
+  Qed.
+
+  Local Hint Resolve inj_swiden.
+
+  Let inj_mDswiden n: injective (fun h : {set 'I_n} => ord_max |: swiden h).
+  Proof.
+    move=> h1 h2 /= /setP eq; apply/inj_swiden.
+    apply/setP => /= x; have {eq} := (eq x).
+    rewrite !inE; case: eqP=> [-> _|//].
+    have E (h : {set 'I_n}): ord_max \in swiden h = false.
+      apply/negP; case/imsetP=> /= y _ /eqP.
+      by rewrite eqE /= eq_sym ltn_eqF.
+    by rewrite !E.
+  Qed.
+
+  Let disjoint_S n k: [disjoint (S1 n k) & (S2 n k)].
+  Proof.
+    rewrite -setI_eq0; apply/eqP/setP=> /= x.
+    rewrite !in_set; apply/negP=> /andP[].
+    case/imsetP=> /= h1 _ -> /imsetP /= [h2 _].
+    move/setP/(_ ord_max); rewrite !in_set eqxx /=.
+    case/imsetP=> /= {h1 h2} m _ /eqP.
+    by rewrite eqE /= eq_sym ltn_eqF.
+  Qed.
+
+  Let union_S n k:
+    [set h in {set 'I_n.+1} | #|h| == k.+1] = S1 n k :|: S2 n k.
+  Proof.
+    apply/eqP; rewrite eq_sym eqEcard; apply/andP; split.
+      rewrite subUset; apply/andP; split.
+        apply/subsetP=> h /imsetP /= [m]; rewrite inE.
+        by move=> eq ->; rewrite inE card_imset //=.
+      apply/subsetP=> h /imsetP /= [m]; rewrite inE.
+      move=> eq->; rewrite inE cardsU1 card_imset //=.
+      rewrite -[k.+1]add1n (eqP eq) eqn_add2r eqb1.
+      apply/negP=> /imsetP [/=] x _ /eqP.
+      by rewrite eqE /= eq_sym ltn_eqF.
+    have := disjoint_S n k; rewrite -leq_card_setU=> /eqP->.
+    rewrite !card_imset //= ?card_draws /=; first last.
+      by apply/inj_swiden. by apply/inj_mDswiden.
+    by rewrite !card_ord binS.
+  Qed.  
 
   Lemma mesymSS (R : ringType) n k:
     's_(n.+1, k.+1) = mw 's_(n, k.+1) + mw 's_(n, k) * 'X_(ord_max)
     :> {mpoly R[n.+1]}.
   Proof.
-    pose T k n := k.-tuple 'I_n; rewrite {1}mesym_tupleE.
-    pose F1 (t : T k.+1 n) := twiden t.
-    pose F2 (t : T k n) := [tuple of rcons [seq widen i | i <- t] (inord n)].
-    pose E1 := [set F1 t | t : T k.+1 n & tmono t].
-    pose E2 := [set F2 t | t : T k n & tmono t].
-    have inj_F1: injective F1.
-      by move=> x y /= [] /(inj_map (@inj_widen _)) /val_inj.
-    have inj_F2: injective F2.
-      move=> x y /= [] /(congr1 rev); rewrite !rev_rcons.
-      case=> /(congr1 rev); rewrite !revK => [].
-      by move/(inj_map (@inj_widen _)) /val_inj.
-    have sorted_E1: forall t, t \in E1 -> tmono t.
-      move=> /= t /imsetP [/= u]; rewrite inE /tmono => st_u ->.
-      by rewrite -map_comp (eq_map (f2 := val)).
-    have sorted_E2: forall t, t \in E2 -> tmono t.
-      move=> /= t /imsetP [/= u]; rewrite inE /tmono => st_u ->.
-      case: u st_u; case=> //= x u _ st_u.
-      rewrite map_rcons -map_comp (eq_map (f2 := val)) //.
-      by rewrite rcons_path st_u /= last_map inordK.
-    have disj_E: [disjoint E1 & E2].
-      apply/pred0P=> x /=; apply/negP=> /andP [].
-      case/imsetP=> /= t1 _ -> /imsetP /= [t2 /= _].
-      move/(congr1 ((@tnth _ _)^~ ord_max))/esym.
-      rewrite {1}/tnth nth_rcons size_map size_tuple /= ltnn eqxx.
-      by apply/eqP; rewrite eqE /= inordK // tnth_map gtn_eqF /=.
-    have split_E: [set t : T k.+1 n.+1 | tmono t] = E1 :|: E2.
-      apply/esym/eqP; rewrite eqEcard; apply/andP; split.
-        apply/subsetP=> /= t; rewrite in_setU; case/orP.
-        * by move/sorted_E1; rewrite inE.
-        * by move/sorted_E2; rewrite inE.
-      rewrite cardsU disjoint_setI0 // cards0 subn0.
-      rewrite !card_imset /= ?(cardsT, card_tuple, card_ord) //.
-      by rewrite !card_ltn_sorted_tuples binS addnC.
-    rewrite -big_set /= split_E big_set /= bigU //=; congr (_ + _).
-    + rewrite /E1 big_imset /=; last by move=> t1 t2 _ _; apply/inj_F1.
-      rewrite big_set mesym_tupleE /= raddf_sum /=; apply/eq_bigr=> i _.
+    rewrite /mesym -big_set /= union_S big_set.
+    rewrite bigU ?disjoint_S //=; congr (_ + _).
+    + rewrite big_imset /=; last by move=> ?? _ _; apply/inj_swiden.
+      rewrite big_set /= raddf_sum /=; apply/eq_bigr=> h _.
       rewrite !mprodXE mwidenX; congr 'X_[_]; apply/mnmP=> j.
-      rewrite big_map mnmwiden_sum !mnm_sum; apply/eq_bigr.
-      by move=> l _; rewrite mnmwiden1.
-    + rewrite /E2 big_imset /=; last by move=> t1 t2 _ _; apply/inj_F2.
-      rewrite big_set mesym_tupleE raddf_sum mulr_suml /=.
-      apply/eq_bigr=> i _; set s := [seq _ | _ <- i].
+      rewrite mnmwiden_sum !mnm_sum big_imset //=; last first.
+        by move=> ?? _ _; apply/inj_widen.
+      by apply/eq_bigr=> i _; rewrite mnmwiden1.
+    + rewrite big_imset /=; last by move=> t1 t2 _ _; apply/inj_mDswiden.
+      rewrite big_set /= raddf_sum /= mulr_suml; apply/eq_bigr=> h _.
       rewrite !mprodXE mwidenX -mpolyXD; congr 'X_[_].
-      rewrite mnmwiden_sum; move/perm_eqlP: (perm_rcons (inord n) s).
-      move=> h; rewrite {h}(eq_big_perm _ h) /= big_cons mnm_addC.
-      congr (_ + U_(_))%MM; last by apply/eqP; rewrite eqE /= inordK.
-      by rewrite big_map; apply/eq_bigr; move=> l _; rewrite mnmwiden1.
+      rewrite (big_setD1 ord_max) /= ?in_setU1 ?eqxx //=.
+      rewrite mulmC setU1K //= ?mnmwiden_sum ?big_imset /=.
+        by congr (_ + _)%MM; apply/eq_bigr=> i _; rewrite mnmwiden1.
+        by move=> ?? _ _; apply/inj_widen.
+        apply/negP; case/imsetP=> /= x _ /eqP.
+        by rewrite eqE /= eq_sym ltn_eqF.
   Qed.
 
   Lemma Viete:
