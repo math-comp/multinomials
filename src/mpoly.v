@@ -79,6 +79,8 @@ Reserved Notation "p ^`M ( m )"
    (at level 8, format "p ^`M ( m )").
 Reserved Notation "p ^`M ( m , n )"
    (at level 8, format "p ^`M ( m ,  n )").
+Reserved Notation "p ^`M [ m ]"
+   (at level 8, format "p ^`M [ m ]").
 Reserved Notation "''s_' k"
   (at level 8, k at level 2, format "''s_' k").
 Reserved Notation "''s_' ( n , k )"
@@ -278,6 +280,9 @@ Section MultinomTheory.
   Local Notation "x *+ n" := (mnm_muln x n) : multi_scope.
 
   Lemma mnm_mulm0 m: (m *+ 0 = 0)%MM.
+  Proof. by []. Qed.
+
+  Lemma mnm_mulm1 m: (m *+ 1 = m)%MM.
   Proof. by []. Qed.
 
   Lemma mnm_mulmS m i: ((m *+ i.+1) = (m + m *+ i))%MM.
@@ -2249,32 +2254,94 @@ Section MPolyDeriv.
     by close.
   Qed.
 
-  Definition mderivn i k p : {mpoly R[n]} :=
-    iter k (mderiv i) p.
+  Lemma mderiv_perm (s1 s2 : seq 'I_n) p:
+    perm_eq s1 s2 -> foldr mderiv p s1 = foldr mderiv p s2.
+  Proof.
+    pose M q s := foldr mderiv q s; rewrite -!/(M _ _).
+    have h (s : seq 'I_n) (x : 'I_n) q: x \in s ->
+      M q s = M q (x :: rem x s).
+    + elim: s=> [|y s ih] //; rewrite in_cons.
+      case: eqP=> /= [->|/eqP]; first by rewrite eqxx.
+      move=> ne_xy /ih {ih}->; rewrite eq_sym.
+      by rewrite (negbTE ne_xy) /= mderiv_comm.
+    elim: s1 s2 => [|x s1 ih] s2.
+      by rewrite perm_eq_sym=> /perm_eq_small=> ->.
+    move=> peq_xDs1_s2; have x_in_s2: x \in s2.
+      by rewrite -(perm_eq_mem peq_xDs1_s2) mem_head.
+    have /h ->/= := x_in_s2; rewrite -ih // -(perm_cons x).
+    by rewrite (perm_eqlP peq_xDs1_s2) perm_to_rem.
+  Qed.
 
-  Notation "p ^`M ( i , k )" := (mderivn i k p).
+  Definition mderivm (m : 'X_{1..n}) p : {mpoly R[n]} :=
+    foldr (fun i => iter (m i) (mderiv i)) p (enum 'I_n).
+
+  Local Notation "p ^`M [ m ]" := (mderivm m p).
+
+  Lemma mderivm_foldr m p:
+    let s := flatten [seq nseq (m i) i | i <- enum 'I_n] in
+    p^`M[m] = foldr mderiv p s.
+  Proof.
+    rewrite /mderivm; elim: (enum _)=> //= i s ih.
+    by rewrite foldr_cat; elim: (m i)=> //= k ->.
+  Qed.
+
+  Lemma mderivm0 p: p^`M[0] = p.
+  Proof.
+    rewrite mderivm_foldr (eq_map (f2 := fun _ => [::])).
+      by elim: (enum _). by move=> i /=; rewrite mnm0E.
+  Qed.
+
+  Lemma mderivmD m1 m2 p: p^`M[m1 + m2] = p^`M[m1]^`M[m2].
+  Proof.
+    rewrite !mderivm_foldr -foldr_cat; apply/mderiv_perm.
+    apply/perm_eqP=> /= a; rewrite count_cat !count_flatten.
+    rewrite -big_split /=; apply/eq_bigr=> i _.
+    by rewrite mnmDE nseqD count_cat addnC.
+  Qed.
+
+  Lemma mderivmU1 i p: p^`M[U_(i)] = p^`M(i).
+  Proof.
+    rewrite mderivm_foldr (@mderiv_perm _ [:: i]) //.
+    apply/perm_eqP=> /= a; rewrite addn0 count_flatten.
+    rewrite enumT -/(index_enum _) (bigD1 i) //=.
+    rewrite mnm1E eqxx /= addn0 big1 // => j ne_ji.
+    by rewrite mnm1E eq_sym (negbTE ne_ji).
+  Qed.
+
+  Lemma mderivm_is_linear m: linear (mderivm m).
+  Proof.
+    move=> c p q; rewrite /mderivm; elim: (enum _)=> //= i s ih.
+    by elim: (m i) => //= {ih}k ->; rewrite mderivD mderivZ.
+  Qed.
+
+  Canonical mderivm_additive m := Additive (mderivm_is_linear m).
+  Canonical mderivm_linear   m := Linear   (mderivm_is_linear m).
+
+  Local Notation "p ^`M ( i , n )" := (mderivm (U_(i) *+ n) p).
 
   Lemma mderivn0 i p: p^`M(i, 0) = p.
-  Proof. by []. Qed.
+  Proof. by rewrite mnm_mulm0 mderivm0. Qed.
 
   Lemma nderivn1 i p: p^`M(i, 1) = p^`M(i).
-  Proof. by []. Qed.
-
-  Lemma mderivnS i k p: p^`M(i, k.+1) = p^`M(i, k)^`M(i).
-  Proof. by []. Qed.
+  Proof. by rewrite mnm_mulm1 mderivmU1. Qed.
 
   Lemma mderivSn i k p: p^`M(i, k.+1) = p^`M(i)^`M(i, k).
-  Proof. by rewrite /mderivn iterSr. Qed.
+  Proof. by rewrite mnm_mulmS mderivmD mderivmU1. Qed.
 
-  Lemma mderivn_is_linear i k: linear (mderivn i k).
-  Proof. by elim: k=> //= k ih c p q /=; rewrite ih mderivD mderivZ. Qed.
+  Lemma mderivnS i k p: p^`M(i, k.+1) = p^`M(i, k)^`M(i).
+  Proof. by rewrite mnm_mulmS mulmC mderivmD mderivmU1. Qed.
 
-  Canonical mderivn_additive i k := Additive (mderivn_is_linear i k).
-  Canonical mderivn_linear   i k := Linear   (mderivn_is_linear i k).
-
-  Definition mderivm m p : {mpoly R[n]} :=
-    foldr (fun i p => mderivn i (m i) p) p (enum 'I_n).
+  Lemma mderivnE i k p:
+    p^`M(i, k) = iter k (mderiv i) p.
+  Proof.
+    elim: k => /= [|k ih]; first by rewrite mderivn0.                       
+    by rewrite mderivnS ih.
+  Qed.
 End MPolyDeriv.
+
+Notation "p ^`M ( i )"     := (mderiv i p).
+Notation "p ^`M [ m ]"     := (mderivm m p).
+Notation "p ^`M ( i , n )" := (mderivm (U_(i) *+ n) p).
 
 (* -------------------------------------------------------------------- *)
 Section MPolyMorphism.

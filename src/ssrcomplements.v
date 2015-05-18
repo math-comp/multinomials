@@ -35,6 +35,19 @@ Lemma flatten_seq1 (T : Type) (r : seq T):
   flatten [seq [:: x] | x <- r] = r.
 Proof. by elim: r=> /= [|x r ->]. Qed.
 
+Lemma count_flatten (T U : Type) (r : seq T) (F : T -> seq U) a:
+    count a (flatten [seq F x | x <- r])
+  = (\sum_(x <- r) (count a (F x)))%N.
+Proof.
+  elim: r => /= [|x r ih]; first by rewrite big_nil.
+  by rewrite count_cat big_cons ih.
+Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma nseqD T n1 n2 (x : T):
+  nseq (n1 + n2) x = nseq n1 x ++ nseq n2 x.
+Proof. by rewrite cat_nseq /nseq /ncons iter_add. Qed.
+
 (* -------------------------------------------------------------------- *)
 Lemma uniq_nth (T : eqType) (x0 : T) s:
      (forall i j, i < size s -> j < size s ->
