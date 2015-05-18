@@ -2146,7 +2146,7 @@ Section MPolyDeriv.
 
   Local Notation "p ^`M ( i )" := (mderiv i p).
 
-  Lemma mderivE p (i : 'I_n) k: msize p <= k ->
+  Lemma mderivwE i p k: msize p <= k ->
     p^`M(i) = \sum_(m : 'X_{1..n < k}) ((m i)%:R * p@_m) *: 'X_[m - U_(i)].
   Proof.
     pose I := [subFinType of 'X_{1..n < k}].
@@ -2156,12 +2156,12 @@ Section MPolyDeriv.
     rewrite big_uncond //= => j /memN_msupp_eq0 ->.
     by rewrite mulr0 scale0r.
   Qed.
-  Implicit Arguments mderivE [p i].
+  Implicit Arguments mderivwE [p i].
 
   Lemma mcoeff_deriv i m p: p^`M(i)@_m = p@_(m + U_(i)) *+ (m i).+1.
   Proof.
     pose_big_enough j; first rewrite {2}[p](mpolywE (k := j)) //.
-      rewrite !(mderivE j) // !raddf_sum -sumrMnl; apply/eq_bigr.
+      rewrite !(mderivwE j) // !raddf_sum -sumrMnl; apply/eq_bigr.
       move=> /= [k /= _] _; rewrite !mcoeffZ !mcoeffX.
       case: (k =P m + U_(i))%MM=> [{1 3}->|].
         by rewrite mnmDE mnm1E eqxx addn1 addmK eqxx !simpm mulr_natl.
@@ -2175,7 +2175,7 @@ Section MPolyDeriv.
 
   Lemma mderiv_is_linear i: linear (mderiv i).
   Proof.
-    move=> c p q; pose_big_enough j; first rewrite !(mderivE j) //.
+    move=> c p q; pose_big_enough j; first rewrite !(mderivwE j) //.
       rewrite scaler_sumr -big_split /=; apply/eq_bigr=> k _.
       rewrite !scalerA -scalerDl; congr (_ *: _).
       by rewrite mcoeffD mcoeffZ mulrDr !mulrA commr_nat.
@@ -2248,7 +2248,7 @@ Section MPolyDeriv.
 
   Lemma mderiv_comm i j p: p^`M(i)^`M(j) = p^`M(j)^`M(i).
   Proof.
-    pose_big_enough k; first pose mderivE := (mderivE k).
+    pose_big_enough k; first pose mderivE := (mderivwE k).
       rewrite ![p^`M(_)]mderivE // !raddf_sum /=; apply/eq_bigr.
       move=> l _; rewrite !mderivZ !mderivX !scalerA.
       rewrite !submDA mnm_addC -!commr_nat -!mulrA -!natrM.
@@ -2414,6 +2414,18 @@ Section MPolyDeriv.
     by rewrite mderivmZ -scalerA -mderivmX.
   Qed.
 
+  Lemma mderivmwE k m p: msize p <= k -> p^`M[m] =
+    \sum_(m' : 'X_{1..n < k})
+       (p@_m' * (\prod_(i < n) (m' i)^_(m i))%:R *: 'X_[m'-m]).
+  Proof.
+    move=> lt_pk; pose P (m : 'X_{1..n < k}) := (val m) \in msupp p.
+    rewrite (bigID P) {}/P /= addrC big1 ?add0r; last first.
+      by move=> m' /memN_msupp_eq0=> ->; rewrite mul0r scale0r.
+    rewrite mderivmE (big_mksub [subFinType of 'X_{1..n < k}]) //=.
+      by apply/msupp_uniq.
+    by move=> m' /msize_mdeg_lt /leq_trans; apply.
+  Qed.
+
   Lemma mderivnE i k p: p^`M(i, k) =
     \sum_(m <- msupp p) (((m i)^_k)%:R * p@_m) *: 'X_[m - U_(i) *+ k].
   Proof.
@@ -2426,6 +2438,35 @@ Section MPolyDeriv.
 
   Lemma mderivnX i k m: 'X_[m]^`M(i, k) = ((m i)^_k)%:R *: 'X_[m - U_(i) *+ k].
   Proof. by rewrite mderivnE msuppX big_seq1 mcoeffX eqxx mulr1. Qed.
+
+  Lemma mcoeff_mderivm m p m':
+    (p^`M[m])@_m' = p@_(m + m') *+ (\prod_(i < n) ((m + m')%MM i)^_(m i)).
+  Proof.
+    pose_big_enough i; first rewrite (@mderivmwE i) //.
+      have lt_mDm'_i: mdeg (m + m') < i by [].
+      rewrite (bigD1 (Sub (m + m')%MM lt_mDm'_i)) //=.
+      rewrite mcoeffD raddf_sum /= [X in _+X]big1; last first.
+        case=> j lt_ji; rewrite eqE /= => ne_j_mDm'.
+        rewrite mcoeffZ mcoeffX; case: eqP; rewrite ?mulr0 //=.
+        move=> eq_m'_jBm; move: ne_j_mDm'; rewrite -eq_m'_jBm.
+        case: (boolP (m <= j))%MM => [/addmBA->|].
+          by rewrite [(m+j)%MM]mulmC /= addmK eqxx.
+        rewrite negb_forall; case/existsP=> /= k Nle_mj.
+        by rewrite (bigD1 k) //= ffact_small ?simpm // ltnNge.
+      rewrite addr0 mcoeffZ mcoeffX {3}[(m+m')%MM]mulmC addmK.
+      by rewrite eqxx mulr1 mulr_natr.
+    by close.
+  Qed.
+
+  Lemma mcoeff_mderiv i p m: (p^`M(i))@_m = p@_(m + U_(i)) *+ (m i).+1.
+  Proof.
+    rewrite -mderivmU1m mcoeff_mderivm mulmC /=.
+    rewrite (bigD1 i) //= mnmDE !mnm1E eqxx addn1 ffactn1.
+    rewrite (eq_bigr (fun _ => 1%N)) ?prod_nat_const /=.
+      by rewrite exp1n muln1.
+    move=> j ne_ji; rewrite mnmDE mnm1E eq_sym.
+    by rewrite (negbTE ne_ji) ffactn0.
+  Qed.
 End MPolyDeriv.
 
 Notation "p ^`M ( i )"     := (mderiv i p).
