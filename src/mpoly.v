@@ -237,6 +237,12 @@ Section MultinomTheory.
   Canonical mnm_monoid := Monoid.Law mnm_addA mnm_add0m mnm_addm0.
   Canonical mnm_comoid := Monoid.ComLaw mnm_addC.
 
+  Lemma subm0 m: (m - 0 = m)%MM.
+  Proof. by apply/mnmP=> i; rewrite mnmBE mnm0E subn0. Qed.
+
+  Lemma sub0m m: (0 - m = 0)%MM.
+  Proof. by apply/mnmP=> i; rewrite mnmBE mnm0E sub0n. Qed.
+
   Lemma eqm_add2l m n1 n2:
     ((m + n1)%MM == (m + n2)%MM) = (n1 == n2).
   Proof.
@@ -287,6 +293,9 @@ Section MultinomTheory.
 
   Lemma mnm_mulmS m i: ((m *+ i.+1) = (m + m *+ i))%MM.
   Proof. by rewrite /mnm_muln !Monoid.iteropE iterS /=. Qed.
+
+  Lemma mnm_mulSm m i: ((m *+ i.+1) = (m *+ i + m))%MM.
+  Proof. by rewrite mnm_mulmS mulmC. Qed.
 
   Lemma mnmMn m k i: ((m *+ k) i)%MM = (k * (m i))%N.
   Proof.
@@ -2215,12 +2224,6 @@ Section MPolyDeriv.
   Lemma mderiv_mulC i c p : (c%:MP * p)^`M(i) = c%:MP * p^`M(i).
   Proof. by rewrite !mul_mpolyC mderivZ. Qed.
 
-  Lemma mderivCM i c p: (c *: p)^`M(i) = c *: p^`M(i).
-  Proof.
-    apply/mpolyP=> k; rewrite mcoeff_deriv !mcoeffZ.
-    by rewrite -mulrnAr -mcoeff_deriv.
-  Qed.
-
   Lemma mderivM i p q: (p * q)^`M(i) = (p^`M(i) * q) + (p * q^`M(i)).
   Proof.
     elim/mpolyind: p; first by rewrite !(mul0r, add0r, mderiv0).
@@ -2247,7 +2250,7 @@ Section MPolyDeriv.
   Proof.
     pose_big_enough k; first pose mderivE := (mderivE k).
       rewrite ![p^`M(_)]mderivE // !raddf_sum /=; apply/eq_bigr.
-      move=> l _; rewrite !mderivCM !mderivX !scalerA.
+      move=> l _; rewrite !mderivZ !mderivX !scalerA.
       rewrite !submDA mnm_addC -!commr_nat -!mulrA -!natrM.
       congr (_ * _%:R *: _); rewrite !mnmBE !mnm1E eq_sym.
       by case: eqP=> [->//|_] /=; rewrite !subn0 mulnC.
@@ -2285,13 +2288,13 @@ Section MPolyDeriv.
     by rewrite foldr_cat; elim: (m i)=> //= k ->.
   Qed.
 
-  Lemma mderivm0 p: p^`M[0] = p.
+  Lemma mderivm0m p: p^`M[0] = p.
   Proof.
     rewrite mderivm_foldr (eq_map (f2 := fun _ => [::])).
       by elim: (enum _). by move=> i /=; rewrite mnm0E.
   Qed.
 
-  Lemma mderivmD m1 m2 p: p^`M[m1 + m2] = p^`M[m1]^`M[m2].
+  Lemma mderivmDm m1 m2 p: p^`M[m1 + m2] = p^`M[m1]^`M[m2].
   Proof.
     rewrite !mderivm_foldr -foldr_cat; apply/mderiv_perm.
     apply/perm_eqP=> /= a; rewrite count_cat !count_flatten.
@@ -2299,7 +2302,16 @@ Section MPolyDeriv.
     by rewrite mnmDE nseqD count_cat addnC.
   Qed.
 
-  Lemma mderivmU1 i p: p^`M[U_(i)] = p^`M(i).
+  Lemma mderiv_summ (T : Type) (r : seq T) (P : pred T) F p:
+      p^`M[\sum_(x <- r | P x) (F x)]
+    = foldr mderivm p [seq F x | x <- r & P x].
+  Proof.
+    elim: r => //= [|x s ih]; first by rewrite big_nil mderivm0m.
+    rewrite big_cons; case: (P x)=> //=.
+    by rewrite mulmC /= mderivmDm ih.
+  Qed.
+
+  Lemma mderivmU1m i p: p^`M[U_(i)] = p^`M(i).
   Proof.
     rewrite mderivm_foldr (@mderiv_perm _ [:: i]) //.
     apply/perm_eqP=> /= a; rewrite addn0 count_flatten.
@@ -2317,26 +2329,103 @@ Section MPolyDeriv.
   Canonical mderivm_additive m := Additive (mderivm_is_linear m).
   Canonical mderivm_linear   m := Linear   (mderivm_is_linear m).
 
+  Lemma mderivmN m: {morph mderivm m: x / - x}.
+  Proof. exact: raddfN. Qed.
+
+  Lemma mderivmD m: {morph mderivm m: x y / x + y}.
+  Proof. exact: raddfD. Qed.
+
+  Lemma mderivmB m: {morph mderivm m: x y / x - y}.
+  Proof. exact: raddfB. Qed.
+
+  Lemma mderivmMn m k: {morph mderivm m: x / x *+ k}.
+  Proof. exact: raddfMn. Qed.
+
+  Lemma mderivmMNn m k: {morph mderivm m: x / x *- k}.
+  Proof. exact: raddfMNn. Qed.
+
+  Lemma mderivmZ m c p: (c *: p)^`M[m] = c *: p^`M[m].
+  Proof. by rewrite linearZ. Qed.
+
+  Lemma mderivm_mulC m c p : (c%:MP * p)^`M[m] = c%:MP * p^`M[m].
+  Proof. by rewrite !mul_mpolyC mderivmZ. Qed.
+
   Local Notation "p ^`M ( i , n )" := (mderivm (U_(i) *+ n) p).
 
   Lemma mderivn0 i p: p^`M(i, 0) = p.
-  Proof. by rewrite mnm_mulm0 mderivm0. Qed.
+  Proof. by rewrite mnm_mulm0 mderivm0m. Qed.
 
   Lemma nderivn1 i p: p^`M(i, 1) = p^`M(i).
-  Proof. by rewrite mnm_mulm1 mderivmU1. Qed.
+  Proof. by rewrite mnm_mulm1 mderivmU1m. Qed.
 
   Lemma mderivSn i k p: p^`M(i, k.+1) = p^`M(i)^`M(i, k).
-  Proof. by rewrite mnm_mulmS mderivmD mderivmU1. Qed.
+  Proof. by rewrite mnm_mulmS mderivmDm mderivmU1m. Qed.
 
   Lemma mderivnS i k p: p^`M(i, k.+1) = p^`M(i, k)^`M(i).
-  Proof. by rewrite mnm_mulmS mulmC mderivmD mderivmU1. Qed.
+  Proof. by rewrite mnm_mulmS mulmC mderivmDm mderivmU1m. Qed.
 
-  Lemma mderivnE i k p:
+  Lemma mderivn_iter i k p:
     p^`M(i, k) = iter k (mderiv i) p.
+  Proof. by elim: k => /= [|k ih]; rewrite ?mderivn0 // mderivnS ih. Qed.
+
+  Lemma mderivmX m1 m2:
+    ('X_[m1])^`M[m2] = (\prod_(i < n) (m1 i)^_(m2 i))%:R *: 'X_[m1-m2].
   Proof.
-    elim: k => /= [|k ih]; first by rewrite mderivn0.                       
-    by rewrite mderivnS ih.
+    have h m: m = (\sum_(i < n) U_(i) *+ (m i))%MM.
+      apply/mnmP=> i; rewrite mnm_sum (bigD1 i) //=.
+      rewrite mnmMn mnm1E eqxx /= muln1 big1 ?addn0 //.
+      by move=> j ne_ji; rewrite mnmMn mnm1E (negbTE ne_ji) muln0.
+    rewrite [m2]h mderiv_summ filter_predT /index_enum -enumT /=.
+    elim: (enum _) (enum_uniq 'I_n) => /= [|i s ih /andP [i_notin_s uq_s]].
+      by move=> _; rewrite !big_nil scale1r subm0.
+    pose F j := (m1 j) ^_ (m2 j); rewrite ih // mderivmZ.
+    rewrite big_seq [X in X%:R](eq_bigr F) -?big_seq; last first.
+      move=> j j_in_s; rewrite (bigD1_seq j) //=.
+      rewrite mnmDE mnm_sum mnmMn mnm1E eqxx muln1.
+      rewrite big1 ?mulm1 // => j' ne_j'j; rewrite mnmMn.
+      by rewrite mnm1E (negbTE ne_j'j) muln0.
+    rewrite big_cons mulnC natrM -scalerA; apply/esym.
+    rewrite 2![X in X%:R*:(_*:_)](big_seq, eq_bigr F); last first.
+      move=> j j_in_s; rewrite big_cons mnmDE mnm_sum.
+      rewrite (bigD1_seq j) //= big1 ?mulm1=> [|j' ne_j'j].
+        rewrite !mnmMn !mnm1E eqxx muln1; move/memPn: i_notin_s.
+        rewrite eq_sym; move/(_ j j_in_s) => /negbTE=> ->.
+        by rewrite muln0 add0n.
+      by rewrite mnmMn mnm1E (negbTE ne_j'j) muln0.
+    rewrite -big_seq; congr (_ *: _); rewrite !big_cons.
+    rewrite mnmDE mnm_sum big_seq big1 ?mulm1; last first.
+      move=> /= j j_in_s; rewrite mnmMn mnm1E; move/memPn: i_notin_s.
+      by move/(_ j j_in_s)=> /negbTE->; rewrite muln0.
+    rewrite mnmMn mnm1E eqxx muln1; elim: (m2 i)=> /= [|k ihk].
+      by rewrite ffactn0 scale1r mnm_mulm0 mul1m mderivm0m.
+    rewrite mderivnS -ihk mderivZ mderivX scalerA -natrM.
+    rewrite submDA mulmAC /= mnm_mulSm; congr (_%:R *: 'X_[_]).
+    rewrite mnmBE mnmDE mnm_sum big_seq big1; last first.
+      move=> /= j j_in_s; rewrite mnmMn mnm1E; move: i_notin_s.
+      by move/memPn/(_ j j_in_s)=> /negbTE->; rewrite muln0.
+    by rewrite mulm1 mnmMn mnm1E eqxx muln1 ffactnSr.
   Qed.
+
+  Lemma mderivmE m p: p^`M[m] =
+    \sum_(m' <- msupp p)
+       (p@_m' * (\prod_(i < n) (m' i)^_(m i))%:R *: 'X_[m'-m]).
+  Proof.
+    rewrite {1}[p]mpolyE raddf_sum /=; apply/eq_bigr=> m' _.
+    by rewrite mderivmZ -scalerA -mderivmX.
+  Qed.
+
+  Lemma mderivnE i k p: p^`M(i, k) =
+    \sum_(m <- msupp p) (((m i)^_k)%:R * p@_m) *: 'X_[m - U_(i) *+ k].
+  Proof.
+    rewrite mderivmE; apply/eq_bigr=> /= m _.
+    rewrite -commr_nat (bigD1 i) //= big1 ?muln1.
+      by rewrite mnmMn mnm1E eqxx muln1.
+    move=> j ne_ji; rewrite mnmMn mnm1E eq_sym.
+    by rewrite (negbTE ne_ji) muln0 ffactn0.
+  Qed.
+
+  Lemma mderivnX i k m: 'X_[m]^`M(i, k) = ((m i)^_k)%:R *: 'X_[m - U_(i) *+ k].
+  Proof. by rewrite mderivnE msuppX big_seq1 mcoeffX eqxx mulr1. Qed.
 End MPolyDeriv.
 
 Notation "p ^`M ( i )"     := (mderiv i p).
