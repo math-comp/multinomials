@@ -924,6 +924,9 @@ Section MSuppZMod.
   Lemma msuppD_le p q: {subset msupp (p + q) <= msupp p ++ msupp q}.
   Proof. by move=> x => /domD_subset. Qed.
 
+  Lemma msuppB_le p q: {subset msupp (p - q) <= msupp p ++ msupp q}.
+  Proof. by move=> x /msuppD_le; rewrite !mem_cat (perm_eq_mem (msuppN _)). Qed.
+
   Lemma msuppD (p1 p2 : {mpoly R[n]}):
        [predI (msupp p1) & (msupp p2)] =1 xpred0
     -> perm_eq (msupp (p1 + p2)) (msupp p1 ++ msupp p2).
