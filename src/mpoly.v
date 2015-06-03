@@ -95,6 +95,7 @@ Local Notation efst := (@fst _ _) (only parsing).
 Local Notation esnd := (@snd _ _) (only parsing).
 
 Local Infix "@@" := product (at level 60, right associativity).
+Local Notation widen := (widen_ord (leqnSn _)).
 
 (* -------------------------------------------------------------------- *)
 Reserved Notation "''X_{1..' n '}'"
@@ -3722,8 +3723,6 @@ Local Notation "''s_' ( K , n , k )" := (@mesym n K k).
 Local Notation "''s_' ( n , k )" := (@mesym n _ k).
 
 (* -------------------------------------------------------------------- *)
-Local Notation widen := (widen_ord (leqnSn _)).
-
 Section MWiden.
   Variable n : nat.
   Variable R : ringType.
@@ -3876,6 +3875,89 @@ Section MWiden.
   Lemma mpwidenZ c p: mpwiden (c *: p) = mwiden c *: (mpwiden p).
   Proof. by rewrite /mpwiden map_polyZ. Qed.
 End MWiden.
+
+(* -------------------------------------------------------------------- *)
+Section MPolyUni.
+  Variable n : nat.
+  Variable R : ringType.
+
+  Implicit Types p q : {mpoly R[n.+1]}.
+
+  Let X (i : 'I_n.+1) : {poly {mpoly R[n]}} :=
+    match split (cast_ord (esym (addn1 n)) i) with
+    | inl j => ('X_j)%:P
+    | inr _ => 'X
+    end.
+
+  Definition muni (p : {mpoly R[n.+1]}) : {poly {mpoly R[n]}} :=
+    nosimpl (mmap (polyC \o @mpolyC _ _) X p).
+
+  Let XE m: mmap1 X m = 'X_[[multinom (m (widen i)) | i < n]] *: 'X^(m ord_max).
+  Proof.
+    have X1: X ord_max = 'X.
+      rewrite /X; case: splitP=> //; case=> j lt_jn /eqP /=.
+      by have := lt_jn; rewrite ltn_neqAle eq_sym=> /andP[/negbTE->].
+    have X2 i: X (widen i) = ('X_i)%:P.
+      rewrite /X; case: splitP=> [j eq|j].
+        by congr ('X__)%:P; apply/val_inj=> /=; rewrite -eq.
+      by rewrite ord1 /= addn0 => /eqP /=; rewrite ltn_eqF.
+    rewrite /mmap1 big_ord_recr /= X1 -mul_polyC.
+    rewrite mpolyXE_id rmorph_prod /=; congr (_ * _).
+    by apply/eq_bigr=> i _; rewrite X2 rmorphX /= mnmE.
+  Qed.
+
+  Lemma muniE p: muni p =
+    \sum_(m <- msupp p)
+       p@_m *: 'X_[[multinom (m (widen i)) | i < n]] *: 'X^(m ord_max).
+  Proof.
+    apply/eq_bigr=> m _; rewrite XE /= -!mul_polyC.
+    by rewrite mulrA -polyC_mul mul_mpolyC.
+  Qed.
+
+  Definition mmulti (p : {poly {mpoly R[n]}}) : {mpoly R[n.+1]} :=
+    \sum_(i < size p) ((mwiden p`_i) * ('X_ord_max) ^+ i).
+
+  Lemma muni_is_additive: additive muni.
+  Proof. by apply/mmap_is_additive. Qed.
+
+  Canonical muni_additive := Additive muni_is_additive.
+
+  Lemma muni0     : muni 0 = 0               . Proof. exact: raddf0. Qed.
+  Lemma muniN     : {morph muni: x / - x}    . Proof. exact: raddfN. Qed.
+  Lemma muniD     : {morph muni: x y / x + y}. Proof. exact: raddfD. Qed.
+  Lemma muniB     : {morph muni: x y / x - y}. Proof. exact: raddfB. Qed.
+  Lemma muniMn  k : {morph muni: x / x *+ k} . Proof. exact: raddfMn. Qed.
+  Lemma muniMNn k : {morph muni: x / x *- k} . Proof. exact: raddfMNn. Qed.
+
+  Definition muni_is_multiplicative: multiplicative muni.
+  Proof.
+    apply/commr_mmap_is_multiplicative=> /= [i p|p m1 m2].
+      rewrite /X; case: splitP=> j _; last exact/commr_polyX.
+      apply/polyP=> k; rewrite coefCM coefMC.
+      by apply/commr_mpolyX.
+    apply/polyP=> k; rewrite coefCM coefMC XE coefZ coefXn.
+    case: eqP; rewrite ?(mulr0, mul0r, mulr1, mul1r) //= => _.
+    by apply/commr_mpolyX.
+  Qed.
+
+  Canonical muni_rmorphism: {rmorphism {mpoly R[n.+1]} -> {poly {mpoly R[n]}}} :=
+    AddRMorphism muni_is_multiplicative.
+
+  Lemma muni1: muni 1 = 1.
+  Proof. exact: rmorph1. Qed.
+
+  Lemma muniM: {morph muni: x y / x * y}.
+  Proof. exact: rmorphM. Qed.
+
+  Lemma muniC c: muni c%:MP = (c%:MP)%:P.
+  Proof. by rewrite /muni mmapC. Qed.
+
+  Lemma muniN1: muni (-1) = -1.
+  Proof. by rewrite raddfN /= muniC. Qed.
+
+  Lemma muniZ c p: muni (c *: p) = c%:MP *: muni p.
+  Proof. by rewrite /muni mmapZ /= mul_polyC. Qed.
+End MPolyUni.
 
 (* -------------------------------------------------------------------- *)
 Section MESymViete.
