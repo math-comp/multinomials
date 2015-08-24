@@ -14,7 +14,7 @@ INCFLAGS := -R 3rdparty $(NAME)
 SUBDIRS  +=
 COQFILES += $(wildcard 3rdparty/*.v)
 else
-INCFLAGS := -I ${SSR_TOP}/ssreflect/${COQBRANCH}/src -R ${SSR_TOP}/theories/ Ssreflect
+INCFLAGS := -I ${SSR_TOP}/ -R ${SSR_TOP} mathcomp
 SUBDIRS  +=
 COQFILES +=
 endif
