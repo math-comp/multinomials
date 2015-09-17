@@ -3713,6 +3713,56 @@ Proof.
 rewrite mcoeff_mesym; case: (boolP (mechar _ _))=> //=.
 by rewrite -mem_msupp_mesym mlead_supp // mesym_neq0.
 Qed.
+
+Definition tmono (n : nat) (h : seq 'I_n) :=
+  sorted ltn (map val h).
+
+Lemma uniq_tmono (h : seq 'I_n) : tmono h -> uniq h.
+Proof.
+rewrite /tmono => /sorted_uniq; rewrite (map_inj_uniq val_inj).
+by apply; [apply/ltn_trans | move=> ?; rewrite /ltn /= ltnn].
+Qed.
+
+Lemma eq_tmono (h1 h2 : seq 'I_n) :
+  tmono h1 -> tmono h2 -> h1 =i h2 -> h1 = h2.
+Proof.
+move=> tm1 tm2 h; apply/(inj_map val_inj).
+apply/(eq_sorted_irr (leT := ltn))=> //.
+  by apply/ltn_trans.
+  by move=> ?; rewrite /ltn /= ltnn.
+move=> m; apply/mapP/mapP; case=> /= x;
+  by rewrite (h, =^~ h)=> {h} h ->; exists x.
+Qed.
+
+Lemma mesym_tupleE (k : nat) : 's_k =
+  \sum_(h : k.-tuple 'I_n | tmono h) \prod_(i <- h) 'X_i.
+Proof.
+have tval_tcast T k1 k2 (eq : k1 = k2) (x : k1.-tuple T):
+  tval (tcast eq x) = tval x.
++ by rewrite /tcast; case: k2 / eq.
+pose t2s (t : k.-tuple 'I_n) := [set x | x \in t].
+rewrite /mesym -[X in X=_]big_set -[X in _=X]big_set /=.
+set E := [set t2s x | x in [pred t | tmono (tval t)]].
+have h: E = [set i : {set 'I_n} | #|i| == k].
+  apply/setP=> /= h; rewrite inE; apply/imsetP/idP=> /=.
+  + case=> t; rewrite inE => tmono_t -> /=; rewrite /t2s.
+    rewrite cardsE /= -[X in _==X](size_tuple t).
+    by apply/eqP/card_uniqP/uniq_tmono.
+  + move/eqP=> eq_sz; exists (tcast eq_sz [tuple of (enum h)]).
+    * rewrite inE /tmono tval_tcast /=; pose I := enum 'I_n.
+      apply/(subseq_sorted _ (s2 := [seq val i | i <- I])).
+        by apply/ltn_trans.
+        by apply/map_subseq; rewrite /enum_mem -enumT; apply/filter_subseq.
+        by rewrite val_enum_ord iota_ltn_sorted.
+    * by apply/setP=> i; rewrite !(inE, memtE) tval_tcast mem_enum.
+rewrite -h {h}/E big_imset 1?big_set /=; last first.
+  move=> t1 t2; rewrite !inE => tmono_t1 tmono_t2 /setP eq.
+  apply/eqP; rewrite eqE /=; apply/eqP/eq_tmono => // i.
+  by move/(_ i): eq; rewrite /t2s !inE.
+apply/eq_big=> // i; rewrite inE 1?big_set /=.
+case: i => i sz_i /= tmono_i; rewrite (eq_bigl (mem i)) //=.
+by rewrite !mprodXE big_uniq //; apply/uniq_tmono.
+Qed.
 End MElemPolySym.
 
 Local Notation "''s_' ( K , n , k )" := (@mesym n K k).
