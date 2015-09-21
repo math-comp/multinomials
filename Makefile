@@ -4,6 +4,7 @@
 NAME     := SsrMultinomials
 SUBDIRS  :=
 COQFILES := \
+	finmap/finmap.v \
 	src/ssrcomplements.v \
 	src/poset.v \
 	src/freeg.v \
