@@ -20,7 +20,7 @@ SUBDIRS  +=
 COQFILES +=
 endif
 
-INCFLAGS += -R src $(NAME)
+INCFLAGS += -R finmap $(NAME) -R src $(NAME)
 
 include Makefile.common
 
