@@ -47,8 +47,8 @@ Definition fun_of_fsfun (g : fsfun) : K -> T :=
 
 Coercion fun_of_fsfun : fsfun >-> Funclass.
 
-Coercion map_of_fsfun    : fsfun >-> finmap_of.
 Coercion finMap_of_fsfun : fsfun >-> finMap.
+Coercion map_of_fsfun    : fsfun >-> finmap_of.
 End FinSuppFunDef.
 
 Identity Coercion type_of_fsfun : fsfun_of >-> fsfun.
@@ -70,18 +70,21 @@ Section FsfunCanonicals.
 Variable (K : choiceType) (T : eqType) (x : T).
 
 Canonical  fsfunType := Eval hnf in [subType for (@map_of_fsfun K T x)].
-Definition fsfun_eqMixin := Eval hnf in [eqMixin of {fsfun K -> T / x} by <:].
-Canonical  fsfun_eqType := Eval hnf in EqType {fsfun K -> T / x} fsfun_eqMixin.
+Definition fsfun_eqMixin := Eval hnf in [eqMixin of @fsfun K T x by <:].
+Canonical  fsfun_eqType := Eval hnf in EqType (@fsfun K T x) (fsfun_eqMixin).
+
+Definition fsfunof_eqMixin := Eval hnf in [eqMixin of {fsfun K -> T / x} by <:].
+Canonical  fsfunof_eqType := Eval hnf in EqType {fsfun K -> T / x} (fsfunof_eqMixin).
 End FsfunCanonicals.
 
 (* -------------------------------------------------------------------- *)
 Section FsfunChoice.
 Variable (K : choiceType) (T : choiceType) (x : T).
 
-Definition fsfun_choiceMixin :=
+Definition fsfunof_choiceMixin :=
   Eval hnf in [choiceMixin of {fsfun K -> T / x} by <:].
-Canonical  fsfun_choiceType :=
-  Eval hnf in ChoiceType {fsfun K -> T / x } fsfun_choiceMixin.
+Canonical  fsfunof_choiceType :=
+  Eval hnf in ChoiceType {fsfun K -> T / x } fsfunof_choiceMixin.
 End FsfunChoice.
 
 (* -------------------------------------------------------------------- *)
@@ -99,6 +102,13 @@ case/andP=> [nz_gy y_in_g]; rewrite getf_restrict //.
 by apply/contra: nz_gy=> z_gy; rewrite in_FSet /=.
 Qed.
 
+Lemma canonical_fsfunK (g : {fmap K -> T}) :
+  canonical_fsfun x g -> fsfun_reduce g = g.
+Proof.
+move=> h; apply/fmapP=> k; rewrite fnd_rem; case: (boolP (_ \in _))=> //.
+by case/imfsetP=> y /eqP eq; move/forallP/(_ y)/eqP: h.
+Qed.
+
 Definition mkfsfun (g : {fmap K -> T}) : {fsfun K -> T / x} :=
   mkFsfun (canonical_fsfun_reduce g).
 
@@ -110,3 +120,42 @@ End MkFsfun.
 (* -------------------------------------------------------------------- *)
 Notation "[ 'fsfun' g  / x ]" := (mkfsfun x g) : fun_scope.
 Notation "[ 'fsfun' g ]" := (mkfsfun _ g) : fun_scope.
+
+(* -------------------------------------------------------------------- *)
+Section FsfunTheory.
+Variable (K : choiceType) (T : eqType) (x : T).
+
+Lemma mkfsfunK (g : {fmap K -> T}) :
+  [fsfun g / x] = fsfun_reduce x g :> {fmap K -> T}.
+Proof. by []. Qed.
+
+Lemma fsfun_fnd (g : {fmap K -> T}) (y : K) :
+  [fsfun g / x] y = odflt x g.[? y].
+Proof.
+rewrite /fun_of_fsfun fnd_rem; case: (boolP (y \in _))=> //=.
+by case/imfsetP=> y' /eqP <- ->; rewrite -Some_fnd.
+Qed.  
+
+Lemma fsfunE (domf : {fset K}) (E : K -> T) (y : K) :
+    [fsfun [fmap x : domf => E (val x)] / x] y
+  = if y \in domf then E y else x.
+Proof. by rewrite fsfun_fnd; case: fndP=> //= kf; rewrite ffunE. Qed.
+
+Lemma fsfunW (P : {fsfun K -> T / x} -> Prop) :
+  (forall g, P [fsfun g / x]) -> forall g, P g.
+Proof.
+move=> ih; case=> g h; have ->//: mkFsfun h = [fsfun g].
+by apply/eqP; rewrite -val_eqE /= canonical_fsfunK.
+Qed.
+
+Lemma domf_fsfunE (g : {fmap K -> T}) :
+  domf [fsfun g / x] = [fset k : domf g | g k != x].
+Proof.
+rewrite /finMap_of_fsfun mkfsfunK domf_rem; apply/fsetP.
+move=> k; rewrite in_fsetD andbC; case: (boolP (_ \in _))=> /=.
+  move=> k_in_g; have ->: k = val (FSetSub k_in_g) by [].
+  by rewrite !val_in_FSet /= -!topredE /=.
+move=> k_notin_g; apply/esym/imfsetP=> h; move: h k_notin_g.
+by case=> [[y]] y_in_g /= _ -> /negP.
+Qed.
+End FsfunTheory.

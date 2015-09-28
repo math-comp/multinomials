@@ -36,7 +36,7 @@ Reserved Notation "{ 'malg' G [ K ] }"
 Reserved Notation "{ 'malg' K }"
   (at level 0, K at level 2, format "{ 'malg'  K }").
 Reserved Notation "[ 'malg' g ]"
-  (at level 0, S at level 2, format "[ 'malg'  g ]").
+  (at level 0, g at level 2, format "[ 'malg'  g ]").
 Reserved Notation "[ 'malg' x : aT => E ]"
   (at level 0, x ident, format "[ 'malg'  x : aT  =>  E ]").
 Reserved Notation "<< z *p k >>"
@@ -94,7 +94,7 @@ End MkMalg.
 Notation "[ 'malg' g ]"
   := (mkmalg [fsfun g / 0]) : ring_scope.
 Notation "[ 'malg' x : aT => E ]"
-  := [malg [fsfun [fmap x : aT => E] / 0]] : ring_scope.
+  := (mkmalg [fsfun [fmap x : aT => E] / 0]) : ring_scope.
 Notation "<< z *g k >>"
   := [malg [fmap].[k <- z]] : ring_scope.
 Notation "<< k >>"
@@ -117,9 +117,45 @@ Notation "g @_ k" := (mcoeff g k).
 Section MalgTheory.
 Variable (K : choiceType) (G : zmodType).
 
-Lemma freegP (g1 g2 : {malg G[K]}) :
+Lemma mkmalgK (g : {fsfun K -> G / 0}) :
+  mkmalg g = g :> {fsfun _ -> _ / _}.
+Proof. by []. Qed.
+
+Lemma malgP (g1 g2 : {malg G[K]}) :
   reflect (forall k, g1@_k = g2@_k) (g1 == g2).
 Proof. admit. Qed.
+
+Lemma mcoeff_fnd (g : {fmap K -> G}) k :
+  (mkmalg [fsfun g / 0])@_k = odflt 0 g.[?k].
+Proof. by apply/fsfun_fnd. Qed.
+
+Lemma mcoeffE (domf : {fset K}) (E : K -> G) k :
+    [malg k : domf => E (val k)]@_k
+  = if k \in domf then E k else 0.
+Proof. by apply/fsfunE. Qed.
+
+Lemma mcoeff_eq0 (g : {malg G[K]}) (k : K) :
+  (g@_k == 0) = (k \notin msupp g).
+Proof.
+case: g; elim/fsfunW=> g; rewrite mcoeff_fnd /msupp domf_fsfunE.
+case: fndP=> kf /=; first have: k = val (FSetSub kf) by [].
+  by move=> {2}->; rewrite val_in_FSet -topredE /= negbK.
+by rewrite eqxx; apply/esym/imfsetP=> h; case: h kf=> [[y]] ? _ -> /negP.
+Qed.
+
+Lemma mcoeff_outdom (g : {malg G[K]}) (k : K) :
+  k \notin msupp g -> g@_k = 0.
+Proof. by rewrite -mcoeff_eq0=> /eqP. Qed.
+
+CoInductive msupp_spec (g : {malg G[K]}) (k : K) : bool -> G -> Type :=
+| MsuppIn  (_ : k \in    msupp g) : msupp_spec g k true  g@_k
+| MsuppOut (_ : k \notin msupp g) : msupp_spec g k false 0.
+
+Lemma msuppP (g : {malg G[K]}) (k : K) : msupp_spec g k (k \in msupp g) g@_k.
+Proof.
+case: (boolP (k \in msupp g)); first by apply/MsuppIn.
+by move=> k_notin_g; rewrite (mcoeff_outdom k_notin_g); apply/MsuppOut.
+Qed.
 End MalgTheory.
 
 (* -------------------------------------------------------------------- *)
@@ -127,6 +163,10 @@ Section MalgZMod.
 Variable (K : choiceType) (G : zmodType).
 
 Implicit Types g : {malg G[K]}.
+Implicit Types k : K.
+
+Let EN g     k := - g@_k.
+Let ED g1 g2 k := g1@_k + g2@_k.
 
 Definition fgzero : {malg G[K]} :=
   [malg [fmap]].
@@ -137,6 +177,38 @@ Definition fgopp g :=
 Definition fgadd g1 g2 :=
   [malg k : (msupp g1 `|` msupp g2) => g1@_(val k) + g2@_(val k)].
 
-Goal associative fgadd.
-Proof. Abort.
+Lemma fgzeroE k : fgzero@_k = 0.
+Proof. by rewrite mcoeff_fnd !(in_fsetE, not_fnd). Qed.
+
+Lemma fgoppE g k : (fgopp g)@_k = - g@_k.
+Proof. by rewrite (mcoeffE _ (EN g)); case: msuppP; rewrite ?oppr0. Qed.
+
+Lemma fgaddE g1 g2 k : (fgadd g1 g2)@_k = g1@_k + g2@_k.
+Proof.
+rewrite (mcoeffE _ (ED g1 g2)); rewrite in_fsetE /ED.
+by case: (msuppP g1); case: (msuppP g2); rewrite !simpm.
+Qed.
+
+Let fgE := (fgzeroE, fgoppE, fgaddE).
+
+Lemma fgaddA : associative fgadd.
+Proof. by move=> x y z; apply/eqP/malgP=> k; rewrite !fgE addrA. Qed.
+
+Lemma fgaddC : commutative fgadd.
+Proof. by move=> x y; apply/eqP/malgP=> k; rewrite !fgaddE addrC. Qed.
+
+Lemma fgadd0g : left_id fgzero fgadd.
+Proof. by move=> x; apply/eqP/malgP=> k; rewrite !fgE add0r. Qed.
+
+Lemma fgaddg0 : right_id fgzero fgadd.
+Proof. by move=> x; rewrite fgaddC fgadd0g. Qed.
+
+Lemma fgaddNg : left_inverse fgzero fgopp fgadd.
+Proof. by move=> x; apply/eqP/malgP=> k; rewrite !fgE addNr. Qed.
+
+Lemma fgaddgN : right_inverse fgzero fgopp fgadd.
+Proof. by move=> x; rewrite fgaddC fgaddNg. Qed.
+
+Definition malg_ZmodMixin := ZmodMixin fgaddA fgaddC fgadd0g fgaddNg.
+Canonical  malg_ZmodType  := Eval hnf in ZmodType {malg G[K]} malg_ZmodMixin.
 End MalgZMod.
