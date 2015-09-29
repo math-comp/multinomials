@@ -257,7 +257,7 @@ Proof. by rewrite mcoeff_fnd fnd_set fnd_fmap0 eq_sym; case: eqP. Qed.
 Lemma mcoeffUU k x : << x *g k >>@_k = x.
 Proof. by rewrite mcoeffU eqxx. Qed.
 
-Definition mcoeffsE := (mcoeff0, mcoeffU, mcoeffB, mcoeffD, mcoeffN, mcoeffMn).
+Let mcoeffsE := (mcoeff0, mcoeffU, mcoeffB, mcoeffD, mcoeffN, mcoeffMn).
 
 (* -------------------------------------------------------------------- *)
 Lemma msupp0 : msupp 0 = fset0 :> {fset K}.
@@ -394,3 +394,46 @@ Definition malg_lmodMixin :=
 Canonical malg_lmodType :=
   Eval hnf in LmodType R {malg R[K]} malg_lmodMixin.
 End MAlgLMod.
+
+(* -------------------------------------------------------------------- *)
+Section MAlgLModTheory.
+Variable (K : choiceType) (R : ringType).
+
+Implicit Types g       : {malg R[K]}.
+Implicit Types c x y z : R.
+Implicit Types k l     : K.
+
+Lemma mcoeffZ c g k : (c *: g)@_k = c * g@_k.
+Proof. by apply/fgscaleE. Qed.
+
+Canonical mcoeff_linear m : {scalar {malg R[K]}} :=
+  AddLinear ((fun c => (mcoeffZ c)^~ m) : scalable_for *%R (mcoeff m)).
+
+(* -------------------------------------------------------------------- *)
+Lemma msuppZ_le c g : msupp (c *: g) `<=` msupp g.
+Proof.
+apply/fsubsetP=> k; rewrite -!mcoeff_neq0 mcoeffZ.
+by apply/contraTneq=> ->; rewrite mulr0 negbK.
+Qed.
+End MAlgLModTheory.
+
+(* -------------------------------------------------------------------- *)
+Section MAlgLModTheoryIdDomain.
+Variable (K : choiceType) (R : idomainType).
+
+Implicit Types g       : {malg R[K]}.
+Implicit Types c x y z : R.
+Implicit Types k l     : K.
+
+(* -------------------------------------------------------------------- *)
+Lemma msuppZ c g : msupp (c *: g) = if c == 0 then fset0 else msupp g.
+Proof.
+case: eqP=> [->|/eqP nz_c]; first by rewrite scale0r msupp0.
+by apply/fsetP=> k; rewrite -!mcoeff_neq0 mcoeffZ mulf_eq0 negb_or nz_c.
+Qed.
+End MAlgLModTheoryIdDomain.
+
+(* -------------------------------------------------------------------- *)
+Definition mcoeffsE :=
+  (mcoeff0, mcoeffUU, mcoeffU, mcoeffB, mcoeffD,
+   mcoeffN, mcoeffMn, mcoeffZ).
