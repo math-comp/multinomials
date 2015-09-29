@@ -87,7 +87,11 @@ End MalgCanonicals.
 Section MkMalg.
 Variable (K : choiceType) (G : zmodType).
 
-Definition mkmalg (g : {fsfun K -> G / 0}) : {malg G[K]} := Malg g.
+Definition mkmalg (g : {fsfun K -> G / 0}) : {malg G[K]} :=
+  Malg g.
+
+Definition mkmalgU (k : K) (x : G) :=
+  nosimpl (mkmalg [fsfun [fmap].[k <- x] / 0]).
 End MkMalg.
 
 (* -------------------------------------------------------------------- *)
@@ -96,7 +100,7 @@ Notation "[ 'malg' g ]"
 Notation "[ 'malg' x : aT => E ]"
   := (mkmalg [fsfun [fmap x : aT => E] / 0]) : ring_scope.
 Notation "<< z *g k >>"
-  := [malg [fmap].[k <- z]] : ring_scope.
+  := (mkmalgU k z).
 Notation "<< k >>"
   := << 1 *g k >> : ring_scope.
 
@@ -228,8 +232,9 @@ Implicit Types g   : {malg G[K]}.
 Implicit Types k   : K.
 Implicit Types x y : G.
 
-Local Notation mcoeff := (@mcoeff K G) (only parsing).
-Local Notation msupp  := (@msupp  K G).
+Local Notation mcoeff  := (@mcoeff  K G) (only parsing).
+Local Notation msupp   := (@msupp   K G).
+Local Notation mkmalgU := (@mkmalgU K G) (only parsing).
 
 Let fgE := (fgzeroE, fgoppE, fgaddE).
 
@@ -251,6 +256,8 @@ Proof. by rewrite mcoeff_fnd fnd_set fnd_fmap0 eq_sym; case: eqP. Qed.
 
 Lemma mcoeffUU k x : << x *g k >>@_k = x.
 Proof. by rewrite mcoeffU eqxx. Qed.
+
+Definition mcoeffsE := (mcoeff0, mcoeffU, mcoeffB, mcoeffD, mcoeffN, mcoeffMn).
 
 (* -------------------------------------------------------------------- *)
 Lemma msupp0 : msupp 0 = fset0 :> {fset K}.
@@ -306,6 +313,28 @@ Qed.
 
 Lemma msuppMNm_le g n : msupp (g *- n) `<=` msupp g.
 Proof. by rewrite msuppN msuppMn_le. Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma monalgU_is_additive k : additive (mkmalgU k).
+Proof. by move=> x1 x2 /=; apply/eqP/malgP=> k'; rewrite !mcoeffsE mulrnBl. Qed.
+
+Canonical monalgU_additive k := Additive (monalgU_is_additive k).
+
+Lemma monalgU0   k   : << (0 : G) *g k >> = 0        . Proof. exact: raddf0. Qed.
+Lemma monalgUN   k   : {morph mkmalgU k: x / - x}    . Proof. exact: raddfN. Qed.
+Lemma monalgUD   k   : {morph mkmalgU k: x y / x + y}. Proof. exact: raddfD. Qed.
+Lemma monalgUB   k   : {morph mkmalgU k: x y / x - y}. Proof. exact: raddfB. Qed.
+Lemma monalgUMn  k n : {morph mkmalgU k: x / x *+ n} . Proof. exact: raddfMn. Qed.
+Lemma monalgUMNn k n : {morph mkmalgU k: x / x *- n} . Proof. exact: raddfMNn. Qed.
+
+Lemma monalgU_eq0 x k: (<< x *g k >> == 0) = (x == 0).
+Proof.
+apply/eqP/eqP; last by move=> ->; rewrite monalgU0.
+by move/(congr1 (mcoeff k)); rewrite !mcoeffsE eqxx.
+Qed.
+
+Definition monalgUE :=
+  (monalgU0, monalgUB, monalgUD, monalgUN, monalgUMn).
 
 (* -------------------------------------------------------------------- *)
 Lemma monalgEw (g : {malg G[K]}) (domg : {fset K}) : msupp g `<=` domg ->
