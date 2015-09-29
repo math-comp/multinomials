@@ -12,6 +12,10 @@ Authors
 
   "Pierre-Yves Strub" \<pierre-yves@strub.nu\>
 
+Contributors:
+
+  - [Florent Hivert](https://www.lri.fr/~hivert/)
+
 This library is also the result of discussions with:
 
   - Sophie Bernard
