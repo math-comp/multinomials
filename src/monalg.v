@@ -352,3 +352,45 @@ Lemma monalgE (g : {malg G[K]}) :
   g = \sum_(k : msupp g) << g@_(val k) *g val k >>.
 Proof. by apply/monalgEw/fsubset_refl. Qed.
 End MAlgZModTheory.
+
+(* -------------------------------------------------------------------- *)
+Section MAlgLMod.
+Variable (K : choiceType) (R : ringType).
+
+Implicit Types g       : {malg R[K]}.
+Implicit Types c x y z : R.
+Implicit Types k l     : K.
+
+Definition fgscale c g : {malg R[K]} :=
+  \sum_(k : msupp g) << c * g@_(val k) *g val k >>.
+
+Local Notation "c *:g g" := (fgscale c g)
+  (at level 40, left associativity).
+
+Lemma fgscaleE c g k :
+  (c *:g g)@_k = c * g@_k.
+Proof.
+rewrite {2}[g]monalgE !raddf_sum mulr_sumr.
+by apply/eq_bigr=> /= i _; rewrite !mcoeffU mulrnAr.
+Qed.
+
+Lemma fgscaleA c1 c2 g :
+  c1 *:g (c2 *:g g) = (c1 * c2) *:g g.
+Proof. by apply/eqP/malgP=> x; rewrite !fgscaleE mulrA. Qed.
+
+Lemma fgscale1r D: 1 *:g D = D.
+Proof. by apply/eqP/malgP=> k; rewrite !fgscaleE mul1r. Qed.
+
+Lemma fgscaleDr c g1 g2 :
+  c *:g (g1 + g2) = c *:g g1 + c *:g g2.
+Proof. by apply/eqP/malgP=> k; rewrite !(mcoeffD, fgscaleE) mulrDr. Qed.
+
+Lemma fgscaleDl g c1 c2:
+  (c1 + c2) *:g g = c1 *:g g + c2 *:g g.
+Proof. by apply/eqP/malgP=> x; rewrite !(mcoeffD, fgscaleE) mulrDl. Qed.
+
+Definition malg_lmodMixin :=
+  LmodMixin fgscaleA fgscale1r fgscaleDr fgscaleDl.
+Canonical malg_lmodType :=
+  Eval hnf in LmodType R {malg R[K]} malg_lmodMixin.
+End MAlgLMod.
