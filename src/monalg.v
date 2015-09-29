@@ -123,7 +123,11 @@ Proof. by []. Qed.
 
 Lemma malgP (g1 g2 : {malg G[K]}) :
   reflect (forall k, g1@_k = g2@_k) (g1 == g2).
-Proof. admit. Qed.
+Proof.
+apply: (iffP eqP)=> [->//|]; move: g1 g2.
+case=> [g1] [g2] h; apply/eqP; rewrite -val_eqE /=.
+by apply/fsfunP=> k; move/(_ k): h.
+Qed.
 
 Lemma mcoeff_fnd (g : {fmap K -> G}) k :
   (mkmalg [fsfun g / 0])@_k = odflt 0 g.[?k].

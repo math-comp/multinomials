@@ -129,12 +129,16 @@ Lemma mkfsfunK (g : {fmap K -> T}) :
   [fsfun g / x] = fsfun_reduce x g :> {fmap K -> T}.
 Proof. by []. Qed.
 
+Lemma fsfun_reduceE (g : {fmap K -> T}) (y : K) :
+  odflt x (fsfun_reduce x g).[?y] = odflt x g.[?y].
+Proof.
+rewrite fnd_rem; case: (boolP (y \in _))=> //=.
+by case/imfsetP=> y' /eqP <- ->; rewrite -Some_fnd.
+Qed.
+
 Lemma fsfun_fnd (g : {fmap K -> T}) (y : K) :
   [fsfun g / x] y = odflt x g.[? y].
-Proof.
-rewrite /fun_of_fsfun fnd_rem; case: (boolP (y \in _))=> //=.
-by case/imfsetP=> y' /eqP <- ->; rewrite -Some_fnd.
-Qed.  
+Proof. by apply/fsfun_reduceE. Qed.
 
 Lemma fsfunE (domf : {fset K}) (E : K -> T) (y : K) :
     [fsfun [fmap x : domf => E (val x)] / x] y
@@ -146,6 +150,34 @@ Lemma fsfunW (P : {fsfun K -> T / x} -> Prop) :
 Proof.
 move=> ih; case=> g h; have ->//: mkFsfun h = [fsfun g].
 by apply/eqP; rewrite -val_eqE /= canonical_fsfunK.
+Qed.
+
+Lemma canonical_fsfun_codom
+  (g : {fmap K -> T}) (k : K) (kf : k \in domf g) :
+  canonical_fsfun x g -> g.[kf] != x.
+Proof.
+move=> c_g; apply/eqP=> eq_gk_x; move/forallP: c_g.
+by move/(_ (FSetSub kf)); rewrite eq_gk_x eqxx.
+Qed.
+
+Lemma canonical_getfI (g1 g2 : {fmap K -> T}) (y : K)
+    (c_g1 : canonical_fsfun x g1)
+    (c_g2 : canonical_fsfun x g2)
+  : odflt x g1.[? y] = odflt x g2.[? y] -> g1.[? y] = g2.[? y].
+Proof.
+case: (fndP g1); case: (fndP g2)=> //=; first by move=> k1 k2 /= ->.
++ by move=> _ kf ?; have /eqP := canonical_fsfun_codom kf c_g1.
++ by move=> kf _ /esym ?; have /eqP := canonical_fsfun_codom kf c_g2.
+Qed.
+
+Lemma fsfunP (g1 g2 : {fsfun K -> T / x}) :
+  reflect (forall k, g1 k = g2 k) (g1 == g2).
+Proof.
+apply: (iffP idP)=> [/eqP->//|]; move: g1 g2.
+elim/fsfunW=> g1; elim/fsfunW => g2 h; rewrite -val_eqE /=.
+apply/eqP/fmapP=> k; move/(_ k): h; rewrite !fsfun_fnd.
+rewrite -[LHS]fsfun_reduceE -[RHS]fsfun_reduceE.
+by apply/canonical_getfI; apply/canonical_fsfun_reduce.
 Qed.
 
 Lemma domf_fsfunE (g : {fmap K -> T}) :
