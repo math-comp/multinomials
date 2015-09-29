@@ -3457,6 +3457,22 @@ Section MPolySymCompCom.
 Variable n : nat.
 Variable R : comRingType.
 
+Local Notation "m # s" := [multinom m (s i) | i < n]
+  (at level 40, left associativity, format "m # s").
+
+Lemma msym_mPo (s : 'S_n) (p : {mpoly R[n]}) k (T : n.-tuple {mpoly R[k]}) :
+  (msym s p) \mPo T = p \mPo [tuple tnth T (s i) | i < n].
+Proof.
+pose_big_enough l; [rewrite !(comp_mpolywE _ (w := l)) // | by close].
+have FP (m : 'X_{1..n < l}) : mdeg (m#s) < l by rewrite mdeg_mperm bmdeg.
+pose F (m : 'X_{1..n < l}) := BMultinom (FP m).
+have inj_F: injective F.
+  by move=> m1 m2 /(congr1 val) /mperm_inj /val_inj.
+rewrite [RHS](reindex_inj inj_F); apply/eq_bigr=> m _ /=.
+rewrite mcoeff_sym (reindex_inj (@perm_inj _ s)) /=; congr (_ *: _).
+by apply/eq_bigr=> i _; rewrite mnmE tnth_mktuple.
+Qed.
+
 Lemma msym_comp_poly k (p : {mpoly R[n]}) (t : n.-tuple {mpoly R[k]}) :
      p \is symmetric
   -> (forall s : 'S_k, perm_eq t [tuple (msym s t`_i) | i < n])
