@@ -7,13 +7,13 @@
 (* -------------------------------------------------------------------- *)
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path choice.
 Require Import finset fintype finfun finmap tuple bigop ssralg ssrint.
-Require Import fsfun ssrcomplements.
+Require Import ssrnum fsfun ssrcomplements.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import Monoid GRing.Theory.
+Import Monoid GRing.Theory Num.Theory.
 
 Local Open Scope fset.
 Local Open Scope fmap.
@@ -219,6 +219,19 @@ Proof. by move=> x; rewrite fgaddC fgaddNg. Qed.
 
 Definition malg_ZmodMixin := ZmodMixin fgaddA fgaddC fgadd0g fgaddNg.
 Canonical  malg_ZmodType  := Eval hnf in ZmodType {malg G[K]} malg_ZmodMixin.
+End MalgZMod.
+
+Section MAlgZModTheory.
+Variable (K : choiceType) (G : zmodType).
+
+Implicit Types g   : {malg G[K]}.
+Implicit Types k   : K.
+Implicit Types x y : G.
+
+Local Notation mcoeff := (@mcoeff K G) (only parsing).
+Local Notation msupp  := (@msupp  K G).
+
+Let fgE := (fgzeroE, fgoppE, fgaddE).
 
 (* -------------------------------------------------------------------- *)
 Lemma mcoeff_is_additive k: additive (mcoeff k).
@@ -226,19 +239,87 @@ Proof. by move=> g1 g2 /=; rewrite !fgE. Qed.
 
 Canonical mcoeff_additive k := Additive (mcoeff_is_additive k).
 
-Lemma mcoeff0   k   : 0@_k = 0                     . Proof. exact: raddf0. Qed.
+Lemma mcoeff0   k   : 0@_k = 0 :> G                . Proof. exact: raddf0. Qed.
 Lemma mcoeffN   k   : {morph mcoeff k: x / - x}    . Proof. exact: raddfN. Qed.
 Lemma mcoeffD   k   : {morph mcoeff k: x y / x + y}. Proof. exact: raddfD. Qed.
 Lemma mcoeffB   k   : {morph mcoeff k: x y / x - y}. Proof. exact: raddfB. Qed.
 Lemma mcoeffMn  k n : {morph mcoeff k: x / x *+ n} . Proof. exact: raddfMn. Qed.
 Lemma mcoeffMNn k n : {morph mcoeff k: x / x *- n} . Proof. exact: raddfMNn. Qed.
 
+Lemma mcoeffU k x k' : << x *g k >>@_k' = x *+ (k == k').
+Proof. by rewrite mcoeff_fnd fnd_set fnd_fmap0 eq_sym; case: eqP. Qed.
+
+Lemma mcoeffUU k x : << x *g k >>@_k = x.
+Proof. by rewrite mcoeffU eqxx. Qed.
+
 (* -------------------------------------------------------------------- *)
-Lemma msupp0 : msupp 0 = fset0.
-Proof. admit. Qed.
+Lemma msupp0 : msupp 0 = fset0 :> {fset K}.
+Proof.
+apply/fsetP=> k; rewrite in_fset0; apply/negbTE.
+by rewrite -mcoeff_eq0 mcoeff0.
+Qed.
+
+Lemma msuppU k x : msupp << x *g k >> = if x == 0 then fset0 else [fset k].
+Proof.
+apply/fsetP=> k'; rewrite -mcoeff_neq0 mcoeffU 2!fun_if.
+rewrite in_fset0 in_fset1 [k'==_]eq_sym; case: (x =P 0).
+  by move=> ->; rewrite mul0rn eqxx.
+  by move=> /eqP nz_x; case: (k =P k')=> //=; rewrite eqxx.
+Qed.
 
 Lemma msuppN g : msupp (-g) = msupp g.
 Proof. by apply/fsetP=> k; rewrite -!mcoeff_neq0 mcoeffN oppr_eq0. Qed.
 
+Lemma msuppD_le g1 g2 : msupp (g1 + g2) `<=` msupp g1 `|` msupp g2.
+Proof.
+apply/fsubsetP=> k; rewrite in_fsetU -mcoeff_neq0 mcoeffD.
+by case: (msuppP g1); case: (msuppP g2)=> //=; rewrite addr0 eqxx.
+Qed.
 
-End MalgZMod.
+Lemma msuppB_le g1 g2 : msupp (g1 - g2) `<=` msupp g1 `|` msupp g2.
+Proof. by rewrite -[msupp g2]msuppN; apply/msuppD_le. Qed.
+
+Lemma msuppD g1 g2 : [disjoint msupp g1 & msupp g2] ->
+  msupp (g1 + g2) = msupp g1 `|` msupp g2.
+Proof.
+move=> dj_g1g2; apply/fsetP=> k; rewrite in_fsetU.
+rewrite -!mcoeff_neq0 mcoeffD; case: (boolP (_ || _)); last first.
+  by rewrite negb_or !negbK => /andP[/eqP-> /eqP->]; rewrite addr0 eqxx.
+wlog: g1 g2 dj_g1g2 / (k \notin msupp g2) => [wlog h|].
+  case/orP: {+}h; rewrite mcoeff_neq0; last rewrite addrC.
+    by move/(fdisjointP dj_g1g2)/wlog; apply.
+  move/(fdisjointP_sym dj_g1g2)/wlog; apply.
+    by rewrite fdisjoint_sym. by rewrite orbC.
+by move=> /mcoeff_outdom ->; rewrite eqxx orbF addr0.
+Qed.
+
+Lemma msuppB g1 g2 : [disjoint msupp g1 & msupp g2] ->
+  msupp (g1 - g2) = msupp g1 `|` msupp g2.
+Proof. by move=> dj_g1g2; rewrite msuppD msuppN. Qed.
+
+Lemma msuppMn_le g n : msupp (g *+ n) `<=` msupp g.
+Proof.
+elim: n => [|n ih]; first by rewrite mulr0n msupp0 fsub0set.
+rewrite mulrS (fsubset_trans (msuppD_le _ _)) //.
+by rewrite fsubUset fsubset_refl.
+Qed.
+
+Lemma msuppMNm_le g n : msupp (g *- n) `<=` msupp g.
+Proof. by rewrite msuppN msuppMn_le. Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma monalgEw (g : {malg G[K]}) (domg : {fset K}) : msupp g `<=` domg ->
+  g = \sum_(k : domg) << g@_(val k) *g val k >>.
+Proof.
+move=> le_gd; apply/eqP/malgP=> k /=; case: msuppP=> [kg|k_notin_g].
+  rewrite raddf_sum /= (bigD1 (fincl le_gd (FSetSub kg))) //=.
+  rewrite mcoeffUU big1 ?addr0 //; case=> [k' k'_in_g] /=.
+  by rewrite eqE /= mcoeffU => /negbTE ->.
+rewrite raddf_sum /= big1 //; case=> [k' k'g] _ /=.
+by rewrite mcoeffU; case: eqP k_notin_g=> // <- /mcoeff_outdom ->.
+Qed.
+
+Lemma monalgE (g : {malg G[K]}) :
+  g = \sum_(k : msupp g) << g@_(val k) *g val k >>.
+Proof. by apply/monalgEw/fsubset_refl. Qed.
+End MAlgZModTheory.
