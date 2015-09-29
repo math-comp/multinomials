@@ -107,11 +107,11 @@ Variable (K : choiceType) (G : zmodType).
 Definition msupp (g : {malg G[K]}) :=
   nosimpl (domf (malg_val g)).
 
-Definition mcoeff (g : {malg G[K]}) (x : K) :=
+Definition mcoeff (x : K) (g : {malg G[K]}) :=
   nosimpl (malg_val g x).
 End MalgSupp.
 
-Notation "g @_ k" := (mcoeff g k).
+Notation "g @_ k" := (mcoeff k g).
 
 (* -------------------------------------------------------------------- *)
 Section MalgTheory.
@@ -146,6 +146,10 @@ case: fndP=> kf /=; first have: k = val (FSetSub kf) by [].
   by move=> {2}->; rewrite val_in_FSet -topredE /= negbK.
 by rewrite eqxx; apply/esym/imfsetP=> h; case: h kf=> [[y]] ? _ -> /negP.
 Qed.
+
+Lemma mcoeff_neq0 (g : {malg G[K]}) (k : K) :
+  (g@_k != 0) = (k \in msupp g).
+Proof. by rewrite mcoeff_eq0 negbK. Qed.
 
 Lemma mcoeff_outdom (g : {malg G[K]}) (k : K) :
   k \notin msupp g -> g@_k = 0.
@@ -215,4 +219,26 @@ Proof. by move=> x; rewrite fgaddC fgaddNg. Qed.
 
 Definition malg_ZmodMixin := ZmodMixin fgaddA fgaddC fgadd0g fgaddNg.
 Canonical  malg_ZmodType  := Eval hnf in ZmodType {malg G[K]} malg_ZmodMixin.
+
+(* -------------------------------------------------------------------- *)
+Lemma mcoeff_is_additive k: additive (mcoeff k).
+Proof. by move=> g1 g2 /=; rewrite !fgE. Qed.
+
+Canonical mcoeff_additive k := Additive (mcoeff_is_additive k).
+
+Lemma mcoeff0   k   : 0@_k = 0                     . Proof. exact: raddf0. Qed.
+Lemma mcoeffN   k   : {morph mcoeff k: x / - x}    . Proof. exact: raddfN. Qed.
+Lemma mcoeffD   k   : {morph mcoeff k: x y / x + y}. Proof. exact: raddfD. Qed.
+Lemma mcoeffB   k   : {morph mcoeff k: x y / x - y}. Proof. exact: raddfB. Qed.
+Lemma mcoeffMn  k n : {morph mcoeff k: x / x *+ n} . Proof. exact: raddfMn. Qed.
+Lemma mcoeffMNn k n : {morph mcoeff k: x / x *- n} . Proof. exact: raddfMNn. Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma msupp0 : msupp 0 = fset0.
+Proof. admit. Qed.
+
+Lemma msuppN g : msupp (-g) = msupp g.
+Proof. by apply/fsetP=> k; rewrite -!mcoeff_neq0 mcoeffN oppr_eq0. Qed.
+
+
 End MalgZMod.
