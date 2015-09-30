@@ -3497,6 +3497,33 @@ Qed.
 End MPolySymCompCom.
 
 (* -------------------------------------------------------------------- *)
+Section MPolySymUnit.
+Variable n : nat.
+Variable R : idomainType.
+
+Implicit Types p q r : {mpoly R[n]}.
+
+Lemma msymMK (p q : {mpoly R[n]}) :
+  p != 0 -> p \is symmetric -> p * q \is symmetric -> q \is symmetric.
+Proof.
+move=> nz_p /issymP sym_p /issymP sym_pq; apply/issymP => s.
+by move/(_ s): sym_pq; rewrite msymM sym_p => /(mulfI nz_p).
+Qed.
+
+Lemma sym_divring : divring_closed (symmetric (n := n) (R := R)).
+Proof.
+split; try solve [apply/rpred1 | apply/rpredB].
+move=> p q sym_p sym_q /=; case: (boolP (q \isn't a GRing.unit)).
+  by move/invr_out=> ->; apply/rpredM.
+rewrite negbK=> inv_q; apply/(msymMK _ sym_q).
+  by apply/contraTneq: inv_q=> ->; rewrite unitr0.
+by rewrite mulrCA divrr // mulr1.
+Qed.
+
+Canonical sym_divringPred  := DivringPred sym_divring.
+End MPolySymUnit.
+
+(* -------------------------------------------------------------------- *)
 Section MElemPolySym.
 Variable n : nat.
 Variable R : ringType.
