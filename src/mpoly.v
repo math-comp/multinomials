@@ -51,7 +51,7 @@
 (*                       monomial of p for the degrevlex monimial ordering.   *)
 (*                       mlead p defaults to 0%MM when p is 0.                *)
 (*           mleadc p == the coefficient of the highest monomial in p;        *)
-(*                       this is a notation for p@_(mleadc p).                *)
+(*                       this is a notation for p@_(mlead p).                 *)
 (* p \is a mpolyOver S <=> the coefficients of p satisfy S; S should have a   *)
 (*                       key that should be (at least) an addrPred.           *)
 (*             p.@[x] == the evaluation of a polynomial p at a point x, where *)
@@ -1866,17 +1866,17 @@ Implicit Types p q r : {mpoly R[n]}.
 Definition mlead p : 'X_{1..n} :=
   (\max_(m <- msupp p) m)%O.
 
-Definition mleadC (c : R) : mlead c%:MP = 0%MM.
+Lemma mleadC (c : R) : mlead c%:MP = 0%MM.
 Proof.
 rewrite /mlead msuppC; case: eqP=> _.
   by rewrite big_nil.
   by rewrite unlock /= maxo0.
 Qed.
 
-Definition mlead0 : mlead 0 = 0%MM.
+Lemma mlead0 : mlead 0 = 0%MM.
 Proof. by rewrite mleadC. Qed.
 
-Definition mlead1 : mlead 1 = 0%MM.
+Lemma mlead1 : mlead 1 = 0%MM.
 Proof. by rewrite mleadC. Qed.
 
 Lemma mleadXm m : mlead 'X_[m] = m.
@@ -4019,7 +4019,7 @@ Lemma muniB     : {morph muni: x y / x - y}. Proof. exact: raddfB. Qed.
 Lemma muniMn  k : {morph muni: x / x *+ k} . Proof. exact: raddfMn. Qed.
 Lemma muniMNn k : {morph muni: x / x *- k} . Proof. exact: raddfMNn. Qed.
 
-Definition muni_is_multiplicative : multiplicative muni.
+Lemma muni_is_multiplicative : multiplicative muni.
 Proof.
 apply/commr_mmap_is_multiplicative=> /= [i p|p m1 m2].
   rewrite /X; case: splitP=> j _; last exact/commr_polyX.
