@@ -6,7 +6,7 @@
 
 (* -------------------------------------------------------------------- *)
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path choice.
-Require Import finset fintype finfun finmap tuple bigop ssralg ssrint.
+Require Import finset fintype finfun xfinmap tuple bigop ssralg ssrint.
 Require Import ssrnum fsfun ssrcomplements.
 
 Set Implicit Arguments.
@@ -88,7 +88,7 @@ Section MkMalg.
 Variable (K : choiceType) (G : zmodType).
 
 Definition mkmalg (g : {fsfun K -> G / 0}) : {malg G[K]} :=
-  Malg g.
+  nosimpl (Malg g).
 
 Definition mkmalgU (k : K) (x : G) :=
   nosimpl (mkmalg [fsfun [fmap].[k <- x] / 0]).
@@ -437,3 +437,139 @@ End MAlgLModTheoryIdDomain.
 Definition mcoeffsE :=
   (mcoeff0, mcoeffUU, mcoeffU, mcoeffB, mcoeffD,
    mcoeffN, mcoeffMn, mcoeffZ).
+
+(* -------------------------------------------------------------------- *)
+Section MAlgRingType.
+Variable (K : choiceType) (R : ringType).
+Variable (idx : K) (op : Monoid.law idx).
+
+Local Notation "1" := idx : m_scope.
+Local Notation "x * y" := (op x y) : m_scope.
+
+Delimit Scope m_scope with M.
+
+Implicit Types g       : {malg R[K]}.
+Implicit Types c x y z : R.
+Implicit Types k l     : K.
+
+Lemma mcoeffU1 k k' : (<< k >> : {malg R[K]})@_k' = (k == k')%:R.
+Proof. by rewrite mcoeffU. Qed.
+
+Lemma msuppU1 k : @msupp _ R << k >> = [fset k].
+Proof. by rewrite msuppU oner_eq0. Qed.
+
+Definition fgone : {malg R[K]} := << 1%M >>.
+
+Local Notation "g1 *M_[ k1 , k2 ] g2" :=
+  << g1@_k1%M * g2@_k2%M *g (k1 * k2)%M >>
+  (at level 40, no associativity, format "g1  *M_[ k1 ,  k2 ]  g2").
+
+Local Notation "g1 *gM_[ k2 ] g2" :=
+  (\sum_(k1 : msupp g1) g1 *M_[val k1, k2] g2)
+  (at level 40, no associativity, only parsing).
+
+Local Notation "g1 *Mg_[ k1 ] g2" :=
+  (\sum_(k2 : msupp g2) g1 *M_[k1, val k2] g2)
+  (at level 40, no associativity, only parsing).
+
+Local Notation fg1mull_r g1 g2 k2 :=
+  (fun k1 => g1 *M_[k1, k2] g2) (only parsing).
+
+Local Notation fg1mulr_r g1 g2 k1 :=
+  (fun k2 => g1 *M_[k1, k2] g2) (only parsing).
+
+Local Notation fg1mull := (fg1mull_r _ _ _) (only parsing).
+Local Notation fg1mulr := (fg1mulr_r _ _ _) (only parsing).
+
+Definition fgmul g1 g2 : {malg R[K]} :=
+  \sum_(k1 : msupp g1) \sum_(k2 : msupp g2)
+    g1 *M_[val k1, val k2] g2.
+
+Lemma fgmull g1 g2 :
+  fgmul g1 g2 = \sum_(k1 : msupp g1) \sum_(k2 : msupp g2)
+    g1 *M_[val k1, val k2] g2.
+Proof. by []. Qed.
+
+Lemma fgmulr g1 g2 :
+  fgmul g1 g2 = \sum_(k2 : msupp g2) \sum_(k1 : msupp g1)
+    g1 *M_[val k1, val k2] g2.
+Proof. by rewrite fgmull exchange_big. Qed.
+
+Let fg1mulzg g1 g2 k1 k2 : k1 \notin msupp g1 -> 
+  << g1@_k1 * g2@_k2 *g (k1 * k2)%M >> = 0.
+Proof. by move/mcoeff_outdom=> ->; rewrite mul0r monalgU0. Qed.
+
+Let fg1mulgz g1 g2 k1 k2 : k2 \notin msupp g2 -> 
+  << g1@_k1 * g2@_k2 *g (k1 * k2)%M >> = 0.
+Proof. by move/mcoeff_outdom=> ->; rewrite mulr0 monalgU0. Qed.
+
+Lemma fgmullw g1 g2 (d1 d2 : {fset K}) :
+    msupp g1 `<=` d1 -> msupp g2 `<=` d2
+  -> fgmul g1 g2 = \sum_(k1 : d1) \sum_(k2 : d2) g1 *M_[val k1, val k2] g2.
+Proof.
+move=> le_d1 le_d2; pose F k1 := g1 *Mg_[k1] g2.
+rewrite fgmull (big_fset_incl F le_d1) {}/F /=; last first.
+  by move=> k _ /fg1mulzg ?; rewrite big1.
+apply/eq_bigr=> k1 _; rewrite (big_fset_incl fg1mulr le_d2) //.
+by move=> x _ /fg1mulgz.
+Qed.
+
+Lemma fgmulrw g1 g2 (d1 d2 : {fset K}) :
+    msupp g1 `<=` d1 -> msupp g2 `<=` d2
+  -> fgmul g1 g2 = \sum_(k2 : d2) \sum_(k1 : d1) g1 *M_[val k1, val k2] g2.
+Proof. by move=> le_d1 le_d2; rewrite (fgmullw le_d1 le_d2) exchange_big. Qed.
+
+Definition fgmullwl {g1 g2} (d1 : {fset K}) (le : msupp g1 `<=` d1) :=
+  @fgmullw g1 g2 _ _ le (fsubset_refl _).
+
+Definition fgmulrwl {g1 g2} (d2 : {fset K}) (le : msupp g2 `<=` d2) :=
+  @fgmulrw g1 g2 _ _ (fsubset_refl _) le.
+
+Lemma fgoneE k : fgone@_k = (k == 1%M)%:R.
+Proof. by rewrite mcoeffU1 eq_sym. Qed.
+
+Lemma fgmulA : associative fgmul.
+Proof. admit. Qed.
+
+Lemma fgmul1g : left_id fgone fgmul.
+Proof.
+move=> g; rewrite fgmull; apply/eqP/malgP=> k.
+rewrite msuppU1 big_fset1 [X in _=X@__]monalgE !raddf_sum /=.
+by apply/eq_bigr=> kg _; rewrite fgoneE eqxx mul1r mul1m.
+Qed.
+
+Lemma fgmulg1 : right_id fgone fgmul.
+Proof.
+move=> g; rewrite fgmulr; apply/eqP/malgP=> k.
+rewrite msuppU1 big_fset1 [X in _=X@__]monalgE !raddf_sum /=.
+by apply/eq_bigr=> kg _; rewrite fgoneE eqxx mulr1 mulm1.
+Qed.
+
+Lemma fgmulgDl : left_distributive fgmul +%R.
+Proof.
+move=> g1 g2 g; apply/esym; rewrite
+  (fgmullwl (fsubsetUl _ (msupp g2)))
+  (fgmullwl (fsubsetUr (msupp g1) _)).
+rewrite -big_split /= (fgmullwl (msuppD_le _ _)).
+apply/eq_bigr=> k1 _; rewrite -big_split /=; apply/eq_bigr.
+by move=> k2 _; rewrite mcoeffD mulrDl monalgUD.
+Qed.
+
+Lemma fgmulgDr : right_distributive fgmul +%R.
+Proof.
+move=> g g1 g2; apply/esym; rewrite
+  (fgmulrwl (fsubsetUl _ (msupp g2)))
+  (fgmulrwl (fsubsetUr (msupp g1) _)).
+rewrite -big_split /= (fgmulrwl (msuppD_le _ _)).
+apply/eq_bigr=> k1 _; rewrite -big_split /=; apply/eq_bigr.
+by move=> k2 _; rewrite mcoeffD mulrDr monalgUD.
+Qed.
+
+Lemma fgoner_eq0 : fgone != 0.
+Proof. by apply/malgP=> /(_ 1%M) /eqP; rewrite !mcoeffsE oner_eq0. Qed.
+
+Definition malg_ringMixin :=
+  RingMixin fgmulA fgmul1g fgmulg1 fgmulgDl fgmulgDr fgoner_eq0.
+Canonical  malg_ringType :=
+  Eval hnf in RingType {malg R[K]} malg_ringMixin.
+End MAlgRingType.

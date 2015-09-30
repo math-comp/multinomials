@@ -5,6 +5,7 @@ NAME     := SsrMultinomials
 SUBDIRS  :=
 COQFILES := \
 	finmap/finmap.v \
+	src/xfinmap.v \
 	src/ssrcomplements.v \
 	src/fsfun.v \
 	src/monalg.v \

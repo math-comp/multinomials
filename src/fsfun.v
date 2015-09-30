@@ -24,11 +24,6 @@ Reserved Notation "[ 'fsfun' g / x ]"
   (at level 0, g, x at level 2, format "[ 'fsfun'  g  /  x ]").
 
 (* -------------------------------------------------------------------- *)
-Lemma fnd_fmap0 (T : choiceType) (U : Type) x :
-  ([fmap] : {fmap T -> U}).[?x] = None.
-Proof. by rewrite not_fnd // in_fset0. Qed.
-
-(* -------------------------------------------------------------------- *)
 Section FinSuppFunDef.
 Variable K : choiceType.
 Variable T : eqType.
