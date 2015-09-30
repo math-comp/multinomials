@@ -375,3 +375,20 @@ Section BigOpMulrn.
     by rewrite !big_cons ih; case: (P x); rewrite ?(mulr0n, mulr1n, add0r).
   Qed.
 End BigOpMulrn.
+
+(* -------------------------------------------------------------------- *)
+Lemma bignat_sumn_cond (T : Type) (r : seq T) (P : pred T) (F : T -> nat):
+  (\sum_(i <- r | P i) (F i))%N = sumn [seq F i | i <- r & P i].
+Proof.
+  elim: r => /= [|i r ih]; first by rewrite big_nil.
+  by rewrite big_cons; case: (P i); rewrite ih.
+Qed.
+
+Lemma bignat_sumn (T : Type) (r : seq T) (F : T -> nat):
+  (\sum_(i <- r) (F i))%N = sumn [seq F i | i <- r].
+Proof. by rewrite bignat_sumn_cond filter_predT. Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma tval_tcast (T : Type) (n m : nat) (e : n = m) (t : n.-tuple T):
+  tval (tcast e t) = tval t.
+Proof. by case: m / e. Qed.
