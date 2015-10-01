@@ -4785,3 +4785,98 @@ Definition dhomog_vectMixin :=
 Canonical dhomog_vectType :=
   Eval hnf in VectType R (dhomog n.+1 R d) dhomog_vectMixin.
 End MPolyHomogVec.
+
+
+Section ProjHomog.
+
+Variable n : nat.
+Variable R : ringType.
+
+Implicit Types p q r : {mpoly R[n]}.
+Implicit Types m : 'X_{1..n}.
+
+Section Def.
+Variable d : nat.
+
+Definition pihomog p : {mpoly R[n]} :=
+  \sum_(m <- msupp p | mdeg m == d) p@_m *: 'X_[m].
+
+Lemma pihomogwE k p : msize p <= k ->
+  pihomog p = \sum_(m : 'X_{1..n < k} | mdeg m == d) p@_m *: 'X_[m].
+Proof.
+  move=> lt_pk.
+  pose I := [subFinType of 'X_{1..n < k}].
+  rewrite /pihomog.
+  rewrite [LHS](big_mksub_cond I) //=; first last.
+    by move=> x /msize_mdeg_lt /leq_trans ->.
+    by rewrite msupp_uniq.
+  rewrite [RHS](bigID (fun x  : 'X_{1..n < k} => val x \in msupp p)) /=.
+  rewrite [X in _ = _ + X]big1 ?addr0 // => m /andP [] _ /memN_msupp_eq0 ->.
+  by rewrite scale0r.
+Qed.
+
+Lemma pihomog_is_linear : linear pihomog.
+Proof.
+  move=> c p q /=.
+  pose_big_enough l.
+    rewrite [LHS](pihomogwE _ (k := l)) //.
+    rewrite (pihomogwE _ (k := l) (p := p)) //.
+    rewrite (pihomogwE _ (k := l) (p := q)) //.
+    2: by close.
+  rewrite scaler_sumr -big_split /=; apply eq_bigr => m _.
+  by rewrite linearP /= scalerDl scalerA.
+Qed.
+Canonical pihomog_additive : {additive {mpoly R[n]} -> {mpoly R[n]}} :=
+  Additive pihomog_is_linear.
+Canonical pihomog_linear   := Linear   pihomog_is_linear.
+
+Lemma pihomog0     : pihomog 0 = 0               . Proof. exact: raddf0. Qed.
+Lemma pihomogN     : {morph pihomog: x / - x}    . Proof. exact: raddfN. Qed.
+Lemma pihomogD     : {morph pihomog: x y / x + y}. Proof. exact: raddfD. Qed.
+Lemma pihomogB     : {morph pihomog: x y / x - y}. Proof. exact: raddfB. Qed.
+Lemma pihomogMn  k : {morph pihomog: x / x *+ k} . Proof. exact: raddfMn. Qed.
+Lemma pihomogMNn k : {morph pihomog: x / x *- k} . Proof. exact: raddfMNn. Qed.
+
+Lemma pihomogE p : p \is d.-homog -> pihomog p = p.
+Proof.
+  move/dhomogP => hom_p.
+  rewrite /pihomog {3}(mpolyE p) [LHS]big_seq_cond [RHS]big_seq_cond.
+  apply eq_bigl => m /=; rewrite andbT.
+  case: (boolP (m \in msupp p)) => //= /hom_p ->.
+  by rewrite eq_refl.
+Qed.
+
+Lemma pihomogP p : pihomog p \is d.-homog.
+Proof.
+  apply rpred_sum => m /eqP Hdeg; apply rpredZ.
+  by apply/dhomogP => m0 /mem_msuppXP <-.
+Qed.
+
+Lemma pihomog_id p : pihomog (pihomog p) = pihomog p.
+Proof. by rewrite pihomogE; last exact: pihomogP. Qed.
+
+End Def.
+
+Lemma pihomog_ne0 d b p : d != b -> p \is d.-homog -> pihomog b p = 0.
+Proof.
+  move=> ne /dhomogP hom; rewrite /pihomog big_seq_cond.
+  apply big_pred0 => m; apply negbTE.
+  by move: ne; apply contra => /andP [] /hom ->.
+Qed.
+
+Lemma pihomog_partitionE k p : msize p <= k -> p = \sum_(d < k) pihomog d p.
+Proof.
+  move=> Hk.
+  rewrite (eq_bigr (fun d : 'I_k =>
+                      \sum_(m : 'X_{1..n < k} | mdeg m == d) p@_m *: 'X_[m])); first last.
+    move=> i _; exact: pihomogwE.
+  rewrite (exchange_big_dep predT) //=.
+  rewrite {1}(mpolywE Hk); apply eq_bigr => m _.
+  rewrite -scaler_sumr.
+  rewrite (eq_bigl (fun i : 'I_k => i == Ordinal (bmdeg m))); first last.
+    by move=> i /=; rewrite eq_sym.
+  by rewrite big_pred1_eq.
+Qed.
+
+End ProjHomog.
+
