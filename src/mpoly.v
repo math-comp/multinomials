@@ -4435,8 +4435,7 @@ Notation "d .-homog" := (@ishomog1 _ _ d)
 
 (* -------------------------------------------------------------------- *)
 Definition ishomog {n} {R : ringType}: qualifier 0 {mpoly R[n]} :=
-  [qualify p | (n == 0%N) || [exists d : 'I_(msize p), p \is d.-homog]].
-
+  [qualify p | p \is (msize p).-1.-homog].
 (* -------------------------------------------------------------------- *)
 Module MPolyHomogKey.
 Fact homog_key {n} {R : ringType}: pred_key (@ishomog n R).
@@ -4477,6 +4476,14 @@ Proof.
   by move/hg_p=> ->; rewrite negbK.
 Qed.
 
+Lemma dhomog1 : (1 : {mpoly R[n]}) \is 0.-homog.
+Proof. apply/dhomogP; rewrite msupp1=> m; rewrite inE=> /eqP ->; exact: mdeg0. Qed.
+
+Lemma dhomog_uniq p d e : p != 0 -> p \is d.-homog -> p \is e.-homog -> d = e.
+Proof.
+  by move=> Hp /dhomogP/(_ _ (mlead_supp Hp)) <- /dhomogP/(_ _ (mlead_supp Hp)).
+Qed.
+
 Lemma dhomog_submod_closed d : submod_closed [in R[n], d.-homog].
 Proof.
   split=> [|c p q]; first by rewrite dhomogE msupp0.
@@ -4504,6 +4511,80 @@ Proof. by apply/rpredN. Qed.
 
 Lemma dhomogZ d c p: p \in d.-homog -> (c *: p) \in d.-homog.
 Proof. by apply/rpredZ. Qed.
+
+
+Lemma homog_msize p : (p \is homog) = (p \is (msize p).-1.-homog).
+Proof. by []. Qed.
+
+Lemma dhomog_msize d p : p \is d.-homog -> p \is (msize p).-1.-homog.
+Proof.
+  rewrite msizeE.
+  case Hsupp : (size (msupp p)) => [| sz].
+    move: Hsupp => /eqP/nilP Hsupp _; rewrite Hsupp big_nil /=.
+    move: Hsupp => /msuppnil0 ->; exact: dhomog0.
+  rewrite -(in_tupleE (msupp p)) big_tuple; set f := BIG_F.
+  have /(eq_bigmax f) : 0 < #|'I_(size (msupp p))| by rewrite card_ord Hsupp.
+  move=> [] imx ->; rewrite {}/f /= => Hhom.
+  set mx := tnth _ _; suff <- : d = mdeg mx :> nat by [].
+  move/dhomogP : Hhom => Hhom.
+  by rewrite (Hhom _ (mem_tnth imx (in_tuple (msupp p)))).
+Qed.
+
+Lemma homogE d p : p \is d.-homog -> p \is homog.
+Proof. by move/dhomog_msize. Qed.
+
+Lemma homogP p : reflect (exists d, p \is d.-homog) (p \is homog).
+Proof.
+  rewrite /homog unfold_in; apply (iffP idP).
+  - move=> H; by exists (msize p).-1.
+  - move=> [] d; exact: dhomog_msize.
+Qed.
+
+Lemma mpoly0 p : n = 0%N -> p = (p@_0%MM)%:MP.
+Proof.
+  move=> Hn; subst n; rewrite -mpolyP => m.
+  rewrite mcoeffC.
+  suff -> : m = 0%MM by rewrite eq_refl /= mulr1.
+  rewrite mnmP => i; exfalso.
+  by have := ltn_ord i.
+Qed.
+
+Lemma mpoly0_homog p : n = 0%N -> p \is 0.-homog.
+Proof.
+  move/(mpoly0 p) ->.
+  case: (altP (p@_0 =P 0)) => [-> | /negbTE H]; first exact: dhomog0.
+  apply/dhomogP => m; rewrite msuppC H inE => /eqP ->.
+  exact: mdeg0.
+Qed.
+
+Lemma dhomogM d p e q :
+  p \is d.-homog -> q \is e.-homog -> p * q \is (d + e).-homog.
+Proof.
+  move=> /dhomogP homp /dhomogP homq.
+  apply/dhomogP => m /msuppM_le/allpairsP [[m1 m2]] [] /= /homp <- /homq <- ->.
+  exact: mdegD.
+Qed.
+
+Lemma dhomog_expr d p k :
+  p \is d.-homog -> p ^+ k \is (d * k).-homog.
+Proof.
+  elim: k => [| k IHk] Hp.
+    rewrite expr0 muln0; exact: dhomog1.
+  rewrite exprS /= mulnS; by apply: dhomogM; last exact: IHk.
+Qed.
+
+Lemma prod_homog (s : seq {mpoly R[n]}) :
+  all (fun p => p \is homog) s -> \prod_(p <- s) p \is homog.
+Proof.
+  move=> H; apply/homogP.
+  elim: s H => [_ | p s IHs] /=.
+    exists 0%N; rewrite big_nil; exact: dhomog1.
+  move=> /andP [] /homogP [] dp Hdp /IHs{IHs} [] drec Hrec.
+  exists (dp + drec)%N; rewrite big_cons.
+  exact: dhomogM.
+Qed.
+
+
 End MPolyHomogTheory.
 
 (* -------------------------------------------------------------------- *)
