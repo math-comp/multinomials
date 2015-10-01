@@ -226,7 +226,7 @@ Canonical  malg_ZmodType  := Eval hnf in ZmodType {malg G[K]} malg_ZmodMixin.
 End MalgZMod.
 
 Section MAlgZModTheory.
-Variable (K : choiceType) (G : zmodType).
+Context {K : choiceType} {G : zmodType}.
 
 Implicit Types g   : {malg G[K]}.
 Implicit Types k   : K.
@@ -273,6 +273,9 @@ rewrite in_fset0 in_fset1 [k'==_]eq_sym; case: (x =P 0).
   by move=> ->; rewrite mul0rn eqxx.
   by move=> /eqP nz_x; case: (k =P k')=> //=; rewrite eqxx.
 Qed.
+
+Lemma msuppU_le {k x} : msupp << x *g k >> `<=` [fset k].
+Proof. by rewrite msuppU; case: eqP=> _; rewrite (fsub0set, fsubset_refl). Qed.
 
 Lemma msuppN g : msupp (-g) = msupp g.
 Proof. by apply/fsetP=> k; rewrite -!mcoeff_neq0 mcoeffN oppr_eq0. Qed.
@@ -397,7 +400,7 @@ End MAlgLMod.
 
 (* -------------------------------------------------------------------- *)
 Section MAlgLModTheory.
-Variable (K : choiceType) (R : ringType).
+Context {K : choiceType} {R : ringType}.
 
 Implicit Types g       : {malg R[K]}.
 Implicit Types c x y z : R.
@@ -419,7 +422,7 @@ End MAlgLModTheory.
 
 (* -------------------------------------------------------------------- *)
 Section MAlgLModTheoryIdDomain.
-Variable (K : choiceType) (R : idomainType).
+Context {K : choiceType} {R : idomainType}.
 
 Implicit Types g       : {malg R[K]}.
 Implicit Types c x y z : R.
@@ -435,8 +438,8 @@ End MAlgLModTheoryIdDomain.
 
 (* -------------------------------------------------------------------- *)
 Definition mcoeffsE :=
-  (mcoeff0, mcoeffUU, mcoeffU, mcoeffB, mcoeffD,
-   mcoeffN, mcoeffMn, mcoeffZ).
+  (@mcoeff0, @mcoeffUU, @mcoeffU, @mcoeffB, @mcoeffD,
+   @mcoeffN, @mcoeffMn, @mcoeffZ).
 
 (* -------------------------------------------------------------------- *)
 Section MAlgRingType.
@@ -503,8 +506,7 @@ Let fg1mulgz g1 g2 k1 k2 : k2 \notin msupp g2 ->
   << g1@_k1 * g2@_k2 *g (k1 * k2)%M >> = 0.
 Proof. by move/mcoeff_outdom=> ->; rewrite mulr0 monalgU0. Qed.
 
-Lemma fgmullw g1 g2 (d1 d2 : {fset K}) :
-    msupp g1 `<=` d1 -> msupp g2 `<=` d2
+Lemma fgmullw g1 g2 (d1 d2 : {fset K}) : msupp g1 `<=` d1 -> msupp g2 `<=` d2
   -> fgmul g1 g2 = \sum_(k1 : d1) \sum_(k2 : d2) g1 *M_[val k1, val k2] g2.
 Proof.
 move=> le_d1 le_d2; pose F k1 := g1 *Mg_[k1] g2.
@@ -514,8 +516,7 @@ apply/eq_bigr=> k1 _; rewrite (big_fset_incl fg1mulr le_d2) //.
 by move=> x _ /fg1mulgz.
 Qed.
 
-Lemma fgmulrw g1 g2 (d1 d2 : {fset K}) :
-    msupp g1 `<=` d1 -> msupp g2 `<=` d2
+Lemma fgmulrw g1 g2 (d1 d2 : {fset K}) : msupp g1 `<=` d1 -> msupp g2 `<=` d2
   -> fgmul g1 g2 = \sum_(k2 : d2) \sum_(k1 : d1) g1 *M_[val k1, val k2] g2.
 Proof. by move=> le_d1 le_d2; rewrite (fgmullw le_d1 le_d2) exchange_big. Qed.
 
@@ -525,11 +526,110 @@ Definition fgmullwl {g1 g2} (d1 : {fset K}) (le : msupp g1 `<=` d1) :=
 Definition fgmulrwl {g1 g2} (d2 : {fset K}) (le : msupp g2 `<=` d2) :=
   @fgmulrw g1 g2 _ _ (fsubset_refl _) le.
 
+Lemma fgmulElw g1 g2 (d1 d2 : {fset K}) k : msupp g1 `<=` d1 -> msupp g2 `<=` d2
+  -> (fgmul g1 g2)@_k = \sum_(k1 : d1) \sum_(k2 : d2)
+        (g1@_(val k1) * g2@_(val k2)) *+ ((val k1 * val k2)%M == k).
+Proof.
+move=> le1 le2; rewrite (fgmullw le1 le2) raddf_sum /=.
+apply/eq_bigr=> k1 _; rewrite raddf_sum /=; apply/eq_bigr=> k2 _.
+by rewrite mcoeffsE.
+Qed.
+
+Lemma fgmulErw g1 g2 (d1 d2 : {fset K}) k :
+    msupp g1 `<=` d1 -> msupp g2 `<=` d2
+  -> (fgmul g1 g2)@_k = \sum_(k2 : d2) \sum_(k1 : d1)
+        (g1@_(val k1) * g2@_(val k2)) *+ ((val k1 * val k2)%M == k).
+Proof. by move=> le1 le2; rewrite (fgmulElw _ le1 le2); rewrite exchange_big. Qed.
+
+Lemma fgmul0g g : fgmul 0 g = 0.
+Proof. by rewrite fgmull msupp0 big_fset0. Qed.
+
+Lemma fgmulg0 g : fgmul g 0 = 0.
+Proof. by rewrite fgmulr msupp0 big_fset0. Qed.
+
+Lemma fgmulUg c k g (d : {fset K}) : msupp g `<=` d ->
+ fgmul << c *g k >> g =
+   \sum_(k' : d) << c * g@_(val k') *g (k * val k')%M >>.
+Proof.
+move=> le; rewrite (fgmullw msuppU_le le) big_fset1 /=.
+by apply/eq_bigr=> /= k' _; rewrite mcoeffUU.
+Qed.
+
+Lemma fgmulgU c k g (d : {fset K}) : msupp g `<=` d ->
+ fgmul g << c *g k >> =
+   \sum_(k' : d) << g@_(val k') * c *g (val k' * k)%M >>.
+Proof.
+move=> le; rewrite (fgmulrw le msuppU_le) big_fset1 /=.
+by apply/eq_bigr=> /= k' _; rewrite mcoeffUU.
+Qed.
+
+Lemma fgmulUU c1 c2 k1 k2 :
+  fgmul << c1 *g k1 >> << c2 *g k2 >> = << c1 * c2 *g (k1 * k2)%M >>.
+Proof. by rewrite (fgmullw msuppU_le msuppU_le) !big_fset1 /= !mcoeffUU. Qed.
+
+Lemma fgmulEl1w {g1 g2} (d1 : {fset K}) : msupp g1 `<=` d1 -> fgmul g1 g2 =
+  \sum_(k1 : d1) fgmul << g1@_(val k1) *g val k1 >> g2.
+Proof.
+move=> le; rewrite (fgmullwl le); apply/eq_bigr=> /= k _.
+by rewrite -fgmulUg // fsubset_refl.
+Qed.
+
+Lemma fgmulEr1w {g1 g2} (d2 : {fset K}) : msupp g2 `<=` d2 -> fgmul g1 g2 =
+  \sum_(k2 : d2) fgmul g1 << g2@_(val k2) *g val k2 >>.
+Proof.
+move=> le; rewrite (fgmulrwl le); apply/eq_bigr=> /= k _.
+by rewrite -fgmulgU // fsubset_refl.
+Qed.
+
+Lemma fgmullUg_is_additive c k : additive (fgmul << c *g k >>).
+Proof.
+move=> g1 g2 /=; rewrite (fgmulUg _ _ (msuppB_le g1 g2)).
+rewrite (fgmulUg _ _ (fsubsetUl _ (msupp g2))).
+rewrite (fgmulUg _ _ (fsubsetUr (msupp g1) _)).
+rewrite -sumrB; apply/eq_bigr=> /= k' _.
+by rewrite mcoeffB -monalgUB mulrBr.
+Qed.
+
+Lemma fgmullgU_is_additive c k : additive (fun g => fgmul^~ << c *g k >> g).
+Proof.
+move=> g1 g2 /=; rewrite (fgmulgU _ _ (msuppB_le g1 g2)).
+rewrite (fgmulgU _ _ (fsubsetUl _ (msupp g2))).
+rewrite (fgmulgU _ _ (fsubsetUr (msupp g1) _)).
+rewrite -sumrB; apply/eq_bigr=> /= k' _.
+by rewrite mcoeffB -monalgUB mulrBl.
+Qed.
+
+Definition fgmullUg_additive c k := Additive (fgmullUg_is_additive c k).
+Definition fgmullgU_additive c k := Additive (fgmullgU_is_additive c k).
+
 Lemma fgoneE k : fgone@_k = (k == 1%M)%:R.
 Proof. by rewrite mcoeffU1 eq_sym. Qed.
 
 Lemma fgmulA : associative fgmul.
-Proof. admit. Qed.
+Proof.
+move=> g1 g2 g3; have FE (G : seq {fset K}) :
+  { E : {fset K} | all [pred g | g `<=` E] G }.
+  exists (\big[fsetU/fset0]_(g <- G) g); apply/allP=> /=.
+  move=> g; elim: G=> // a G ih /=; case/orP=> [/eqP->|/ih {ih} ih].
+  by rewrite big_cons fsubsetUl.
+  by rewrite big_cons fsubsetU // ih orbT.
+case: (FE [seq msupp g | g <- [:: g1; g2; g3; fgmul g1 g2; fgmul g2 g3]]).
+move=> E /and5P []/= le1 le2 le3 le12 /andP[le23 _] {FE}.
+transitivity (\sum_(k1 : E) \sum_(k2 : E) \sum_(k3 : E)
+  << g1@_(val k1) * g2@_(val k2) * g3@_(val k3) *g
+       (val k1 * val k2 * val k3)%M >>).
++ rewrite (fgmulEl1w (d1 := E)) //; apply/eq_bigr=> /= k1 _.
+  rewrite [X in fgmul _ X](fgmullw (d1 := E) (d2 := E)) //.
+  have /= raddf := raddf_sum (fgmullUg_additive g1@_(val k1) (val k1)).
+  rewrite raddf; apply/eq_bigr=> /= k2 _; rewrite raddf.
+  by apply/eq_bigr=> /= k3 _; rewrite fgmulUU mulrA mulmA.
+rewrite [LHS](eq_bigr _ (fun _ _ => exchange_big _ _ _ _ _ _)) /=.
+rewrite exchange_big /=; apply/esym; rewrite (@fgmulEr1w _ _ E) //.
+apply/eq_bigr=> /= k3 _; rewrite (@fgmullw g1 _ E E) //.
+have /= raddf := raddf_sum (fgmullgU_additive g3@_(val k3) (val k3)).
+rewrite raddf; apply/eq_bigr=> /= k1 _; rewrite raddf.
+by apply/eq_bigr=> /= k2 _; rewrite fgmulUU.
+Qed.
 
 Lemma fgmul1g : left_id fgone fgmul.
 Proof.
