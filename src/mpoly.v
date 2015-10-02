@@ -4803,16 +4803,16 @@ Notation "[ ''dhomog_' d p ]" := (@indhomog _ _ d p)
 Section MPolyHomogVec.
 Local Notation isorted s := (sorted leq [seq val i | i <- s]).
 
-Let basis n d : {set (d.-tuple 'I_n)} :=
+Definition basis n d : {set (d.-tuple 'I_n)} :=
   [set t in {: d.-tuple 'I_n } | isorted t].
 
-Let s2m n (m : seq 'I_n) :=
+Definition s2m n (m : seq 'I_n) :=
   [multinom count_mem i m | i < n].
 
-Let m2s n (m : 'X_{1..n}) :=
+Definition m2s n (m : 'X_{1..n}) :=
   flatten [seq nseq (m i) i | i <- enum 'I_n].
 
-Fact inj_s2m n d: {in basis n d &, injective (@s2m n \o val)}.
+Lemma inj_s2m n d: {in basis n d &, injective (@s2m n \o val)}.
 Proof.
   move=> t1 t2; rewrite !inE=> srt_t1 srt_t2 eq_tm.
   apply/val_inj/(inj_map val_inj).
@@ -4821,7 +4821,7 @@ Proof.
   by rewrite !mnmE => ->.
 Qed.
 
-Fact srt_m2s n (m : 'X_{1..n}): isorted (m2s m).
+Lemma srt_m2s n (m : 'X_{1..n}): isorted (m2s m).
 Proof.
   have h (T : eqType) (leT : rel T) (s : seq T) (F : T -> nat) x:
     reflexive leT -> transitive leT ->
@@ -4848,7 +4848,7 @@ Proof.
   by apply/hasP; case.
 Qed.
 
-Fact size_m2s n (m : 'X_{1..n}): size (m2s m) = mdeg m.
+Lemma size_m2s n (m : 'X_{1..n}): size (m2s m) = mdeg m.
 Proof.
   rewrite /m2s size_flatten /shape -map_comp /=.
   rewrite (eq_map (f2 := fun i : 'I_n => m i)).
@@ -4856,7 +4856,7 @@ Proof.
   by move=> i /=; rewrite size_nseq.
 Qed.
 
-Fact s2mK n (m : 'X_{1..n}): s2m (m2s m) = m.
+Lemma s2mK n (m : 'X_{1..n}): s2m (m2s m) = m.
 Proof.
   apply/mnmP=> i; rewrite mnmE /m2s /=.
   rewrite count_flatten enumT (bigD1 i) //=.
@@ -4868,7 +4868,7 @@ Qed.
 Local Notation sbasis n d :=
   [seq s2m t | t : d.-tuple 'I_n <- enum (basis n d)].
 
-Fact basis_cover n d (m : 'X_{1..n}): (mdeg m == d) = (m \in sbasis n d).
+Lemma basis_cover n d (m : 'X_{1..n}): (mdeg m == d) = (m \in sbasis n d).
 Proof.
   apply/eqP/idP=> [eq_szm_d|].
     apply/mapP; have /eqP := size_m2s m; rewrite -eq_szm_d => sz_tm.
@@ -4889,10 +4889,10 @@ Proof.
   by rewrite big_uniq ?undup_uniq.
 Qed.
 
-Fact size_basis n d: size (sbasis n.+1 d) = 'C(d + n, d).
+Lemma size_basis n d: size (sbasis n.+1 d) = 'C(d + n, d).
 Proof. by rewrite size_map -cardE; apply/card_sorted_tuples. Qed.
 
-Fact uniq_basis n d: uniq (sbasis n d).
+Lemma uniq_basis n d: uniq (sbasis n d).
 Proof.
   rewrite map_inj_in_uniq ?enum_uniq // => t1 t2.
   by rewrite !mem_enum; apply/inj_s2m.
