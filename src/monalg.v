@@ -6,8 +6,8 @@
 
 (* -------------------------------------------------------------------- *)
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path choice.
-Require Import finset fintype finfun xfinmap tuple bigop ssralg ssrint.
-Require Import ssrnum fsfun ssrcomplements.
+Require Import finset fintype finfun tuple bigop ssralg ssrint.
+Require Import ssrnum xfinmap fsfun.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -27,8 +27,7 @@ Local Notation ilift := fintype.lift.
 Local Notation efst := (@fst _ _) (only parsing).
 Local Notation esnd := (@snd _ _) (only parsing).
 
-Local Infix "@@" := product (at level 60, right associativity).
-Local Notation widen := (widen_ord (leqnSn _)).
+Delimit Scope m_scope with M.
 
 (* -------------------------------------------------------------------- *)
 Reserved Notation "{ 'malg' G [ K ] }"
@@ -45,6 +44,187 @@ Reserved Notation "<< k >>"
   (at level 0).
 Reserved Notation "g @_ k"
   (at level 3, k at level 2, left associativity, format "g @_ k").
+Reserved Notation "c %:MP"
+  (at level 2, format "c %:MP").
+
+(* -------------------------------------------------------------------- *)
+Module MonomialDef.
+
+Record mixin_of (V : Type) : Type := Mixin {
+  one : V;
+  mul : V -> V -> V;
+  _   : associative mul;
+  _   : left_id one mul;
+  _   : right_id one mul;
+  _   : forall x y, mul x y = one -> x = one /\ y = one
+}.
+
+Section ClassDef.
+
+Record class_of T := Class
+ { base : Choice.class_of T; mixin : mixin_of T }.
+
+Structure type := Pack {sort; _ : class_of sort; _ : Type}.
+
+Local Coercion base : class_of >-> Choice.class_of.
+Local Coercion sort : type >-> Sortclass.
+
+Variables (T : Type) (cT : type).
+
+Definition class := let: Pack _ c _ as cT' := cT return class_of cT' in c.
+Definition clone c of phant_id class c := @Pack T c T.
+
+Let xT := let: Pack T _ _ := cT in T.
+Notation xclass := (class : class_of xT).
+
+Definition pack m :=
+  fun bT b & phant_id (Choice.class bT) b => Pack (@Class T b m) T.
+
+Definition eqType := @Equality.Pack cT xclass xT.
+Definition choiceType := @Choice.Pack cT xclass xT.
+
+End ClassDef.
+
+Module Exports.
+Coercion base : class_of >-> Choice.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion sort : type >-> Sortclass.
+
+Coercion  eqType : type >-> Equality.type.
+Canonical eqType.
+Coercion  choiceType : type >-> Choice.type.
+Canonical choiceType.
+
+Bind Scope m_scope with sort.
+
+Notation monomType := type.
+Notation MonomType T m := (@pack T m _ _ id).
+Notation MonomMixin := Mixin.
+
+Notation "[ 'monomType' 'of' T 'for' cT ]" := (@clone T cT _ idfun)
+  (at level 0, format "[ 'monomType'  'of'  T  'for'  cT ]") : form_scope.
+Notation "[ 'monomType' 'of' T ]" := (@clone T _ _ id)
+  (at level 0, format "[ 'monomType'  'of'  T ]") : form_scope.
+End Exports.
+End MonomialDef.
+
+(* -------------------------------------------------------------------- *)
+Import MonomialDef.Exports.
+
+Definition mone {M} := MonomialDef.one (MonomialDef.class M).
+Definition mmul {M} := MonomialDef.mul (MonomialDef.class M).
+
+(* -------------------------------------------------------------------- *)
+Module ConomialDef.
+
+Section ClassDef.
+
+Record class_of (M : Type) : Type := Class {
+  base  : MonomialDef.class_of M;
+  mixin : commutative (MonomialDef.mul base)
+}.
+
+Structure type := Pack {sort; _ : class_of sort; _ : Type}.
+
+Local Coercion base : class_of >-> MonomialDef.class_of.
+Local Coercion sort : type >-> Sortclass.
+
+Variables (T : Type) (cT : type).
+
+Definition class := let: Pack _ c _ as cT' := cT return class_of cT' in c.
+Definition clone c of phant_id class c := @Pack T c T.
+
+Let xT := let: Pack T _ _ := cT in T.
+Notation xclass := (class : class_of xT).
+
+Definition pack mul0 (m0 : @commutative T T mul0) :=
+  fun bT b & phant_id (MonomialDef.class bT) b =>
+  fun    m & phant_id m0 m => Pack (@Class T b m) T.
+
+Definition eqType     := @Equality.Pack cT xclass xT.
+Definition choiceType := @Choice.Pack cT xclass xT.
+Definition monomType  := @MonomialDef.Pack cT xclass xT.
+
+End ClassDef.
+
+Module Exports.
+Coercion base  : class_of >-> MonomialDef.class_of.
+Coercion mixin : class_of >-> commutative.
+Coercion sort  : type >-> Sortclass.
+
+Coercion eqType : type >-> Equality.type.
+Coercion choiceType : type >-> Choice.type.
+Coercion monomType : type >-> MonomialDef.type.
+
+Canonical eqType.
+Canonical choiceType.
+Canonical monomType.
+
+Bind Scope m_scope with sort.
+
+Notation conomType := type.
+Notation ConomType T m := (@pack T _ m _ _ id _ id).
+Notation ConomMixin := MonomialDef.Mixin.
+
+Notation "[ 'conomType' 'of' T 'for' cT ]" := (@clone T cT _ idfun)
+  (at level 0, format "[ 'conomType'  'of'  T  'for'  cT ]") : form_scope.
+Notation "[ 'conomType' 'of' T ]" := (@clone T _ _ id)
+  (at level 0, format "[ 'conomType'  'of'  T ]") : form_scope.
+End Exports.
+
+End ConomialDef.
+
+(* -------------------------------------------------------------------- *)
+Export MonomialDef.Exports.
+Export ConomialDef.Exports.
+
+Local Notation "1" := (@mone _) : m_scope.
+Local Notation "*%R" := (@mmul _) : m_scope.
+Local Notation "x * y" := (mmul x y) : m_scope.
+
+(* -------------------------------------------------------------------- *)
+Module MonomialTheory.
+Section Monomial.
+Variable M : monomType.
+
+Lemma mulmA : associative  (@mmul M). Proof. by case M => T [? []]. Qed.
+Lemma mul1m : left_id  1%M (@mmul M). Proof. by case M => T [? []]. Qed.
+Lemma mulm1 : right_id 1%M (@mmul M). Proof. by case M => T [? []]. Qed.
+
+Local Open Scope m_scope.
+
+Lemma unitm (x y : M) : x * y = 1 -> x = 1 /\ y = 1.
+Proof. by case: M x y => T [? []]. Qed.
+
+Canonical monom_monoid := Monoid.Law mulmA mul1m mulm1.
+
+Lemma unitmP (x y : M) : reflect (x == 1 /\ y == 1) (x * y == 1).
+Proof.
+apply: (iffP idP)=> [|[/eqP-> /eqP->]]; rewrite ?mulm1 //.
+by move/eqP/unitm=> [-> ->]; rewrite !eqxx.
+Qed.
+End Monomial.
+
+Section Conomial.
+Variable M : conomType.
+
+Local Open Scope m_scope.
+
+Lemma mulmC : commutative (@mmul M).
+Proof. by case M => T []. Qed.
+
+Canonical conom_monoid := Monoid.Law (@mulmA M) (@mul1m M) (@mulm1 M).
+Canonical conom_comoid := Monoid.ComLaw mulmC.
+End Conomial.
+
+Module Exports.
+Canonical monom_monoid.
+Canonical conom_monoid.
+Canonical conom_comoid.
+End Exports.
+End MonomialTheory.
+
+Export MonomialTheory.Exports.
 
 (* -------------------------------------------------------------------- *)
 Section MalgDef.
@@ -105,7 +285,7 @@ Notation "<< k >>"
   := << 1 *g k >> : ring_scope.
 
 (* -------------------------------------------------------------------- *)
-Section MalgSupp.
+Section MalgBaseOp.
 Variable (K : choiceType) (G : zmodType).
 
 Definition msupp (g : {malg G[K]}) :=
@@ -113,9 +293,22 @@ Definition msupp (g : {malg G[K]}) :=
 
 Definition mcoeff (x : K) (g : {malg G[K]}) :=
   nosimpl (malg_val g x).
-End MalgSupp.
+End MalgBaseOp.
 
 Notation "g @_ k" := (mcoeff k g).
+
+(* -------------------------------------------------------------------- *)
+Section MalgBaseOpMonom.
+Variable (K : monomType) (G : zmodType).
+
+Definition malgC (c : G) : {malg G[K]} :=
+  nosimpl << c *g 1%M >>.
+
+Lemma malgCE (c : G) : malgC c = << c *g 1%M >>.
+Proof. by []. Qed.
+End MalgBaseOpMonom.
+
+Notation "c %:MP" := (@malgC _ _ c).
 
 (* -------------------------------------------------------------------- *)
 Section MalgTheory.
@@ -239,6 +432,10 @@ Local Notation mkmalgU := (@mkmalgU K G) (only parsing).
 Let fgE := (fgzeroE, fgoppE, fgaddE).
 
 (* -------------------------------------------------------------------- *)
+Lemma malgD_def g1 g2 : g1 + g2 = fgadd g1 g2.
+Proof. by []. Qed.
+
+(* -------------------------------------------------------------------- *)
 Lemma mcoeff_is_additive k: additive (mcoeff k).
 Proof. by move=> g1 g2 /=; rewrite !fgE. Qed.
 
@@ -357,6 +554,51 @@ Proof. by apply/monalgEw/fsubset_refl. Qed.
 End MAlgZModTheory.
 
 (* -------------------------------------------------------------------- *)
+Section MalgMonomTheory.
+Context {K : monomType} {G : zmodType}.
+
+(* -------------------------------------------------------------------- *)
+Lemma msuppC (c : G) :
+  msupp c%:MP = (if c == 0 then fset0 else [fset 1%M]) :> {fset K}.
+Proof. by apply/msuppU. Qed.
+
+Lemma mcoeffC (c : G) k : c%:MP@_k = c *+ (k == (1%M : K)).
+Proof. by rewrite mcoeffU eq_sym. Qed.
+
+Lemma mcoeffC0 (k : K) : 0%:MP@_k = 0 :> G.
+Proof. by rewrite mcoeffC mul0rn. Qed.
+
+Lemma msuppC0 : msupp (0 : G)%:MP = fset0 :> {fset K}.
+Proof. by rewrite msuppC eqxx. Qed.
+
+Lemma malgC0E : 0%:MP = 0 :> {malg G[K]}.
+Proof. by apply/eqP/malgP=> k; rewrite mcoeffC0 mcoeff0. Qed.
+
+Lemma malgCK : cancel (@malgC K G) (@mcoeff K G 1%M).
+Proof. by move=> c; rewrite mcoeffC eqxx mulr1n. Qed.
+
+Lemma malgC_eq (c1 c2 : G) :
+  (c1%:MP == c2%:MP :> {malg G[K]}) = (c1 == c2).
+Proof. by apply/eqP/eqP=> [|->//] /eqP/malgP/(_ 1%M); rewrite !mcoeffU eqxx. Qed.
+
+(* -------------------------------------------------------------------- *)
+Local Notation malgC := (@malgC K G) (only parsing).
+
+Lemma malgC_is_additive : additive malgC.
+Proof. by move=> g1 g2; apply/eqP/malgP=> k; rewrite malgCE monalgUB. Qed.
+
+Canonical malgC_additive : {additive G -> {malg G[K]}} :=
+  Additive malgC_is_additive.
+
+Lemma malgC0     : malgC 0 = 0               . Proof. exact: raddf0. Qed.
+Lemma malgCN     : {morph malgC: x / - x}    . Proof. exact: raddfN. Qed.
+Lemma malgCD     : {morph malgC: x y / x + y}. Proof. exact: raddfD. Qed.
+Lemma malgCB     : {morph malgC: x y / x - y}. Proof. exact: raddfB. Qed.
+Lemma malgCMn  k : {morph malgC: x / x *+ k} . Proof. exact: raddfMn. Qed.
+Lemma malgCMNn k : {morph malgC: x / x *- k} . Proof. exact: raddfMNn. Qed.
+End MalgMonomTheory.
+
+(* -------------------------------------------------------------------- *)
 Section MAlgLMod.
 Variable (K : choiceType) (R : ringType).
 
@@ -406,6 +648,10 @@ Implicit Types g       : {malg R[K]}.
 Implicit Types c x y z : R.
 Implicit Types k l     : K.
 
+Lemma malgZ_def c g : c *: g = fgscale c g.
+Proof. by []. Qed.
+
+(* -------------------------------------------------------------------- *)
 Lemma mcoeffZ c g k : (c *: g)@_k = c * g@_k.
 Proof. by apply/fgscaleE. Qed.
 
@@ -443,13 +689,7 @@ Definition mcoeffsE :=
 
 (* -------------------------------------------------------------------- *)
 Section MAlgRingType.
-Variable (K : choiceType) (R : ringType).
-Variable (idx : K) (op : Monoid.law idx).
-
-Local Notation "1" := idx : m_scope.
-Local Notation "x * y" := (op x y) : m_scope.
-
-Delimit Scope m_scope with M.
+Variable (K : monomType) (R : ringType).
 
 Implicit Types g       : {malg R[K]}.
 Implicit Types c x y z : R.
@@ -535,8 +775,7 @@ apply/eq_bigr=> k1 _; rewrite raddf_sum /=; apply/eq_bigr=> k2 _.
 by rewrite mcoeffsE.
 Qed.
 
-Lemma fgmulErw g1 g2 (d1 d2 : {fset K}) k :
-    msupp g1 `<=` d1 -> msupp g2 `<=` d2
+Lemma fgmulErw g1 g2 (d1 d2 : {fset K}) k : msupp g1 `<=` d1 -> msupp g2 `<=` d2
   -> (fgmul g1 g2)@_k = \sum_(k2 : d2) \sum_(k1 : d1)
         (g1@_(val k1) * g2@_(val k2)) *+ ((val k1 * val k2)%M == k).
 Proof. by move=> le1 le2; rewrite (fgmulElw _ le1 le2); rewrite exchange_big. Qed.
@@ -673,3 +912,138 @@ Definition malg_ringMixin :=
 Canonical  malg_ringType :=
   Eval hnf in RingType {malg R[K]} malg_ringMixin.
 End MAlgRingType.
+
+(* -------------------------------------------------------------------- *)
+Section MAlgRingTheory.
+Variable (K : monomType) (R : ringType).
+
+Delimit Scope m_scope with M.
+
+Implicit Types g       : {malg R[K]}.
+Implicit Types c x y z : R.
+Implicit Types k l     : K.
+
+(* -------------------------------------------------------------------- *)
+Lemma malgM_def g1 g2 : g1 * g2 = fgmul g1 g2.
+Proof. by []. Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma malgME g1 g2 :
+  g1 * g2 = \sum_(k1 : msupp g1) \sum_(k2 : msupp g2)
+    << g1@_(val k1) * g2@_(val k2) *g (val k1 * val k2)%M >>.
+Proof. by []. Qed.
+
+Lemma malgMEw g1 g2 (d1 d2 : {fset K}) :
+  msupp g1 `<=` d1 -> msupp g2 `<=` d2 ->
+  g1 * g2 = \sum_(k1 : d1) \sum_(k2 : d2)
+    << g1@_(val k1) * g2@_(val k2) *g (val k1 * val k2)%M >>.
+Proof. by apply/fgmullw. Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma mcoeffMl g1 g2 k :
+  (g1 * g2)@_k = \sum_(k1 : msupp g1) \sum_(k2 : msupp g2)
+    (g1@_(val k1) * g2@_(val k2)) *+ (val k1 * val k2 == k)%M.
+Proof. by apply/fgmulElw; apply/fsubset_refl. Qed.
+
+Lemma mcoeffMr g1 g2 k :
+  (g1 * g2)@_k = \sum_(k2 : msupp g2) \sum_(k1 : msupp g1)
+    (g1@_(val k1) * g2@_(val k2)) *+ (val k1 * val k2 == k)%M.
+Proof. by apply/fgmulErw; apply/fsubset_refl. Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma mcoeffMlw g1 g2 (d1 d2 : {fset K}) k :
+  msupp g1 `<=` d1 -> msupp g2 `<=` d2 ->
+  (g1 * g2)@_k = \sum_(k1 : d1) \sum_(k2 : d2)
+    (g1@_(val k1) * g2@_(val k2)) *+ (val k1 * val k2 == k)%M.
+Proof. by apply/fgmulElw. Qed.
+
+Lemma mcoeffMrw g1 g2 (d1 d2 : {fset K}) k :
+  msupp g1 `<=` d1 -> msupp g2 `<=` d2 ->
+  (g1 * g2)@_k = \sum_(k2 : d2) \sum_(k1 : d1)
+    (g1@_(val k1) * g2@_(val k2)) *+ (val k1 * val k2 == k)%M.
+Proof. by apply/fgmulErw. Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma mcoeff1 k : 1@_k = (k == 1%M)%:R :> R.
+Proof. by rewrite mcoeffC. Qed.
+
+Lemma mul_malgC c g : c%:MP * g = c *: g.
+Proof.
+rewrite malgCE malgM_def malgZ_def (fgmulUg _ _ (fsubset_refl _)).
+by apply/eq_bigr=> /= k _; rewrite mul1m.
+Qed.
+
+Lemma mcoeffCM c g k : (c%:MP * g)@_k = c * g@_k :> R.
+Proof. by rewrite mul_malgC mcoeffZ. Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma msuppM_le g1 g2 k :
+  k \in msupp (g1 * g2) ->
+    exists k1 : msupp g1, exists k2 : msupp g2, k = (val k1 * val k2)%M.
+Proof.
+move=> k_in_g1Mg2; apply/(existsPP (fun _ => exists_eqP)).
+apply/contraLR: k_in_g1Mg2=> hk; rewrite -mcoeff_eq0.
+rewrite mcoeffMl big1 // => /= k1 _; rewrite big1 // => k2 _.
+case: eqP=> // kE; case/negP: hk; apply/existsP.
+by exists k1; apply/existsP; exists k2; rewrite kE.
+Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma malgC_is_multiplicative : multiplicative (@malgC K R).
+Proof.
+split=> // g1 g2; apply/eqP/malgP=> k.
+by rewrite mcoeffCM !mcoeffC mulrnAr.
+Qed.
+
+Canonical malgC_rmorphism : {rmorphism R -> {malg R[K]}} :=
+  AddRMorphism malgC_is_multiplicative.
+
+(* -------------------------------------------------------------------- *)
+Lemma mpolyC1E : 1%:MP = 1 :> {malg R[K]}.
+Proof. exact: rmorph1. Qed.
+
+Lemma mpolyC_nat (n : nat) : (n%:R)%:MP = n%:R :> {malg R[K]}.
+Proof.
+by apply/eqP/malgP=> i; rewrite mcoeffC mcoeffMn mcoeffC mulrnAC.
+Qed.
+
+Lemma mpolyCM : {morph @malgC K R : p q / p * q}.
+Proof. exact: rmorphM. Qed.
+End MAlgRingTheory.
+
+(* -------------------------------------------------------------------- *)
+Section MalgLAlgType.
+Variable (K : monomType) (R : ringType).
+
+Implicit Types g       : {malg R[K]}.
+Implicit Types c x y z : R.
+Implicit Types k l     : K.
+
+(* -------------------------------------------------------------------- *)
+Lemma fgscaleAl c g1 g2 : c *: (g1 * g2) = (c *: g1) * g2.
+Proof. by rewrite -!mul_malgC mulrA. Qed.
+
+Canonical malg_lalgType :=
+  Eval hnf in LalgType R {malg R[K]} fgscaleAl.
+End MalgLAlgType.
+
+(* -------------------------------------------------------------------- *)
+Section MalgComRingType.
+Variable (K : conomType) (R : comRingType).
+
+Implicit Types g       : {malg R[K]}.
+Implicit Types c x y z : R.
+Implicit Types k l     : K.
+
+Lemma fgmulC : @commutative {malg R[K]} _ *%R.
+Proof.
+move=> g1 g2; apply/eqP/malgP=> k; rewrite mcoeffMl mcoeffMr.
+apply/eq_bigr=> /= k1 _; apply/eq_bigr=> /= k2 _.
+by rewrite mulrC [X in X==k]mulmC.
+Qed.
+
+Canonical malg_comRingType :=
+  Eval hnf in ComRingType {malg R[K]} fgmulC.
+Canonical malg_algType :=
+  Eval hnf in CommAlgType R {malg R[K]}.
+End MalgComRingType.
