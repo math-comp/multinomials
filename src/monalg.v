@@ -339,12 +339,7 @@ Proof. by apply/fsfunE. Qed.
 
 Lemma mcoeff_eq0 (g : {malg G[K]}) (k : K) :
   (g@_k == 0) = (k \notin msupp g).
-Proof.
-case: g; elim/fsfunW=> g; rewrite mcoeff_fnd /msupp domf_fsfunE.
-case: fndP=> kf /=; first have: k = val (FSetSub kf) by [].
-  by move=> {2}->; rewrite val_in_FSet -topredE /= negbK.
-by rewrite eqxx; apply/esym/imfsetP=> h; case: h kf=> [[y]] ? _ -> /negP.
-Qed.
+Proof. by apply/fsfun_eqdfl. Qed.
 
 Lemma mcoeff_neq0 (g : {malg G[K]}) (k : K) :
   (g@_k != 0) = (k \in msupp g).
@@ -352,17 +347,14 @@ Proof. by rewrite mcoeff_eq0 negbK. Qed.
 
 Lemma mcoeff_outdom (g : {malg G[K]}) (k : K) :
   k \notin msupp g -> g@_k = 0.
-Proof. by rewrite -mcoeff_eq0=> /eqP. Qed.
+Proof. by apply/fsfun_outdom. Qed.
 
 CoInductive msupp_spec (g : {malg G[K]}) (k : K) : bool -> G -> Type :=
 | MsuppIn  (_ : k \in    msupp g) : msupp_spec g k true  g@_k
 | MsuppOut (_ : k \notin msupp g) : msupp_spec g k false 0.
 
 Lemma msuppP (g : {malg G[K]}) (k : K) : msupp_spec g k (k \in msupp g) g@_k.
-Proof.
-case: (boolP (k \in msupp g)); first by apply/MsuppIn.
-by move=> k_notin_g; rewrite (mcoeff_outdom k_notin_g); apply/MsuppOut.
-Qed.
+Proof. by rewrite /msupp /mcoeff; case: fsfunEP; constructor. Qed.
 End MalgTheory.
 
 (* -------------------------------------------------------------------- *)
@@ -1071,3 +1063,91 @@ Canonical malg_comRingType :=
 Canonical malg_algType :=
   Eval hnf in CommAlgType R {malg R[K]}.
 End MalgComRingType.
+
+(* -------------------------------------------------------------------- *)
+Section ComMonomial.
+Section Def.
+Variable (I : choiceType).
+
+Inductive cmonom : predArgType := CMonom of {fsfun I -> nat / 0%N}.
+
+Definition cmonom_val m := let: CMonom m := m in m.
+Definition cmonom_of (_ : phant I) := cmonom.
+
+Coercion cmonom_val : cmonom >-> fsfun_of.
+
+Fact cmonom_key : unit. Proof. by []. Qed.
+
+Definition cmonom_of_fsfun   k := locked_with k Malg.
+Canonical  cmonom_unlockable k := [unlockable fun cmonom_of_fsfun k].
+End Def.
+
+Local Notation "{ 'cmonom' I }" :=
+  (@cmonom_of _ (Phant I)) : type_scope.
+
+Definition mkconom (I : choiceType) m :=
+  nosimpl (CMonom m : {cmonom I}).
+
+(* -------------------------------------------------------------------- *)
+Section Canonicals.
+Variable (I : choiceType).
+
+Canonical  cmonomType := Eval hnf in [newType for (@cmonom_val I)].
+Definition cmonom_eqMixin := Eval hnf in [eqMixin of {cmonom I} by <:].
+Canonical  cmonom_eqType := Eval hnf in EqType {cmonom I} cmonom_eqMixin.
+Definition cmonom_choiceMixin := Eval hnf in [choiceMixin of {cmonom I} by <:].
+Canonical  cmonom_choiceType := Eval hnf in ChoiceType {cmonom I} cmonom_choiceMixin.
+End Canonicals.
+
+(* -------------------------------------------------------------------- *)
+Section Theory.
+Context {I : choiceType}.
+
+Implicit Types m : {cmonom I}.
+Implicit Types i j : I.
+
+Definition cmzero : {cmonom I} :=
+  mkconom [fsfun [fmap]].
+
+Definition cmadd m1 m2 := mkconom [fsfun
+  [fmap i : domf m1 `|` domf m2 => (m1 (val i) + m2 (val i))%N]].
+
+Lemma cmzeroE i : cmzero i = 0%N.
+Proof. by rewrite fsfun_fnd fnd_fmap0. Qed.
+
+Lemma cmaddE m1 m2 i : (cmadd m1 m2) i = (m1 i + m2 i)%N.
+Proof.
+rewrite (fsfunE _ _ (fun i => m1 i + m2 i)%N) in_fsetE.
+by case: (fsfunEP m1); case: (fsfunEP m2).
+Qed.
+
+Let cmE := (cmzeroE, cmaddE).
+
+Lemma cmaddA : associative cmadd.
+Proof. by move=> m1 m2 m3; apply/eqP/fsfunP=> i; rewrite !cmE addnA. Qed.
+
+Lemma cmaddC : commutative cmadd.
+Proof. by move=> m1 m2; apply/eqP/fsfunP=> i; rewrite !cmE addnC. Qed.
+
+Lemma cmadd0m : left_id cmzero cmadd.
+Proof. by move=> m; apply/eqP/fsfunP=> i; rewrite !cmE add0n. Qed.
+
+Lemma cmaddm0 : right_id cmzero cmadd.
+Proof. by move=> m; apply/eqP/fsfunP=> i; rewrite !cmE addn0. Qed.
+
+Lemma cmadd_eq0 m1 m2 : cmadd m1 m2 = cmzero -> m1 = cmzero /\ m2 = cmzero.
+Proof.
+move: m1 m2; have gen m1 m2 : cmadd m1 m2 = cmzero -> m1 = cmzero.
+  move/eqP/fsfunP=> h; apply/eqP/fsfunP=> i; move/(_ i)/eqP: h.
+  by rewrite !cmE addn_eq0 => /andP[] /eqP->.
+by move=> m1 m2 h; split; move: h; last rewrite cmaddC; apply/gen.
+Qed.
+
+Definition cmonom_monomMixin :=
+  MonomMixin cmaddA cmadd0m cmaddm0 cmadd_eq0.
+Canonical cmonom_monomType :=
+  Eval hnf in MonomType {cmonom I} cmonom_monomMixin.
+Canonical cmonom_conomType :=
+  Eval hnf in ConomType {cmonom I} cmaddC.
+End Theory.
+End ComMonomial.

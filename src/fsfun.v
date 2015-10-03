@@ -190,4 +190,28 @@ move=> k; rewrite in_fsetD andbC; case: (boolP (_ \in _))=> /=.
 move=> k_notin_g; apply/esym/imfsetP=> h; move: h k_notin_g.
 by case=> [[y]] y_in_g /= _ -> /negP.
 Qed.
+
+Lemma fsfun_eqdfl (f : {fsfun K -> T / x}) y :
+  (f y == x) = (y \notin domf f).
+Proof.
+elim/fsfunW: f => g; rewrite fsfun_fnd domf_fsfunE.
+case: fndP=> yf /=; first have: y = val (FSetSub yf) by [].
+  by move=> {2}->; rewrite val_in_FSet -topredE /= negbK.
+rewrite eqxx; apply/esym/imfsetP=> h; case: h yf.
+by case=> /= z ? _ -> /negP.
+Qed.
+
+Lemma fsfun_outdom (f : {fsfun K -> T / x}) y :
+  y \notin domf f -> f y = x.
+Proof. by rewrite -fsfun_eqdfl=> /eqP. Qed.
+
+CoInductive fsfun_spec (f : {fsfun K -> T / x}) y : bool -> T -> Type :=
+| FsfunIn  (_ : y \in    domf f) : fsfun_spec f y true  (f y)
+| FsfunOut (_ : y \notin domf f) : fsfun_spec f y false x.
+
+Lemma fsfunEP (f : {fsfun K -> T / x}) y : fsfun_spec f y (y \in domf f) (f y).
+Proof.
+case: (boolP (y \in domf f)); first by apply/FsfunIn.
+by move=> y_notin_f; rewrite (fsfun_outdom y_notin_f); apply/FsfunOut.
+Qed.
 End FsfunTheory.
