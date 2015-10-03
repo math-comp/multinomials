@@ -32,6 +32,8 @@ Delimit Scope m_scope with M.
 (* -------------------------------------------------------------------- *)
 Reserved Notation "{ 'cmonom' I }"
   (at level 0, I at level 2, format "{ 'cmonom'  I }").
+Reserved Notation "{ 'fmonom' I }"
+  (at level 0, I at level 2, format "{ 'fmonom'  I }").
 Reserved Notation "{ 'malg' G [ K ] }"
   (at level 0, K, G at level 2, format "{ 'malg'  G [ K ] }").
 Reserved Notation "{ 'malg' K }"
@@ -1078,14 +1080,14 @@ Coercion cmonom_val : cmonom >-> fsfun_of.
 
 Fact cmonom_key : unit. Proof. by []. Qed.
 
-Definition cmonom_of_fsfun   k := locked_with k Malg.
+Definition cmonom_of_fsfun   k := locked_with k CMonom.
 Canonical  cmonom_unlockable k := [unlockable fun cmonom_of_fsfun k].
 End Def.
 
 Local Notation "{ 'cmonom' I }" :=
   (@cmonom_of _ (Phant I)) : type_scope.
 
-Definition mkconom (I : choiceType) m :=
+Definition mkcmonom (I : choiceType) m :=
   nosimpl (CMonom m : {cmonom I}).
 
 (* -------------------------------------------------------------------- *)
@@ -1107,9 +1109,9 @@ Implicit Types m : {cmonom I}.
 Implicit Types i j : I.
 
 Definition cmzero : {cmonom I} :=
-  mkconom [fsfun [fmap]].
+  mkcmonom [fsfun [fmap]].
 
-Definition cmadd m1 m2 := mkconom [fsfun
+Definition cmadd m1 m2 := mkcmonom [fsfun
   [fmap i : domf m1 `|` domf m2 => (m1 (val i) + m2 (val i))%N]].
 
 Lemma cmzeroE i : cmzero i = 0%N.
@@ -1151,3 +1153,72 @@ Canonical cmonom_conomType :=
   Eval hnf in ConomType {cmonom I} cmaddC.
 End Theory.
 End ComMonomial.
+
+(* -------------------------------------------------------------------- *)
+Section FreeMonomial.
+Section Def.
+Variable (I : choiceType).
+
+Inductive fmonom : predArgType := FMonom of seq I.
+
+Definition fmonom_val m := let: FMonom m := m in m.
+Definition fmonom_of (_ : phant I) := fmonom.
+
+Coercion fmonom_val : fmonom >-> seq.
+
+Fact fmonom_key : unit. Proof. by []. Qed.
+
+Definition fmonom_of_seq     k := locked_with k FMonom.
+Canonical  fmonom_unlockable k := [unlockable fun fmonom_of_seq k].
+End Def.
+
+Local Notation "{ 'fmonom' I }" :=
+  (@fmonom_of _ (Phant I)) : type_scope.
+
+Definition mkfmonom (I : choiceType) m :=
+  nosimpl (FMonom m : {fmonom I}).
+
+(* -------------------------------------------------------------------- *)
+Section Canonicals.
+Variable (I : choiceType).
+
+Canonical  fmonomType := Eval hnf in [newType for (@fmonom_val I)].
+Definition fmonom_eqMixin := Eval hnf in [eqMixin of {fmonom I} by <:].
+Canonical  fmonom_eqType := Eval hnf in EqType {fmonom I} fmonom_eqMixin.
+Definition fmonom_choiceMixin := Eval hnf in [choiceMixin of {fmonom I} by <:].
+Canonical  fmonom_choiceType := Eval hnf in ChoiceType {fmonom I} fmonom_choiceMixin.
+End Canonicals.
+
+(* -------------------------------------------------------------------- *)
+Section Theory.
+Context {I : choiceType}.
+
+Implicit Types m : {fmonom I}.
+Implicit Types i j : I.
+
+Definition fmzero : {fmonom I} := mkfmonom [::].
+
+Definition fmadd m1 m2 := mkfmonom (m1 ++ m2).
+
+Lemma fmaddA : associative fmadd.
+Proof. by move=> m1 m2 m3; rewrite /fmadd catA. Qed.
+
+Lemma fmadd0m : left_id fmzero fmadd.
+Proof. by move=> m; rewrite /fmadd cat0s; apply/innew_val. Qed.
+
+Lemma fmaddm0 : right_id fmzero fmadd.
+Proof. by move=> m; rewrite /fmadd cats0; apply/innew_val. Qed.
+
+Lemma fmadd_eq0 m1 m2 : fmadd m1 m2 = fmzero -> m1 = fmzero /\ m2 = fmzero.
+Proof.
+case=> /(congr1 size)/eqP; rewrite size_cat addn_eq0.
+rewrite !size_eq0 => /andP[/eqP zm1 /eqP zm2].
+by split; apply/val_eqP; rewrite /= ?(zm1, zm2).
+Qed.
+
+Definition fmonom_monomMixin :=
+  MonomMixin fmaddA fmadd0m fmaddm0 fmadd_eq0.
+Canonical fmonom_monomType :=
+  Eval hnf in MonomType {fmonom I} fmonom_monomMixin.
+End Theory.
+End FreeMonomial.
