@@ -30,6 +30,8 @@ Local Notation esnd := (@snd _ _) (only parsing).
 Delimit Scope m_scope with M.
 
 (* -------------------------------------------------------------------- *)
+Reserved Notation "{ 'cmonom' I }"
+  (at level 0, I at level 2, format "{ 'cmonom'  I }").
 Reserved Notation "{ 'malg' G [ K ] }"
   (at level 0, K, G at level 2, format "{ 'malg'  G [ K ] }").
 Reserved Notation "{ 'malg' K }"
@@ -1009,6 +1011,25 @@ Qed.
 
 Lemma mpolyCM : {morph @malgC K R : p q / p * q}.
 Proof. exact: rmorphM. Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma mcoeff1g_is_multiplicative :
+  multiplicative (mcoeff 1%M : {malg R[K]} -> R).
+Proof.
+split=> [g1 g2|]; rewrite ?malgCK //.
+pose E := 1%M |` (msupp g1 `|` msupp g2).
+have le1: msupp g1 `<=` E by rewrite fsubsetU // fsubsetUl ?orbT.
+have le2: msupp g2 `<=` E by rewrite fsubsetU // fsubsetUr ?orbT.
+have E1: 1%M \in E by rewrite in_fsetU in_fset1 eqxx.
+rewrite (malgMEw le1 le2) (bigD1 (FSetSub E1)) //=.
+rewrite (bigD1 (FSetSub E1)) //= mulm1 2!mcoeffD mcoeffUU.
+rewrite !raddf_sum !big1 ?simpm //= => k; rewrite -val_eqE /= => ne1_k.
+  rewrite raddf_sum big1 ?mcoeff0 //= => k' _; rewrite mcoeffU.
+  by case: eqP=> // /eqP /MonomialTheory.unitmP []; rewrite (negbTE ne1_k).
+by rewrite mcoeffU mul1m (negbTE ne1_k).
+Qed.
+
+Canonical mcoeff1g_rmorphism  := AddRMorphism mcoeff1g_is_multiplicative.
 End MAlgRingTheory.
 
 (* -------------------------------------------------------------------- *)
@@ -1025,6 +1046,9 @@ Proof. by rewrite -!mul_malgC mulrA. Qed.
 
 Canonical malg_lalgType :=
   Eval hnf in LalgType R {malg R[K]} fgscaleAl.
+
+(* -------------------------------------------------------------------- *)
+Canonical mcoeff1g_lrmorphism := [lrmorphism of mcoeff 1%M].
 End MalgLAlgType.
 
 (* -------------------------------------------------------------------- *)
