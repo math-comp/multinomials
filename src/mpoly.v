@@ -4728,6 +4728,12 @@ Qed.
 Lemma pihomog_id p : pihomog (pihomog p) = pihomog p.
 Proof. by rewrite pihomogE; last exact: pihomogP. Qed.
 
+Lemma homog_piE p : p \is d.-homog for mf = (pihomog p == p).
+Proof.
+  apply (sameP idP); apply (iffP idP); last by move /pihomogE ->.
+  move=> /eqP <-; exact: pihomogP.
+Qed.
+
 End Def.
 
 Lemma pihomog_ne0 d b p : d != b -> p \is d.-homog for mf-> pihomog b p = 0.
@@ -4736,6 +4742,7 @@ Proof.
   apply big_pred0 => m; apply negbTE.
   by move: ne; apply contra => /andP [] /hom ->.
 Qed.
+
 
 Lemma pihomog_partitionE k p : mfsize p <= k -> p = \sum_(d < k) pihomog d p.
 Proof.
