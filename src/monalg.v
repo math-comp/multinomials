@@ -56,6 +56,8 @@ Reserved Notation "''X_{1..' n '}'"
   (at level 0, n at level 2).
 Reserved Notation "'U_(' n )"
   (at level 0, n at level 2, no associativity).
+Reserved Notation "x ^[ f , g ]"
+   (at level 2, left associativity, format "x ^[ f , g ]").
 
 (* -------------------------------------------------------------------- *)
 Module MonomialDef.
@@ -1634,4 +1636,77 @@ Definition msize_eq0    := @mmeasure_eq0    _ G [measure of mdeg].
 Definition msize_msupp0 := @mmeasure_msupp0 _ G [measure of mdeg].
 End MSize.
 
+(* -------------------------------------------------------------------- *)
+Section MalgMorphism.
+Section Defs.
+Variables (K : choiceType) (G : zmodType) (S : ringType).
+Variables (f : G -> S) (h : K -> S).
 
+Definition mmap g := \sum_(k : msupp g) (f g@_(val k)) * (h (val k)).
+
+Lemma mmapE g :
+  mmap g = \sum_(k : msupp g) (f g@_(val k)) * (h (val k)).
+Proof. by []. Qed.
+End Defs.
+
+Local Notation "g ^[ f , h ]" := (mmap f h g).
+
+Section BaseTheory.
+Variables (K : choiceType) (G : zmodType) (S : ringType).
+
+Context {f : {additive G -> S}} {h : K -> S}.
+
+Lemma mmapEw g (d : {fset K}) : msupp g `<=` d ->
+  g^[f, h] = \sum_(k : d) (f g@_(val k)) * (h (val k)).
+Proof.
+move=> le; pose F k := (f g@_k) * (h k); rewrite mmapE.
+rewrite (big_fset_incl F le) {}/F //= => k _ /mcoeff_outdom.
+by move=> ->; rewrite raddf0 mul0r.
+Qed.
+End BaseTheory.
+
+Section Additive.
+Variables (K : choiceType) (G : zmodType) (S : ringType).
+
+Context {f : {additive G -> S}} {h : K -> S}.
+
+Lemma mmap_is_additive : additive (mmap f h).
+Proof.
+move=> g1 g2 /=; rewrite (mmapEw (msuppB_le _ _)).
+rewrite (mmapEw (fsubsetUl _ (msupp g2))).
+rewrite (mmapEw (fsubsetUr (msupp g1) _)).
+rewrite -sumrB; apply/eq_bigr=> k _.
+by rewrite !raddfB /= mulrBl.
+Qed.
+
+Canonical mmap_additive := Additive mmap_is_additive.
+
+Local Notation mmap := (mmap f h).
+
+Lemma mmap0     : mmap 0 = 0               . Proof. exact: raddf0. Qed.
+Lemma mmapN     : {morph mmap: x / - x}    . Proof. exact: raddfN. Qed.
+Lemma mmapD     : {morph mmap: x y / x + y}. Proof. exact: raddfD. Qed.
+Lemma mmapB     : {morph mmap: x y / x - y}. Proof. exact: raddfB. Qed.
+Lemma mmapMn  n : {morph mmap: x / x *+ n} . Proof. exact: raddfMn. Qed.
+Lemma mmapMNn n : {morph mmap: x / x *- n} . Proof. exact: raddfMNn. Qed.
+End Additive.
+
+Section Linear.
+Variables (K : monomType) (R : ringType) (S : ringType).
+
+Context {f : {rmorphism R -> S}} {h : K -> S}.
+
+Lemma mmapZ c (g : {malg R[K]}) : (c *: g)^[f,h] = (f c) * g^[f,h].
+Proof.
+rewrite (mmapEw (msuppZ_le _ _)) mmapE big_distrr /=.
+by apply/eq_bigr=> k _; rewrite linearZ rmorphM /= mulrA.
+Qed.
+
+Lemma mmapC c : (c%:MP)^[f,h] = (f c) * (h 1)%M.
+Proof.
+rewrite mmapE msuppC; case: eqP=> [->|].
+  by rewrite big_fset0 raddf0 mul0r.
+by move=> _; rewrite big_fset1 /= mcoeffUU.
+Qed.
+End Linear.
+End MalgMorphism.
