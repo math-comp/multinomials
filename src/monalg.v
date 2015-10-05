@@ -42,6 +42,8 @@ Reserved Notation "[ 'malg' g ]"
   (at level 0, g at level 2, format "[ 'malg'  g ]").
 Reserved Notation "[ 'malg' x : aT => E ]"
   (at level 0, x ident, format "[ 'malg'  x : aT  =>  E ]").
+Reserved Notation "{ 'mpoly' T [ n ] }"
+  (at level 0, T, n at level 2, format "{ 'mpoly'  T [ n ] }").
 Reserved Notation "<< z *p k >>"
   (at level 0).
 Reserved Notation "<< k >>"
@@ -50,6 +52,8 @@ Reserved Notation "g @_ k"
   (at level 3, k at level 2, left associativity, format "g @_ k").
 Reserved Notation "c %:MP"
   (at level 2, format "c %:MP").
+Reserved Notation "'U_(' n )"
+  (at level 0, n at level 2, no associativity).
 
 (* -------------------------------------------------------------------- *)
 Module MonomialDef.
@@ -1087,8 +1091,7 @@ End Def.
 Local Notation "{ 'cmonom' I }" :=
   (@cmonom_of _ (Phant I)) : type_scope.
 
-Definition mkcmonom (I : choiceType) m :=
-  nosimpl (CMonom m : {cmonom I}).
+Local Notation mkcmonom m := (cmonom_of_fsfun cmonom_key m).
 
 (* -------------------------------------------------------------------- *)
 Section Canonicals.
@@ -1096,61 +1099,152 @@ Variable (I : choiceType).
 
 Canonical  cmonomType := Eval hnf in [newType for (@cmonom_val I)].
 Definition cmonom_eqMixin := Eval hnf in [eqMixin of {cmonom I} by <:].
-Canonical  cmonom_eqType := Eval hnf in EqType {cmonom I} cmonom_eqMixin.
+
+Canonical  cmonom_eqType := Eval hnf in EqType (cmonom I) cmonom_eqMixin.
+Canonical  cmonomof_eqType := Eval hnf in EqType {cmonom I} cmonom_eqMixin.
+
 Definition cmonom_choiceMixin := Eval hnf in [choiceMixin of {cmonom I} by <:].
-Canonical  cmonom_choiceType := Eval hnf in ChoiceType {cmonom I} cmonom_choiceMixin.
+Canonical  cmonom_choiceType := Eval hnf in ChoiceType (cmonom I) cmonom_choiceMixin.
+Canonical  cmonomof_choiceType := Eval hnf in ChoiceType {cmonom I} cmonom_choiceMixin.
 End Canonicals.
 
 (* -------------------------------------------------------------------- *)
-Section Theory.
+Section Structures.
 Context {I : choiceType}.
 
 Implicit Types m : {cmonom I}.
 Implicit Types i j : I.
 
-Definition cmzero : {cmonom I} :=
+Lemma cmE (f : {fsfun I -> nat / 0%N}) : mkcmonom f =1 CMonom f.
+Proof. by move=> i; rewrite unlock. Qed.
+
+Lemma cmP m1 m2 : reflect (forall i, m1 i = m2 i) (m1 == m2).
+Proof.
+apply: (iffP eqP)=> [->//|]; case: m1 m2 => [m1] [m2] eq.
+by apply/val_eqP/fsfunP=> i; rewrite eq.
+Qed.
+
+Definition cmone : {cmonom I} :=
   mkcmonom [fsfun [fmap]].
 
-Definition cmadd m1 m2 := mkcmonom [fsfun
+Definition cmu i : {cmonom I} :=
+  mkcmonom [fsfun [fmap].[i <- 1%N]].
+
+Definition cmmul m1 m2 : {cmonom I} := mkcmonom [fsfun
   [fmap i : domf m1 `|` domf m2 => (m1 (val i) + m2 (val i))%N]].
 
-Lemma cmzeroE i : cmzero i = 0%N.
-Proof. by rewrite fsfun_fnd fnd_fmap0. Qed.
+Lemma cmoneE i : cmone i = 0%N.
+Proof. by rewrite cmE fsfun_fnd fnd_fmap0. Qed.
 
-Lemma cmaddE m1 m2 i : (cmadd m1 m2) i = (m1 i + m2 i)%N.
+Lemma cmuE i j : (cmu i) j = (i == j) :> nat.
+Proof. by rewrite cmE fsfun_fnd fnd_set eq_sym fnd_fmap0; case: eqP. Qed.
+
+Lemma cmmulE m1 m2 i : (cmmul m1 m2) i = (m1 i + m2 i)%N.
 Proof.
-rewrite (fsfunE _ _ (fun i => m1 i + m2 i)%N) in_fsetE.
+rewrite cmE (fsfunE _ _ (fun i => m1 i + m2 i)%N) in_fsetE.
 by case: (fsfunEP m1); case: (fsfunEP m2).
 Qed.
 
-Let cmE := (cmzeroE, cmaddE).
+Let cmE := (cmoneE, cmmulE).
 
-Lemma cmaddA : associative cmadd.
+Lemma cmmulA : associative cmmul.
 Proof. by move=> m1 m2 m3; apply/eqP/fsfunP=> i; rewrite !cmE addnA. Qed.
 
-Lemma cmaddC : commutative cmadd.
-Proof. by move=> m1 m2; apply/eqP/fsfunP=> i; rewrite !cmE addnC. Qed.
+Lemma cmmulC : commutative cmmul.
+Proof. by move=> m1 m2; apply/eqP/cmP=> i; rewrite !cmE addnC. Qed.
 
-Lemma cmadd0m : left_id cmzero cmadd.
-Proof. by move=> m; apply/eqP/fsfunP=> i; rewrite !cmE add0n. Qed.
+Lemma cmmul0m : left_id cmone cmmul.
+Proof. by move=> m; apply/eqP/cmP=> i; rewrite !cmE add0n. Qed.
 
-Lemma cmaddm0 : right_id cmzero cmadd.
-Proof. by move=> m; apply/eqP/fsfunP=> i; rewrite !cmE addn0. Qed.
+Lemma cmmulm0 : right_id cmone cmmul.
+Proof. by move=> m; apply/eqP/cmP=> i; rewrite !cmE addn0. Qed.
 
-Lemma cmadd_eq0 m1 m2 : cmadd m1 m2 = cmzero -> m1 = cmzero /\ m2 = cmzero.
+Lemma cmmul_eq0 m1 m2 : cmmul m1 m2 = cmone -> m1 = cmone /\ m2 = cmone.
 Proof.
-move: m1 m2; have gen m1 m2 : cmadd m1 m2 = cmzero -> m1 = cmzero.
+move: m1 m2; have gen m1 m2 : cmmul m1 m2 = cmone -> m1 = cmone.
   move/eqP/fsfunP=> h; apply/eqP/fsfunP=> i; move/(_ i)/eqP: h.
   by rewrite !cmE addn_eq0 => /andP[] /eqP->.
-by move=> m1 m2 h; split; move: h; last rewrite cmaddC; apply/gen.
+by move=> m1 m2 h; split; move: h; last rewrite cmmulC; apply/gen.
 Qed.
 
 Definition cmonom_monomMixin :=
-  MonomMixin cmaddA cmadd0m cmaddm0 cmadd_eq0.
+  MonomMixin cmmulA cmmul0m cmmulm0 cmmul_eq0.
 Canonical cmonom_monomType :=
   Eval hnf in MonomType {cmonom I} cmonom_monomMixin.
 Canonical cmonom_conomType :=
-  Eval hnf in ConomType {cmonom I} cmaddC.
+  Eval hnf in ConomType {cmonom I} cmmulC.
+End Structures.
+
+Definition mdeg (I : choiceType) (m : {cmonom I}) :=
+  (\sum_(k : domf m) (m (val k)))%N.
+
+Section Theory.
+Context {I : choiceType}.
+
+Implicit Types m : {cmonom I}.
+
+Local Notation "'U_( i )" := (@cmu I i).
+Local Notation mdeg := (@mdeg I).
+
+Lemma cm1 i : (1%M : {cmonom I}) i = 0%N.
+Proof. by apply/cmoneE. Qed.
+
+Lemma cmU i j : 'U_(i) j = (i == j) :> nat.
+Proof. by apply/cmuE. Qed.
+
+Lemma cmUU i : 'U_(i) i = 1%N.
+Proof. by rewrite cmU eqxx. Qed.
+
+Lemma cmM i m1 m2 : (m1 * m2)%M i = (m1 i + m2 i)%N.
+Proof. by apply/cmmulE. Qed.
+
+Lemma cmE_eq0 m i : (m i == 0%N) = (i \notin domf m).
+Proof. by apply/fsfun_eqdfl. Qed.
+
+Lemma cmE_neq0 m i : (m i != 0%N) = (i \in domf m).
+Proof. by rewrite cmE_eq0 negbK. Qed.
+
+CoInductive mdom_spec m (i : I) : bool -> nat -> Type :=
+| MdomIn  (_ : i \in    domf m) : mdom_spec m i true  (m i)
+| MdomOut (_ : i \notin domf m) : mdom_spec m i false 0%N.
+
+Lemma mdomP m i : mdom_spec m i (i \in domf m) (m i).
+Proof. by case: fsfunEP; constructor. Qed.
+
+Lemma mdom1 : domf (1 : {cmonom I})%M = fset0 :> {fset I}.
+Proof. by apply/fsetP=> i; rewrite in_fset0 -cmE_neq0 cm1 eqxx. Qed.
+
+Lemma mdomU i : domf 'U_(i) = [fset i].
+Proof. by apply/fsetP=> j; rewrite -!cmE_neq0 cmU in_fset1 eqb0 negbK. Qed.
+
+Lemma mdomD m1 m2 : domf (m1 * m2)%M = domf m1 `|` domf m2.
+Proof.
+apply/fsetP=> i; rewrite in_fsetU -!cmE_neq0 cmM.
+by rewrite addn_eq0 negb_and.
+Qed.
+
+Lemma mdegE m : mdeg m = (\sum_(i : domf m) (m (val i)))%N.
+Proof. by []. Qed.
+
+Lemma mdegEw m (d : {fset I}) : domf m `<=` d ->
+  mdeg m = (\sum_(i : d) (m (val i)))%N.
+Proof. 
+move=> le; pose F i := m i; rewrite mdegE (big_fset_incl F le) //.
+by move=> i i_in_d; rewrite -cmE_neq0 negbK => /eqP.
+Qed.
+
+Lemma mdeg1 : mdeg 1%M = 0%N.
+Proof. by rewrite mdegE mdom1 big_fset0. Qed.
+
+Lemma mdegU k : mdeg 'U_(k) = 1%N.
+Proof. by rewrite mdegE mdomU big_fset1 cmUU. Qed.
+
+Lemma mdegD : {morph mdeg: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N }.
+Proof.
+move=> m1 m2 /=; rewrite mdegE mdomD.
+rewrite (mdegEw (fsubsetUl _ (domf m2))) (mdegEw (fsubsetUr (domf m1) _)).
+by rewrite -big_split /=; apply/eq_bigr=> /= i _; rewrite cmM.
+Qed.
 End Theory.
 End ComMonomial.
 
@@ -1222,3 +1316,8 @@ Canonical fmonom_monomType :=
   Eval hnf in MonomType {fmonom I} fmonom_monomMixin.
 End Theory.
 End FreeMonomial.
+
+(* -------------------------------------------------------------------- *)
+Notation "{ 'cmonom' I }" := (@cmonom_of _ (Phant I)).
+Notation "{ 'fmonom' I }" := (@fmonom_of _ (Phant I)).
+Notation "{ 'mpoly' R [ n ] }" := {malg R[{cmonom 'I_n}]}.

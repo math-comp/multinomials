@@ -43,7 +43,7 @@ Definition finMap_of_fsfun (g : fsfun) : finMap _ _ :=
   map_of_fsfun g.
 
 Definition fun_of_fsfun (g : fsfun) : K -> T :=
-  fun k => odflt x (map_of_fsfun g).[?k].
+  nosimpl (fun k => odflt x (map_of_fsfun g).[?k]).
 
 Coercion fun_of_fsfun : fsfun >-> Funclass.
 
