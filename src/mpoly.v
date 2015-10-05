@@ -449,9 +449,6 @@ rewrite mdegE (bigD1 i) //= big1 => [|j].
 by apply/contraNeq; rewrite mnmE eqb0 negbK eq_sym.
 Qed.
 
-Lemma mdegU i : mdeg U_(i) != 0%N.
-Proof. by rewrite mdeg1. Qed.
-
 Lemma mdegD m1 m2 : mdeg (m1 + m2) = (mdeg m1 + mdeg m2)%N.
 Proof. by rewrite !mdegE -big_split //=; apply/eq_bigr=> i _; rewrite mnmE. Qed.
 
@@ -936,8 +933,7 @@ Variable n : nat.
 Structure measure := Measure {
   mf : 'X_{1..n} -> nat;
   _  : mf 0 = 0%N;
-  _  : {morph mf : m1 m2 / (m1 + m2)%MM >-> (m1 + m2)%N};
-  _  : forall i : 'I_n, mf U_(i) != 0%N
+  _  : {morph mf : m1 m2 / (m1 + m2)%MM >-> (m1 + m2)%N}
 }.
 
 Coercion mf : measure >-> Funclass.
@@ -946,15 +942,15 @@ Let measure_id (mf1 mf2 : 'X_{1..n} -> nat) := phant_id mf1 mf2.
 
 Definition clone_measure mf :=
   fun (mfL : measure) & measure_id mfL mf =>
-  fun mf0 mfD mfU (mfL' := @Measure mf mf0 mfD mfU)
+  fun mf0 mfD (mfL' := @Measure mf mf0 mfD)
     & phant_id mfL' mfL => mfL'.
 End MMeasureDef.
 
-Notation "[ 'measure' 'of' f ]" := (@clone_measure _ f _ id _ _ _ id)
+Notation "[ 'measure' 'of' f ]" := (@clone_measure _ f _ id _ _ id)
   (at level 0, format"[ 'measure'  'of'  f ]") : form_scope.
 
 (* -------------------------------------------------------------------- *)
-Canonical mdeg_measure n := Eval hnf in @Measure n _ mdeg0 mdegD mdegU.
+Canonical mdeg_measure n := Eval hnf in @Measure n _ mdeg0 mdegD.
 
 (* -------------------------------------------------------------------- *)
 Section MMeasure.
@@ -970,9 +966,6 @@ Lemma mf0 : mf 0%MM = 0%N.
 Proof. by case: mf. Qed.
 
 Lemma mfD : {morph mf : m1 m2 / (m1 + m2)%MM >-> (m1 + m2)%N}.
-Proof. by case: mf. Qed.
-
-Lemma mfU : forall i : 'I_n, mf U_(i)%MM != 0%N.
 Proof. by case: mf. Qed.
 
 Definition mmeasure p := (\max_(m <- msupp p) (mf m).+1)%N.
@@ -1003,25 +996,6 @@ Proof.
 Qed.
 
 End MMeasure.
-
-
-Lemma measure_mdeg_ge n (mf : measure n) m : mf m >= [measure of mdeg] m.
-Proof.
-  rewrite !measureE; apply leq_sum => i _.
-  apply (leq_mul (leqnn _)); rewrite /= mdeg1.
-  rewrite lt0n; exact: mfU.
-Qed.
-
-Lemma mmeasure_mdeg_ge n (R : ringType) mf (p : {mpoly R[n]}) :
-  mmeasure mf p >= mmeasure [measure of mdeg] p.
-Proof.
-  rewrite /mmeasure.
-  elim: (msupp p) => [| m0 s]; first by rewrite !big_nil.
-  rewrite !big_cons /= geq_max => H; apply/andP; split.
-  - have:= measure_mdeg_ge mf m0.
-    by rewrite -ltnS => /leq_trans ->; last exact: leq_maxl.
-  apply (leq_trans H); exact: leq_maxr.
-Qed.
 
 
 (* -------------------------------------------------------------------- *)
@@ -1100,9 +1074,6 @@ rewrite big1 ?addn0 //= => j ne_ij; rewrite mnm1E.
 by rewrite eq_sym (negbTE ne_ij) mul0n.
 Qed.
 
-Lemma mnmwgtU i : mnmwgt U_(i) != 0%N.
-Proof. by rewrite mnmwgt1. Qed.
-
 Lemma mnmwgtD m1 m2 : mnmwgt (m1 + m2) = (mnmwgt m1 + mnmwgt m2)%N.
 Proof.
 rewrite /mnmwgt -big_split /=; apply/eq_bigr=> i _.
@@ -1111,7 +1082,7 @@ Qed.
 End MWeight.
 
 Canonical mnmwgt_measure n :=
-  Eval hnf in @Measure n _ mnmwgt0 mnmwgtD (@mnmwgtU n).
+  Eval hnf in @Measure n _ mnmwgt0 mnmwgtD.
 
 (* -------------------------------------------------------------------- *)
 Notation mweight p := (@mmeasure _ _ [measure of mnmwgt] p).
@@ -4673,15 +4644,18 @@ Variable d : nat.
 Definition pihomog p : {mpoly R[n]} :=
   \sum_(m <- msupp p | mf m == d) p@_m *: 'X_[m].
 
-Lemma pihomogwE k p : mfsize p <= k ->
+Lemma pihomogE k p : mfsize p <= k ->
+  pihomog p = \sum_(m <- msupp p | mf m == d) p@_m *: 'X_[m].
+Proof. by []. Qed.
+
+Lemma pihomogwE k p : msize p <= k ->
   pihomog p = \sum_(m : 'X_{1..n < k} | mf m == d) p@_m *: 'X_[m].
 Proof.
   move=> lt_pk.
   pose I := [subFinType of 'X_{1..n < k}].
   rewrite /pihomog.
   rewrite [LHS](big_mksub_cond I) //=; first last.
-    - move=> x /(mmeasure_mnm_lt mf)/leq_trans/(_ lt_pk)/(leq_ltn_trans _) -> //.
-      exact: measure_mdeg_ge.
+    - by move=> x /msize_mdeg_lt/leq_trans/(_ lt_pk) ->.
     - by rewrite msupp_uniq.
   rewrite [RHS](bigID (fun x  : 'X_{1..n < k} => val x \in msupp p)) /=.
   rewrite [X in _ = _ + X]big1 ?addr0 // => m /andP [] _ /memN_msupp_eq0 ->.
@@ -4710,7 +4684,7 @@ Lemma pihomogB     : {morph pihomog: x y / x - y}. Proof. exact: raddfB. Qed.
 Lemma pihomogMn  k : {morph pihomog: x / x *+ k} . Proof. exact: raddfMn. Qed.
 Lemma pihomogMNn k : {morph pihomog: x / x *- k} . Proof. exact: raddfMNn. Qed.
 
-Lemma pihomogE p : p \is d.-homog for mf-> pihomog p = p.
+Lemma pihomog_dE p : p \is d.-homog for mf-> pihomog p = p.
 Proof.
   move/dhomogP => hom_p.
   rewrite /pihomog {3}(mpolyE p) [LHS]big_seq_cond [RHS]big_seq_cond.
@@ -4726,11 +4700,11 @@ Proof.
 Qed.
 
 Lemma pihomog_id p : pihomog (pihomog p) = pihomog p.
-Proof. by rewrite pihomogE; last exact: pihomogP. Qed.
+Proof. by rewrite pihomog_dE; last exact: pihomogP. Qed.
 
 Lemma homog_piE p : p \is d.-homog for mf = (pihomog p == p).
 Proof.
-  apply (sameP idP); apply (iffP idP); last by move /pihomogE ->.
+  apply (sameP idP); apply (iffP idP); last by move /pihomog_dE ->.
   move=> /eqP <-; exact: pihomogP.
 Qed.
 
@@ -4743,15 +4717,10 @@ Proof.
   by move: ne; apply contra => /andP [] /hom ->.
 Qed.
 
-
 Lemma pihomog_partitionE k p : mfsize p <= k -> p = \sum_(d < k) pihomog d p.
 Proof.
-  move=> Hk.
-  rewrite (eq_bigr (fun d : 'I_k =>
-                      \sum_(m : 'X_{1..n < k} | mf m == d) p@_m *: 'X_[m])); first last.
-    by move=> i _; apply: pihomogwE.
-  rewrite (exchange_big_dep predT) //=.
-  rewrite {1}(mpolywE (leq_trans (mmeasure_mdeg_ge mf p) Hk)); apply eq_bigr => m _.
+  move=> Hk; rewrite /pihomog (exchange_big_dep predT) //= {1}(mpolyE p).
+  apply eq_bigr => m _.
   rewrite -scaler_sumr.
   case: (ssrnat.leqP k (mf m)) => [|Hmk].
     move/(leq_trans Hk)/mmeasure_mnm_ge/memN_msupp_eq0 ->; by rewrite !scale0r.
