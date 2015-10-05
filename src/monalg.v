@@ -1071,6 +1071,70 @@ Canonical malg_algType :=
 End MalgComRingType.
 
 (* -------------------------------------------------------------------- *)
+Section MMeasureDef.
+Variable M : monomType.
+
+Structure measure := Measure {
+  mf : M -> nat;
+  _  : mf 1%M = 0%N;
+  _  : {morph mf : m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N};
+  _  : forall m, mf m = 0%N -> m = 1%M
+}.
+
+Coercion mf : measure >-> Funclass.
+
+Let measure_id (mf1 mf2 : M -> nat) := phant_id mf1 mf2.
+
+Definition clone_measure mf :=
+  fun (mfL : measure) & measure_id mfL mf =>
+  fun mf0 mfD (mfL' := @Measure mf mf0 mfD)
+    & phant_id mfL' mfL => mfL'.
+End MMeasureDef.
+
+Notation "[ 'measure' 'of' f ]" := (@clone_measure _ f _ id _ _ id)
+  (at level 0, format"[ 'measure'  'of'  f ]") : form_scope.
+
+(* -------------------------------------------------------------------- *)
+Section MMeasure.
+Variable M : monomType.
+Variable G : zmodType.
+
+Implicit Types m : M.
+Implicit Types g : {malg G[M]}.
+
+Variable mf : measure M.
+
+Lemma mf0 : mf 1%M = 0%N.
+Proof. by case: mf. Qed.
+
+Lemma mfM : {morph mf : m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N}.
+Proof. by case: mf. Qed.
+
+Lemma mf_eq0I m : mf m = 0%N -> m = 1%M.
+Proof. by case: mf=> mf' _ _ h /= mf0; apply/h. Qed.
+
+Lemma mf_eq0 m : (mf m == 0%N) = (m == 1%M).
+Proof. by apply/eqP/eqP=> [|->]; rewrite ?mf0 // => /mf_eq0I. Qed.
+
+Definition mmeasure g := (\max_(m : msupp g) (mf (val m)).+1)%N.
+
+Lemma mmeasureE g : mmeasure g = (\max_(m : msupp g) (mf (val m)).+1)%N.
+Proof. by []. Qed.
+
+Lemma mmeasure0 : mmeasure 0 = 0%N.
+Proof. by rewrite mmeasureE msupp0 big_fset0. Qed.
+
+Lemma mmeasure_mnm_lt g m : m \in msupp g -> (mf m < mmeasure g)%N.
+Proof.
+move=> km; rewrite mmeasureE (bigD1 (FSetSub km)) //=.
+by rewrite leq_max ltnS leqnn.
+Qed.
+
+Lemma mmeasure_mnm_ge g m : (mmeasure g <= mf m)%N -> m \notin msupp g.
+Proof. by apply/contraTN=> /mmeasure_mnm_lt; rewrite leqNgt ltnS. Qed.
+End MMeasure.
+
+(* -------------------------------------------------------------------- *)
 Section ComMonomial.
 Section Def.
 Variable (I : choiceType).
@@ -1251,13 +1315,19 @@ Lemma mdeg_prod (T : Type) r P (F : T -> {cmonom I}) :
   = (\sum_(x <- r | P x) (mdeg (F x)))%N.
 Proof. by apply/big_morph; [apply/mdegM|apply/mdeg1]. Qed.
 
-Lemma mdeg_eq0 m : (mdeg m == 0%N) = (m == 1%M).
+Lemma mdeg_eq0I m : mdeg m = 0%N -> m = 1%M.
 Proof.
-apply/idP/eqP=> [|->]; last by rewrite mdeg1.
 move=> h; apply/eqP/cmP=> i; move: h; rewrite mdegE cm1.
-case: mdomP=> // ki; rewrite (bigD1 (FSetSub ki)) //=.
+case: mdomP=> // ki; rewrite (bigD1 (FSetSub ki)) //= => /eqP.
 by rewrite addn_eq0=> /andP[/eqP->].
 Qed.
+
+(* -------------------------------------------------------------------- *)
+Canonical mdeg_measure :=
+  Eval hnf in @Measure [monomType of {cmonom I}] mdeg mdeg1 mdegM mdeg_eq0I.
+
+Lemma mdeg_eq0 m : (mdeg m == 0%N) = (m == 1%M).
+Proof. by apply/mf_eq0. Qed.
 
 Lemma cmM_eq1 m1 m2 : (m1 * m2 == 1)%M = (m1 == 1%M) && (m2 == 1%M).
 Proof. by rewrite -!mdeg_eq0 mdegM addn_eq0. Qed.
