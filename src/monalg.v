@@ -1605,3 +1605,33 @@ Notation "'U_(' i )" := (@cmu _ i) : m_scope.
 
 Notation msize   g := (@mmeasure _ _ [measure of mdeg]   g).
 Notation mweight g := (@mmeasure _ _ [measure of mnmwgt] g).
+
+(* -------------------------------------------------------------------- *)
+Section MSize.
+Variable I : choiceType.
+Variable G : zmodType.
+
+Implicit Types m : {cmonom I}.
+Implicit Types g : {malg G[{cmonom I}]}.
+
+Local Notation mdeg := (@mdeg I).
+
+Lemma msizeE g : msize g = (\max_(m : msupp g) (mdeg (val m)).+1)%N.
+Proof. by apply/mmeasureE. Qed.
+
+Lemma msize_mdeg_lt g m : m \in msupp g -> (mdeg m < msize g)%N.
+Proof. by apply/mmeasure_mnm_lt. Qed.
+
+Lemma msize_mdeg_ge g m : (msize g <= mdeg m)%N -> m \notin msupp g.
+Proof. by apply/mmeasure_mnm_ge. Qed.
+
+Definition msize0       := @mmeasure0       _ G [measure of mdeg].
+Definition msizeC       := @mmeasureC       _ G [measure of mdeg].
+Definition msizeD_le    := @mmeasureD_le    _ G [measure of mdeg].
+Definition msize_sum    := @mmeasure_sum    _ G [measure of mdeg].
+Definition msizeN       := @mmeasureN       _ G [measure of mdeg].
+Definition msize_eq0    := @mmeasure_eq0    _ G [measure of mdeg].
+Definition msize_msupp0 := @mmeasure_msupp0 _ G [measure of mdeg].
+End MSize.
+
+
