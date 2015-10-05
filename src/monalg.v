@@ -583,6 +583,13 @@ Lemma malgC_eq (c1 c2 : G) :
   (c1%:MP == c2%:MP :> {malg G[K]}) = (c1 == c2).
 Proof. by apply/eqP/eqP=> [|->//] /eqP/malgP/(_ 1%M); rewrite !mcoeffU eqxx. Qed.
 
+Lemma msupp_eq0 (g : {malg G[K]}) : (msupp g == fset0) = (g == 0).
+Proof.
+apply/eqP/eqP=> [/fsetP z_g|->]; rewrite ?msupp0 //.
+apply/eqP/malgP=> i; rewrite mcoeff0; case: msuppP=> //.
+by rewrite z_g in_fset0.
+Qed.
+
 (* -------------------------------------------------------------------- *)
 Local Notation malgC := (@malgC K G) (only parsing).
 
@@ -1134,6 +1141,45 @@ Qed.
 
 Lemma mmeasure_mnm_ge g m : (mmeasure g <= mf m)%N -> m \notin msupp g.
 Proof. by apply/contraTN=> /mmeasure_mnm_lt; rewrite leqNgt ltnS. Qed.
+
+Lemma mmeasureC c : mmeasure c%:MP = (c != 0%R) :> nat.
+Proof.
+rewrite mmeasureE msuppC; case: (_ == 0)=> /=.
+by rewrite big_fset0. by rewrite big_fset1 mf0.
+Qed.
+
+Lemma mmeasureN g : mmeasure (-g) = mmeasure g.
+Proof. by rewrite mmeasureE msuppN. Qed.
+
+Lemma mmeasureD_le g1 g2 :
+  (mmeasure (g1 + g2) <= maxn (mmeasure g1) (mmeasure g2))%N.
+Proof.
+rewrite {1}mmeasureE; apply/bigmax_leqP=> [[i ki]] _ /=.
+have /fsubsetP /(_ i ki) := (msuppD_le g1 g2); rewrite in_fsetU.
+by rewrite leq_max; case/orP=> /mmeasure_mnm_lt->; rewrite !simpm.
+Qed.
+
+Lemma mmeasure_sum (T : Type) (r : seq _) (F : T -> {malg G[M]}) (P : pred T) :
+  (mmeasure (\sum_(i <- r | P i) F i) <= \max_(i <- r | P i) mmeasure (F i))%N.
+Proof.
+elim/big_rec2: _ => /= [|i k p _ le]; first by rewrite mmeasure0.
+apply/(leq_trans (mmeasureD_le _ _)); rewrite geq_max.
+by rewrite leq_maxl /= leq_max le orbC.
+Qed.
+
+Lemma mmeasure_eq0 g : (mmeasure g == 0%N) = (g == 0).
+Proof.
+apply/idP/eqP=> [z_g|->]; last by rewrite mmeasure0.
+apply/eqP/malgP=> k; rewrite mcoeff0; apply/contraTeq: z_g.
+rewrite mcoeff_neq0 => kg; rewrite mmeasureE.
+by rewrite (bigD1 (FSetSub kg)) //= -lt0n leq_max.
+Qed.
+
+Lemma malgSpred g : g != 0 -> mmeasure g = (mmeasure g).-1.+1.
+Proof. by rewrite -mmeasure_eq0 -lt0n => /prednK. Qed.
+
+Lemma mmeasure_msupp0 g : (mmeasure g == 0%N) = (msupp g == fset0).
+Proof. by rewrite mmeasure_eq0 msupp_eq0. Qed.
 End MMeasure.
 
 (* -------------------------------------------------------------------- *)
@@ -1248,7 +1294,7 @@ Canonical cmonom_conomType :=
 End Structures.
 
 (* -------------------------------------------------------------------- *)
-Definition mdeg (I : choiceType) (m : {cmonom I}) :=
+Definition mdeg {I : choiceType} (m : {cmonom I}) :=
   nosimpl (\sum_(k : domf m) (m (val k)))%N.
 
 Definition mnmwgt {n} (m : {cmonom 'I_n}) :=
@@ -1557,5 +1603,5 @@ Notation "{ 'mpoly' R [ n ] }" := {malg R['X_{1..n}]} : type_scope.
 
 Notation "'U_(' i )" := (@cmu _ i) : m_scope.
 
-Notation msize   g := (@mmeasure _ _ [measure of (@mdeg _)]   g).
-Notation mweight g := (@mmeasure _ _ [measure of (@mnmwgt _)] g).
+Notation msize   g := (@mmeasure _ _ [measure of mdeg]   g).
+Notation mweight g := (@mmeasure _ _ [measure of mnmwgt] g).
