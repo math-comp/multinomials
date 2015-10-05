@@ -1239,12 +1239,31 @@ Proof. by rewrite mdegE mdom1 big_fset0. Qed.
 Lemma mdegU k : mdeg 'U_(k) = 1%N.
 Proof. by rewrite mdegE mdomU big_fset1 cmUU. Qed.
 
-Lemma mdegD : {morph mdeg: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N }.
+Lemma mdegM : {morph mdeg: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N }.
 Proof.
 move=> m1 m2 /=; rewrite mdegE mdomD.
 rewrite (mdegEw (fsubsetUl _ (domf m2))) (mdegEw (fsubsetUr (domf m1) _)).
 by rewrite -big_split /=; apply/eq_bigr=> /= i _; rewrite cmM.
 Qed.
+
+Lemma mdeg_prod (T : Type) r P (F : T -> {cmonom I}) :
+    mdeg (\big[mmul/1%M]_(x <- r | P x) (F x))
+  = (\sum_(x <- r | P x) (mdeg (F x)))%N.
+Proof. by apply/big_morph; [apply/mdegM|apply/mdeg1]. Qed.
+
+Lemma mdeg_eq0 m : (mdeg m == 0%N) = (m == 1%M).
+Proof.
+apply/idP/eqP=> [|->]; last by rewrite mdeg1.
+move=> h; apply/eqP/cmP=> i; move: h; rewrite mdegE cm1.
+case: mdomP=> // ki; rewrite (bigD1 (FSetSub ki)) //=.
+by rewrite addn_eq0=> /andP[/eqP->].
+Qed.
+
+Lemma cmM_eq1 m1 m2 : (m1 * m2 == 1)%M = (m1 == 1%M) && (m2 == 1%M).
+Proof. by rewrite -!mdeg_eq0 mdegM addn_eq0. Qed.
+
+Lemma cm1_eq1 i : ('U_(i) == 1)%M = false.
+Proof. by rewrite -mdeg_eq0 mdegU. Qed.
 End Theory.
 End ComMonomial.
 
