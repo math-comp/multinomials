@@ -1163,13 +1163,17 @@ Variable (I : choiceType).
 
 Canonical  cmonomType := Eval hnf in [newType for (@cmonom_val I)].
 Definition cmonom_eqMixin := Eval hnf in [eqMixin of {cmonom I} by <:].
-
-Canonical  cmonom_eqType := Eval hnf in EqType (cmonom I) cmonom_eqMixin.
-Canonical  cmonomof_eqType := Eval hnf in EqType {cmonom I} cmonom_eqMixin.
-
 Definition cmonom_choiceMixin := Eval hnf in [choiceMixin of {cmonom I} by <:].
-Canonical  cmonom_choiceType := Eval hnf in ChoiceType (cmonom I) cmonom_choiceMixin.
-Canonical  cmonomof_choiceType := Eval hnf in ChoiceType {cmonom I} cmonom_choiceMixin.
+
+Canonical cmonom_eqType :=
+  Eval hnf in EqType (cmonom I) cmonom_eqMixin.
+Canonical cmonom_choiceType :=
+  Eval hnf in ChoiceType (cmonom I) cmonom_choiceMixin.
+
+Canonical cmonomof_eqType :=
+  Eval hnf in EqType {cmonom I} cmonom_eqMixin.
+Canonical cmonomof_choiceType :=
+  Eval hnf in ChoiceType {cmonom I} cmonom_choiceMixin.
 End Canonicals.
 
 (* -------------------------------------------------------------------- *)
@@ -1358,8 +1362,8 @@ End Def.
 Local Notation "{ 'fmonom' I }" :=
   (@fmonom_of _ (Phant I)) : type_scope.
 
-Definition mkfmonom (I : choiceType) m :=
-  nosimpl (FMonom m : {fmonom I}).
+Local Notation mkfmonom s :=
+  (fmonom_of_seq fmonom_key s).
 
 (* -------------------------------------------------------------------- *)
 Section Canonicals.
@@ -1367,10 +1371,75 @@ Variable (I : choiceType).
 
 Canonical  fmonomType := Eval hnf in [newType for (@fmonom_val I)].
 Definition fmonom_eqMixin := Eval hnf in [eqMixin of {fmonom I} by <:].
-Canonical  fmonom_eqType := Eval hnf in EqType {fmonom I} fmonom_eqMixin.
 Definition fmonom_choiceMixin := Eval hnf in [choiceMixin of {fmonom I} by <:].
-Canonical  fmonom_choiceType := Eval hnf in ChoiceType {fmonom I} fmonom_choiceMixin.
+
+Canonical fmonom_eqType :=
+  Eval hnf in EqType (fmonom I) fmonom_eqMixin.
+Canonical fmonomof_eqType :=
+  Eval hnf in EqType {fmonom I} fmonom_eqMixin.
+
+Canonical fmonom_choiceType :=
+  Eval hnf in ChoiceType (fmonom I) fmonom_choiceMixin.
+Canonical fmonomof_choiceType :=
+  Eval hnf in ChoiceType {fmonom I} fmonom_choiceMixin.
 End Canonicals.
+
+(* -------------------------------------------------------------------- *)
+Section Structures.
+Context {I : choiceType}.
+
+Implicit Types m : {fmonom I}.
+Implicit Types i j : I.
+
+Lemma fmE (s : seq I) : mkfmonom s = FMonom s.
+Proof. by rewrite unlock. Qed.
+
+Lemma fmP m1 m2 : (m1 == m2) = (m1 == m2 :> seq I).
+Proof. by rewrite val_eqE. Qed.
+
+Lemma fmK m : FMonom m = m.
+Proof. by apply/innew_val. Qed.
+
+Definition fmone : {fmonom I} := mkfmonom [::].
+Definition fmu i : {fmonom I} := mkfmonom [:: i].
+Definition fmmul m1 m2 : {fmonom I} := mkfmonom (m1 ++ m2).
+
+Lemma fmoneE : fmone = FMonom [::].
+Proof. by apply/eqP; rewrite fmP /fmone fmE. Qed.
+
+Lemma fmuE i : fmu i = FMonom [:: i].
+Proof. by apply/eqP; rewrite fmP /fmu fmE. Qed.
+
+Lemma fmmulE m1 m2 : fmmul m1 m2 = FMonom (m1 ++ m2).
+Proof. by apply/eqP; rewrite fmP /fmmul fmE. Qed.
+
+Let fmE := (fmoneE, fmuE, fmmulE, fmE).
+
+Lemma fmmulA : associative fmmul.
+Proof. by move=> m1 m2 m3; rewrite !fmE catA. Qed.
+
+Lemma fmmul1m : left_id fmone fmmul.
+Proof. by move=> m; rewrite !fmE cat0s fmK. Qed.
+
+Lemma fmmulm1 : right_id fmone fmmul.
+Proof. by move=> m; rewrite !fmE cats0 fmK. Qed.
+
+Lemma fmmul_eq1 m1 m2 : fmmul m1 m2 = fmone -> m1 = fmone /\ m2 = fmone.
+Proof.
+rewrite !fmE; case=> /(congr1 size)/eqP; rewrite size_cat.
+rewrite addn_eq0 !size_eq0 => /andP[/eqP zm1 /eqP zm2].
+by split; apply/val_eqP; rewrite /= ?(zm1, zm2).
+Qed.
+
+Definition fmonom_monomMixin :=
+  MonomMixin fmmulA fmmul1m fmmulm1 fmmul_eq1.
+Canonical fmonom_monomType :=
+  Eval hnf in MonomType {fmonom I} fmonom_monomMixin.
+End Structures.
+
+(* -------------------------------------------------------------------- *)
+Definition fdeg (I : choiceType) (m : {fmonom I}) :=
+  nosimpl (size m).
 
 (* -------------------------------------------------------------------- *)
 Section Theory.
@@ -1379,30 +1448,53 @@ Context {I : choiceType}.
 Implicit Types m : {fmonom I}.
 Implicit Types i j : I.
 
-Definition fmzero : {fmonom I} := mkfmonom [::].
+Local Notation "'U_(' i )" := (@fmu I i).
+Local Notation fdeg := (@fdeg I).
 
-Definition fmadd m1 m2 := mkfmonom (m1 ++ m2).
+Lemma fm1 : (1%M : {fmonom I}) = [::] :> seq I.
+Proof. by rewrite /mone /= fmoneE. Qed.
 
-Lemma fmaddA : associative fmadd.
-Proof. by move=> m1 m2 m3; rewrite /fmadd catA. Qed.
+Lemma fmU i : U_(i) = [:: i] :> seq I.
+Proof. by rewrite fmuE. Qed.
 
-Lemma fmadd0m : left_id fmzero fmadd.
-Proof. by move=> m; rewrite /fmadd cat0s; apply/innew_val. Qed.
+Lemma fmM m1 m2 : (m1 * m2)%M = (m1 ++ m2) :> seq I.
+Proof. by rewrite /mmul /= fmmulE. Qed.
 
-Lemma fmaddm0 : right_id fmzero fmadd.
-Proof. by move=> m; rewrite /fmadd cats0; apply/innew_val. Qed.
+Lemma fdegE m : fdeg m = size m.
+Proof. by []. Qed.
 
-Lemma fmadd_eq0 m1 m2 : fmadd m1 m2 = fmzero -> m1 = fmzero /\ m2 = fmzero.
+Lemma fdeg1 : fdeg 1%M = 0%N.
+Proof. by rewrite fdegE fm1. Qed.
+
+Lemma fdegU k : fdeg U_(k) = 1%N.
+Proof. by rewrite fdegE fmU. Qed.
+
+Lemma fdegM : {morph fdeg: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N }.
+Proof. by move=> m1 m2; rewrite !fdegE fmM size_cat. Qed.
+
+Lemma fdeg_prod (T : Type) r P (F : T -> {fmonom I}) :
+    fdeg (\big[mmul/1%M]_(x <- r | P x) (F x))
+  = (\sum_(x <- r | P x) (fdeg (F x)))%N.
+Proof. by apply/big_morph; [apply/fdegM|apply/fdeg1]. Qed.
+
+Lemma fdeg_eq0I m : fdeg m = 0%N -> m = 1%M.
 Proof.
-case=> /(congr1 size)/eqP; rewrite size_cat addn_eq0.
-rewrite !size_eq0 => /andP[/eqP zm1 /eqP zm2].
-by split; apply/val_eqP; rewrite /= ?(zm1, zm2).
+rewrite fdegE => /size0nil z_m; apply/eqP.
+by rewrite -val_eqE /= z_m fm1.
 Qed.
 
-Definition fmonom_monomMixin :=
-  MonomMixin fmaddA fmadd0m fmaddm0 fmadd_eq0.
-Canonical fmonom_monomType :=
-  Eval hnf in MonomType {fmonom I} fmonom_monomMixin.
+(* -------------------------------------------------------------------- *)
+Canonical fdeg_measure :=
+  Eval hnf in @Measure [monomType of {fmonom I}] fdeg fdeg1 fdegM fdeg_eq0I.
+
+Lemma fdeg_eq0 m : (fdeg m == 0%N) = (m == 1%M).
+Proof. by apply/mf_eq0. Qed.
+
+Lemma fmM_eq1 m1 m2 : (m1 * m2 == 1)%M = (m1 == 1%M) && (m2 == 1%M).
+Proof. by rewrite -!fdeg_eq0 fdegM addn_eq0. Qed.
+
+Lemma fm1_eq1 i : (U_(i) == 1)%M = false.
+Proof. by rewrite -fdeg_eq0 fdegU. Qed.
 End Theory.
 End FreeMonomial.
 
