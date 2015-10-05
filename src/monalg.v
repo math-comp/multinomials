@@ -1247,16 +1247,16 @@ Context {I : choiceType}.
 
 Implicit Types m : {cmonom I}.
 
-Local Notation "'U_( i )" := (@cmu I i).
+Local Notation "'U_(' i )" := (@cmu I i).
 Local Notation mdeg := (@mdeg I).
 
 Lemma cm1 i : (1%M : {cmonom I}) i = 0%N.
 Proof. by apply/cmoneE. Qed.
 
-Lemma cmU i j : 'U_(i) j = (i == j) :> nat.
+Lemma cmU i j : U_(i) j = (i == j) :> nat.
 Proof. by apply/cmuE. Qed.
 
-Lemma cmUU i : 'U_(i) i = 1%N.
+Lemma cmUU i : U_(i) i = 1%N.
 Proof. by rewrite cmU eqxx. Qed.
 
 Lemma cmM i m1 m2 : (m1 * m2)%M i = (m1 i + m2 i)%N.
@@ -1278,7 +1278,7 @@ Proof. by case: fsfunEP; constructor. Qed.
 Lemma mdom1 : domf (1 : {cmonom I})%M = fset0 :> {fset I}.
 Proof. by apply/fsetP=> i; rewrite in_fset0 -cmE_neq0 cm1 eqxx. Qed.
 
-Lemma mdomU i : domf 'U_(i) = [fset i].
+Lemma mdomU i : domf U_(i) = [fset i].
 Proof. by apply/fsetP=> j; rewrite -!cmE_neq0 cmU in_fset1 eqb0 negbK. Qed.
 
 Lemma mdomD m1 m2 : domf (m1 * m2)%M = domf m1 `|` domf m2.
@@ -1300,7 +1300,7 @@ Qed.
 Lemma mdeg1 : mdeg 1%M = 0%N.
 Proof. by rewrite mdegE mdom1 big_fset0. Qed.
 
-Lemma mdegU k : mdeg 'U_(k) = 1%N.
+Lemma mdegU k : mdeg U_(k) = 1%N.
 Proof. by rewrite mdegE mdomU big_fset1 cmUU. Qed.
 
 Lemma mdegM : {morph mdeg: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N }.
@@ -1332,7 +1332,7 @@ Proof. by apply/mf_eq0. Qed.
 Lemma cmM_eq1 m1 m2 : (m1 * m2 == 1)%M = (m1 == 1%M) && (m2 == 1%M).
 Proof. by rewrite -!mdeg_eq0 mdegM addn_eq0. Qed.
 
-Lemma cm1_eq1 i : ('U_(i) == 1)%M = false.
+Lemma cm1_eq1 i : (U_(i) == 1)%M = false.
 Proof. by rewrite -mdeg_eq0 mdegU. Qed.
 End Theory.
 End ComMonomial.
@@ -1410,3 +1410,4 @@ End FreeMonomial.
 Notation "{ 'cmonom' I }" := (@cmonom_of _ (Phant I)).
 Notation "{ 'fmonom' I }" := (@fmonom_of _ (Phant I)).
 Notation "{ 'mpoly' R [ n ] }" := {malg R[{cmonom 'I_n}]}.
+Notation "'U_(' i )" := (@cmu _ i).
