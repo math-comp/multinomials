@@ -52,6 +52,8 @@ Reserved Notation "g @_ k"
   (at level 3, k at level 2, left associativity, format "g @_ k").
 Reserved Notation "c %:MP"
   (at level 2, format "c %:MP").
+Reserved Notation "''X_{1..' n '}'"
+  (at level 0, n at level 2).
 Reserved Notation "'U_(' n )"
   (at level 0, n at level 2, no associativity).
 
@@ -1087,11 +1089,11 @@ Let measure_id (mf1 mf2 : M -> nat) := phant_id mf1 mf2.
 
 Definition clone_measure mf :=
   fun (mfL : measure) & measure_id mfL mf =>
-  fun mf0 mfD (mfL' := @Measure mf mf0 mfD)
+  fun mf1 mfM mfT (mfL' := @Measure mf mf1 mfM mfT)
     & phant_id mfL' mfL => mfL'.
 End MMeasureDef.
 
-Notation "[ 'measure' 'of' f ]" := (@clone_measure _ f _ id _ _ id)
+Notation "[ 'measure' 'of' f ]" := (@clone_measure _ f _ id _ _ _ id)
   (at level 0, format"[ 'measure'  'of'  f ]") : form_scope.
 
 (* -------------------------------------------------------------------- *)
@@ -1154,6 +1156,8 @@ End Def.
 
 Local Notation "{ 'cmonom' I }" :=
   (@cmonom_of _ (Phant I)) : type_scope.
+Local Notation "''X_{1..' n '}'" :=
+  {cmonom 'I_n} : type_scope.
 
 Local Notation mkcmonom m := (cmonom_of_fsfun cmonom_key m).
 
@@ -1243,9 +1247,14 @@ Canonical cmonom_conomType :=
   Eval hnf in ConomType {cmonom I} cmmulC.
 End Structures.
 
+(* -------------------------------------------------------------------- *)
 Definition mdeg (I : choiceType) (m : {cmonom I}) :=
-  (\sum_(k : domf m) (m (val k)))%N.
+  nosimpl (\sum_(k : domf m) (m (val k)))%N.
 
+Definition mnmwgt {n} (m : {cmonom 'I_n}) :=
+  nosimpl (\sum_i m i * i.+1)%N.
+
+(* -------------------------------------------------------------------- *)
 Section Theory.
 Context {I : choiceType}.
 
@@ -1327,8 +1336,8 @@ by rewrite addn_eq0=> /andP[/eqP->].
 Qed.
 
 (* -------------------------------------------------------------------- *)
-Canonical mdeg_measure :=
-  Eval hnf in @Measure [monomType of {cmonom I}] mdeg mdeg1 mdegM mdeg_eq0I.
+Canonical mdeg_measure := Eval hnf in @Measure [monomType of {cmonom I}]
+  mdeg mdeg1 mdegM mdeg_eq0I.
 
 Lemma mdeg_eq0 m : (mdeg m == 0%N) = (m == 1%M).
 Proof. by apply/mf_eq0. Qed.
@@ -1339,6 +1348,48 @@ Proof. by rewrite -!mdeg_eq0 mdegM addn_eq0. Qed.
 Lemma cm1_eq1 i : (U_(i) == 1)%M = false.
 Proof. by rewrite -mdeg_eq0 mdegU. Qed.
 End Theory.
+
+(* -------------------------------------------------------------------- *)
+Section MWeight.
+Variable (n : nat).
+
+Implicit Types m : 'X_{1..n}.
+
+Local Notation mnmwgt := (@mnmwgt n).
+Local Notation "'U_(' i )" := (@cmu [choiceType of 'I_n] i).
+
+Lemma mnmwgtE m : mnmwgt m = (\sum_i m i * i.+1)%N.
+Proof. by []. Qed.
+
+Lemma mnmwgt1 : mnmwgt 1%M = 0%N.
+Proof. by rewrite mnmwgtE big1 // => /= i _; rewrite cm1. Qed.
+
+Lemma mnmwgtU i : mnmwgt U_(i) = i.+1.
+Proof.
+rewrite mnmwgtE (bigD1 i) //= cmUU mul1n big1 ?addn0 //.
+by move=> j ne_ij; rewrite cmU eq_sym (negbTE ne_ij).
+Qed.
+
+Lemma mnmwgtM : {morph mnmwgt: m1 m2 / (m1 * m2)%M >->  (m1 + m2)%N}.
+Proof.
+move=> m1 m2 /=; rewrite !mnmwgtE -big_split /=.
+by apply/eq_bigr=> i _; rewrite cmM mulnDl.
+Qed.
+
+Lemma mnmwgt_eq0I m : mnmwgt m = 0%N -> m = 1%M.
+Proof.
+move=> h; apply/eqP/cmP=> /= i; move: h; rewrite mnmwgtE cm1 => /eqP.
+rewrite sum_nat_eq0 => /forallP /(_ i) /implyP.
+by rewrite muln_eq0 orbF => z_mi; apply/eqP/z_mi.
+Qed.
+
+(* -------------------------------------------------------------------- *)
+Canonical mnmwgt_measure := Eval hnf in @Measure [monomType of 'X_{1..n}]
+  mnmwgt mnmwgt1 mnmwgtM mnmwgt_eq0I.
+
+Lemma mnmwgt_eq0 m : (mnmwgt m == 0%N) = (m == 1%M).
+Proof. by apply/mf_eq0. Qed.
+End MWeight.
 End ComMonomial.
 
 (* -------------------------------------------------------------------- *)
@@ -1499,7 +1550,12 @@ End Theory.
 End FreeMonomial.
 
 (* -------------------------------------------------------------------- *)
-Notation "{ 'cmonom' I }" := (@cmonom_of _ (Phant I)).
-Notation "{ 'fmonom' I }" := (@fmonom_of _ (Phant I)).
-Notation "{ 'mpoly' R [ n ] }" := {malg R[{cmonom 'I_n}]}.
-Notation "'U_(' i )" := (@cmu _ i).
+Notation "{ 'cmonom' I }" := (@cmonom_of _ (Phant I)) : type_scope.
+Notation "{ 'fmonom' I }" := (@fmonom_of _ (Phant I)) : type_scope.
+Notation "''X_{1..' n '}'" :=  {cmonom 'I_n} : type_scope.
+Notation "{ 'mpoly' R [ n ] }" := {malg R['X_{1..n}]} : type_scope.
+
+Notation "'U_(' i )" := (@cmu _ i) : m_scope.
+
+Notation msize   g := (@mmeasure _ _ [measure of (@mdeg _)]   g).
+Notation mweight g := (@mmeasure _ _ [measure of (@mnmwgt _)] g).
