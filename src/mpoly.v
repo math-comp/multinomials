@@ -4644,7 +4644,7 @@ Variable d : nat.
 Definition pihomog p : {mpoly R[n]} :=
   \sum_(m <- msupp p | mf m == d) p@_m *: 'X_[m].
 
-Lemma pihomogE k p : mfsize p <= k ->
+Lemma pihomogE p :
   pihomog p = \sum_(m <- msupp p | mf m == d) p@_m *: 'X_[m].
 Proof. by []. Qed.
 
@@ -4661,6 +4661,9 @@ Proof.
   rewrite [X in _ = _ + X]big1 ?addr0 // => m /andP [] _ /memN_msupp_eq0 ->.
   by rewrite scale0r.
 Qed.
+
+Lemma pihomogX m : pihomog 'X_[m] = if mf m == d then 'X_[m] else 0.
+Proof. by rewrite pihomogE msuppX big_cons big_nil addr0 mcoeffX eq_refl scale1r. Qed.
 
 Lemma pihomog_is_linear : linear pihomog.
 Proof.
