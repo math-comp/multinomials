@@ -1250,6 +1250,148 @@ End Linear.
 End MalgMorphism.
 
 (* -------------------------------------------------------------------- *)
+Section MonalgOver.
+Section Def.
+Context {K : choiceType} {G : zmodType}.
+
+Definition monalgOver (S : pred_class) :=
+  [qualify a g : {malg G[K]} |
+     [forall m : msupp g, g@_(val m) \in S]].
+
+Fact monalgOver_key S : pred_key (monalgOver S). Proof. by []. Qed.
+Canonical monalgOver_keyed S := KeyedQualifier (monalgOver_key S).
+End Def.
+
+(* -------------------------------------------------------------------- *)
+Section Theory.
+Variables (K : choiceType) (G : zmodType).
+
+Local Notation monalgOver := (@monalgOver K G).
+
+Lemma monalgOverS (S1 S2 : pred_class) :
+  {subset S1 <= S2} -> {subset monalgOver S1 <= monalgOver S2}.
+Proof.
+move=> le_S1S2 g /forallP /= S1g; apply/forallP.
+by move=> /= x; apply/le_S1S2/S1g.
+Qed.
+
+Lemma monalgOverU c k S :
+  << c *g k >> \in monalgOver S = (c == 0) || (c \in S).
+Proof.
+rewrite qualifE msuppU; case: (c =P 0)=> [->|] /=.
+  by apply/forallP=> [[k']]; rewrite /= monalgU0 in_fset0.
+move=> nz_c; apply/forallP/idP=> /= h.
+  by move/(_ (FSetSub (fset11 k))): h; rewrite mcoeffUU.
+by case=> /= k'; rewrite in_fset1=> /eqP->; rewrite mcoeffUU.
+Qed.
+
+Lemma monalgOver0 S: 0 \is a monalgOver S.
+Proof.
+rewrite qualifE msupp0; apply/forallP=> //=.
+by case=> /= x; rewrite in_fset0.
+Qed.
+End Theory.
+
+(* -------------------------------------------------------------------- *)
+Section MonalgOverAdd.
+Variables (K : choiceType) (G : zmodType).
+Variables (S : predPredType G) (addS : addrPred S) (kS : keyed_pred addS).
+
+Implicit Types c : G.
+Implicit Types g : {malg G[K]}.
+
+Local Notation monalgOver := (@monalgOver K G).
+
+Lemma monalgOverP {g} :
+  reflect (forall m, g@_m \in kS) (g \in monalgOver kS).
+Proof.
+apply: (iffP forallP)=> /= h k; last by rewrite h.
+by case: msuppP=> [kg|]; rewrite ?rpred0 // (h (FSetSub kg)).
+Qed.
+
+Lemma monalgOver_addr_closed : addr_closed (monalgOver kS).
+Proof.
+split=> [|g1 g2 Sg1 Sg2]; rewrite ?monalgOver0 //.
+by apply/monalgOverP=> m; rewrite mcoeffD rpredD ?(monalgOverP _).
+Qed.
+
+Canonical monalgOver_addrPred := AddrPred monalgOver_addr_closed.
+End MonalgOverAdd.
+
+(* -------------------------------------------------------------------- *)
+Section MonalgOverOpp.
+Variables (K : choiceType) (G : zmodType).
+Variables (S : predPredType G) (zmodS : zmodPred S) (kS : keyed_pred zmodS).
+
+Implicit Types c : G.
+Implicit Types g : {malg G[K]}.
+
+Local Notation monalgOver := (@monalgOver K G).
+
+Lemma monalgOver_oppr_closed : oppr_closed (monalgOver kS).
+Proof.
+move=> g Sg; apply/monalgOverP=> n; rewrite mcoeffN.
+by rewrite rpredN; apply/(monalgOverP kS).
+Qed.
+
+Canonical monalgOver_opprPred := OpprPred monalgOver_oppr_closed.
+Canonical monalgOver_zmodPred := ZmodPred monalgOver_oppr_closed.
+End MonalgOverOpp.
+
+(* -------------------------------------------------------------------- *)
+Section MonalgOverSemiring.
+Variables (K : monomType) (R : ringType).
+Variables (S : predPredType R) (ringS : semiringPred S) (kS : keyed_pred ringS).
+
+Implicit Types c : R.
+Implicit Types g : {malg R[K]}.
+
+Local Notation monalgOver := (@monalgOver K R).
+
+Lemma monalgOverC c : (c%:MP \in monalgOver kS) = (c \in kS).
+Proof. by rewrite monalgOverU; case: eqP=> // ->; rewrite rpred0. Qed.
+
+Lemma monalgOver1 : 1 \in monalgOver kS.
+Proof. by rewrite monalgOverC rpred1. Qed.
+
+Lemma monalgOver_mulr_closed : mulr_closed (monalgOver kS).
+Proof.
+split=> [|g1 g2 /monalgOverP Sg1 /monalgOverP sS2].
+  by rewrite monalgOver1.
+apply/monalgOverP=> m; rewrite mcoeffMl rpred_sum //=.
+move=> k1 _; rewrite rpred_sum // => k2 _.
+by case: eqP; rewrite ?mulr0n (rpred0, rpredM).
+Qed.
+
+Canonical monalgOver_mulrPred := MulrPred monalgOver_mulr_closed.
+Canonical monalgOver_semiringPred := SemiringPred monalgOver_mulr_closed.
+
+Lemma monalgOverZ :
+  {in kS & monalgOver kS, forall c g, c *: g \is a monalgOver kS}.
+Proof.
+move=> c g Sc Sg; apply/monalgOverP=> k.
+by rewrite mcoeffZ rpredM //; apply/(monalgOverP kS).
+Qed.
+
+Lemma rpred_meval :
+  {in monalgOver kS, forall g (v : K -> R),
+     (forall x, v x \in kS) -> mmap idfun v g \in kS}.
+Proof.
+move=> g /monalgOverP Sg v Sv; rewrite mmapE rpred_sum //.
+by move=> /= k; rewrite rpredM.
+Qed.
+End MonalgOverSemiring.
+
+Section MonalgOverRing.
+Variables (K : monomType) (R : ringType).
+Variables (S : predPredType R) (ringS : subringPred S) (kS : keyed_pred ringS).
+
+Canonical monalgOver_smulrPred := SmulrPred (monalgOver_mulr_closed K kS).
+Canonical monalgOver_subringPred := SubringPred (monalgOver_mulr_closed K kS).
+End MonalgOverRing.
+End MonalgOver.
+
+(* -------------------------------------------------------------------- *)
 Section MMeasureDef.
 Variable M : monomType.
 
