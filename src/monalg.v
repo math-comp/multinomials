@@ -1128,6 +1128,128 @@ Canonical malg_algType :=
 End MalgComRingType.
 
 (* -------------------------------------------------------------------- *)
+Section MalgMorphism.
+Section Defs.
+Variables (K : choiceType) (G : zmodType) (S : ringType).
+Variables (f : G -> S) (h : K -> S).
+
+Definition mmap g := \sum_(k : msupp g) (f g@_(val k)) * (h (val k)).
+
+Lemma mmapE g :
+  mmap g = \sum_(k : msupp g) (f g@_(val k)) * (h (val k)).
+Proof. by []. Qed.
+End Defs.
+
+Local Notation "g ^[ f , h ]" := (mmap f h g).
+
+Section BaseTheory.
+Variables (K : choiceType) (G : zmodType) (S : ringType).
+
+Context {f : {additive G -> S}} {h : K -> S}.
+
+Lemma mmapEw g (d : {fset K}) : msupp g `<=` d ->
+  g^[f, h] = \sum_(k : d) (f g@_(val k)) * (h (val k)).
+Proof.
+move=> le; pose F k := (f g@_k) * (h k); rewrite mmapE.
+rewrite (big_fset_incl F le) {}/F //= => k _ /mcoeff_outdom.
+by move=> ->; rewrite raddf0 mul0r.
+Qed.
+
+Lemma mmapU (c : G) (m : K) :
+  mmap f h << c *g m >> = (f c) * (h m).
+Proof. by rewrite (mmapEw msuppU_le) big_fset1 mcoeffUU. Qed.
+End BaseTheory.
+
+Section Additive.
+Variables (K : choiceType) (G : zmodType) (S : ringType).
+
+Context {f : {additive G -> S}} {h : K -> S}.
+
+Lemma mmap_is_additive : additive (mmap f h).
+Proof.
+move=> g1 g2 /=; rewrite (mmapEw (msuppB_le _ _)).
+rewrite (mmapEw (fsubsetUl _ (msupp g2))).
+rewrite (mmapEw (fsubsetUr (msupp g1) _)).
+rewrite -sumrB; apply/eq_bigr=> k _.
+by rewrite !raddfB /= mulrBl.
+Qed.
+
+Canonical mmap_additive := Additive mmap_is_additive.
+
+Local Notation mmap := (mmap f h).
+
+Lemma mmap0     : mmap 0 = 0               . Proof. exact: raddf0. Qed.
+Lemma mmapN     : {morph mmap: x / - x}    . Proof. exact: raddfN. Qed.
+Lemma mmapD     : {morph mmap: x y / x + y}. Proof. exact: raddfD. Qed.
+Lemma mmapB     : {morph mmap: x y / x - y}. Proof. exact: raddfB. Qed.
+Lemma mmapMn  n : {morph mmap: x / x *+ n} . Proof. exact: raddfMn. Qed.
+Lemma mmapMNn n : {morph mmap: x / x *- n} . Proof. exact: raddfMNn. Qed.
+End Additive.
+
+Section CommrMultiplicative.
+Variables (K : monomType) (R : ringType) (S : ringType).
+
+Context {f : {rmorphism R -> S}} {h : {mmorphism K -> S}}.
+
+Implicit Types g : {malg R[K]}.
+
+Lemma mmapZ c (g : {malg R[K]}) : (c *: g)^[f,h] = (f c) * g^[f,h].
+Proof.
+rewrite (mmapEw (msuppZ_le _ _)) mmapE big_distrr /=.
+by apply/eq_bigr=> k _; rewrite linearZ rmorphM /= mulrA.
+Qed.
+
+Lemma mmapC c : (c%:MP)^[f,h] = f c.
+Proof. by rewrite mmapU mmorph1 mulr1. Qed.
+
+Lemma mmap1 : 1^[f,h] = 1.
+Proof. by rewrite mmapC rmorph1. Qed.
+
+Hypothesis commr_f: forall g m m', GRing.comm (f g@_m) (h m').
+
+Lemma commr_mmap_is_multiplicative: multiplicative (mmap f h).
+Proof.
+split=> [g1 g2|]; last by rewrite mmap1.
+pose E := msupp g1 `|` msupp g2.
+have [le1 le2]: (msupp g1 `<=` E) /\ (msupp g2 `<=` E).
+  by rewrite !fsubsetU ?fsubset_refl ?simpm.
+rewrite [_*_](malgMEw (d1 := E) (d2 := E)) //.
+apply/esym; rewrite 2?(mmapEw (d := E)) // raddf_sum /=.
+rewrite big_distrlr /=; apply/eq_bigr=> k1 _; rewrite raddf_sum /=.
+apply/eq_bigr=> k2 _; rewrite mmapU mmorphM /= rmorphM.
+by rewrite -mulrA [X in _*X=_]mulrA -commr_f !mulrA.
+Qed.
+End CommrMultiplicative.
+
+(* -------------------------------------------------------------------- *)
+Section Multiplicative.
+Variables (K : monomType) (R : ringType) (S : comRingType).
+
+Context {f : {rmorphism R -> S}} {h : {mmorphism K -> S}}.
+
+Implicit Types g : {malg R[K]}.
+
+Lemma mmap_is_multiplicative : multiplicative (mmap f h).
+Proof. by apply/commr_mmap_is_multiplicative=> g m m'; apply/mulrC. Qed.
+
+Canonical mmap_rmorphism := AddRMorphism mmap_is_multiplicative.
+End Multiplicative.
+
+(* -------------------------------------------------------------------- *)
+Section Linear.
+Variables (K : monomType) (R : comRingType).
+
+Context {h : {mmorphism K -> R}}.
+
+Lemma mmap_is_linear : scalable_for *%R (mmap idfun h).
+Proof. by move=> /= c g; rewrite -mul_malgC rmorphM /= mmapC. Qed.
+
+Canonical mmap_linear := AddLinear mmap_is_linear.
+Canonical mmap_lrmorphism := [lrmorphism of mmap idfun h].
+End Linear.
+End MalgMorphism.
+
+(* -------------------------------------------------------------------- *)
 Section MMeasureDef.
 Variable M : monomType.
 
@@ -1681,125 +1803,3 @@ Definition msizeN       := @mmeasureN       _ G [measure of mdeg].
 Definition msize_eq0    := @mmeasure_eq0    _ G [measure of mdeg].
 Definition msize_msupp0 := @mmeasure_msupp0 _ G [measure of mdeg].
 End MSize.
-
-(* -------------------------------------------------------------------- *)
-Section MalgMorphism.
-Section Defs.
-Variables (K : choiceType) (G : zmodType) (S : ringType).
-Variables (f : G -> S) (h : K -> S).
-
-Definition mmap g := \sum_(k : msupp g) (f g@_(val k)) * (h (val k)).
-
-Lemma mmapE g :
-  mmap g = \sum_(k : msupp g) (f g@_(val k)) * (h (val k)).
-Proof. by []. Qed.
-End Defs.
-
-Local Notation "g ^[ f , h ]" := (mmap f h g).
-
-Section BaseTheory.
-Variables (K : choiceType) (G : zmodType) (S : ringType).
-
-Context {f : {additive G -> S}} {h : K -> S}.
-
-Lemma mmapEw g (d : {fset K}) : msupp g `<=` d ->
-  g^[f, h] = \sum_(k : d) (f g@_(val k)) * (h (val k)).
-Proof.
-move=> le; pose F k := (f g@_k) * (h k); rewrite mmapE.
-rewrite (big_fset_incl F le) {}/F //= => k _ /mcoeff_outdom.
-by move=> ->; rewrite raddf0 mul0r.
-Qed.
-
-Lemma mmapU (c : G) (m : K) :
-  mmap f h << c *g m >> = (f c) * (h m).
-Proof. by rewrite (mmapEw msuppU_le) big_fset1 mcoeffUU. Qed.
-End BaseTheory.
-
-Section Additive.
-Variables (K : choiceType) (G : zmodType) (S : ringType).
-
-Context {f : {additive G -> S}} {h : K -> S}.
-
-Lemma mmap_is_additive : additive (mmap f h).
-Proof.
-move=> g1 g2 /=; rewrite (mmapEw (msuppB_le _ _)).
-rewrite (mmapEw (fsubsetUl _ (msupp g2))).
-rewrite (mmapEw (fsubsetUr (msupp g1) _)).
-rewrite -sumrB; apply/eq_bigr=> k _.
-by rewrite !raddfB /= mulrBl.
-Qed.
-
-Canonical mmap_additive := Additive mmap_is_additive.
-
-Local Notation mmap := (mmap f h).
-
-Lemma mmap0     : mmap 0 = 0               . Proof. exact: raddf0. Qed.
-Lemma mmapN     : {morph mmap: x / - x}    . Proof. exact: raddfN. Qed.
-Lemma mmapD     : {morph mmap: x y / x + y}. Proof. exact: raddfD. Qed.
-Lemma mmapB     : {morph mmap: x y / x - y}. Proof. exact: raddfB. Qed.
-Lemma mmapMn  n : {morph mmap: x / x *+ n} . Proof. exact: raddfMn. Qed.
-Lemma mmapMNn n : {morph mmap: x / x *- n} . Proof. exact: raddfMNn. Qed.
-End Additive.
-
-Section CommrMultiplicative.
-Variables (K : monomType) (R : ringType) (S : ringType).
-
-Context {f : {rmorphism R -> S}} {h : {mmorphism K -> S}}.
-
-Implicit Types g : {malg R[K]}.
-
-Lemma mmapZ c (g : {malg R[K]}) : (c *: g)^[f,h] = (f c) * g^[f,h].
-Proof.
-rewrite (mmapEw (msuppZ_le _ _)) mmapE big_distrr /=.
-by apply/eq_bigr=> k _; rewrite linearZ rmorphM /= mulrA.
-Qed.
-
-Lemma mmapC c : (c%:MP)^[f,h] = f c.
-Proof. by rewrite mmapU mmorph1 mulr1. Qed.
-
-Lemma mmap1 : 1^[f,h] = 1.
-Proof. by rewrite mmapC rmorph1. Qed.
-
-Hypothesis commr_f: forall g m m', GRing.comm (f g@_m) (h m').
-
-Lemma commr_mmap_is_multiplicative: multiplicative (mmap f h).
-Proof.
-split=> [g1 g2|]; last by rewrite mmap1.
-pose E := msupp g1 `|` msupp g2.
-have [le1 le2]: (msupp g1 `<=` E) /\ (msupp g2 `<=` E).
-  by rewrite !fsubsetU ?fsubset_refl ?simpm.
-rewrite [_*_](malgMEw (d1 := E) (d2 := E)) //.
-apply/esym; rewrite 2?(mmapEw (d := E)) // raddf_sum /=.
-rewrite big_distrlr /=; apply/eq_bigr=> k1 _; rewrite raddf_sum /=.
-apply/eq_bigr=> k2 _; rewrite mmapU mmorphM /= rmorphM.
-by rewrite -mulrA [X in _*X=_]mulrA -commr_f !mulrA.
-Qed.
-End CommrMultiplicative.
-
-(* -------------------------------------------------------------------- *)
-Section Multiplicative.
-Variables (K : monomType) (R : ringType) (S : comRingType).
-
-Context {f : {rmorphism R -> S}} {h : {mmorphism K -> S}}.
-
-Implicit Types g : {malg R[K]}.
-
-Lemma mmap_is_multiplicative : multiplicative (mmap f h).
-Proof. by apply/commr_mmap_is_multiplicative=> g m m'; apply/mulrC. Qed.
-
-Canonical mmap_rmorphism := AddRMorphism mmap_is_multiplicative.
-End Multiplicative.
-
-(* -------------------------------------------------------------------- *)
-Section Linear.
-Variables (K : monomType) (R : comRingType).
-
-Context {h : {mmorphism K -> R}}.
-
-Lemma mmap_is_linear : scalable_for *%R (mmap idfun h).
-Proof. by move=> /= c g; rewrite -mul_malgC rmorphM /= mmapC. Qed.
-
-Canonical mmap_linear := AddLinear mmap_is_linear.
-Canonical mmap_lrmorphism := [lrmorphism of mmap idfun h].
-End Linear.
-End MalgMorphism.
