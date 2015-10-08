@@ -4335,44 +4335,130 @@ rewrite {2}/c nth_default ?size_tuple // muln0 subn0.
 by apply/eq_bigr=> /= i _; rewrite /fun_of_multinom (tnth_nth 0%N).
 Qed.
 
-Lemma sym_fundamental (p : {mpoly R[n]}) : p \is symmetric ->
-  { t | t \mPo S = p /\ mweight t <= msize p}.
+Definition symf1 (p : {mpoly R[n]}) : {mpoly R[n]} * {mpoly R[n]} :=
+  if p == 0 then (0, 0) else
+    let m := mlead p in
+    let c := nth 0%N m in
+    let F := fun i => (c i - c i.+1)%N in
+    (p@_m *: 'X_[F#val], p - p@_m *: ('X_[F#val] \mPo S)).
+
+Fixpoint symfn (k : nat) (p : {mpoly R[n]}) :=
+  if k is k'.+1 then
+    let (t1, p) := symf1 p in
+    let (t2, p) := symfn k' p in
+      (t1 + t2, p)
+  else symf1 p.
+
+Lemma symf1E0 : symf1 0 = (0, 0).
+Proof. by rewrite /symf1 eqxx. Qed.
+
+Lemma symfnE0 k : symfn k 0 = (0, 0).
+Proof. by elim: k => /= [|k ih]; rewrite symf1E0 //= ih addr0. Qed.
+
+Lemma symf1P (p : {mpoly R[n]}) : p \is symmetric ->
+  [&& ((symf1 p).2 == 0) || (mlead (symf1 p).2 < mlead p)%O
+    , (symf1 p).2 \is symmetric
+    & p == (symf1 p).1 \mPo S + (symf1 p).2].
 Proof.
-set S := [tuple 's_(n, i.+1) | i < n].
-elim/mleadrect: p=> p ih sym_p; have [->|nz_p] := eqVneq p 0.
-  by exists 0; rewrite comp_mpoly0 mmeasure0.
-set m := mlead p; pose c := nth 0%N m.
-pose F i := (c i - c i.+1)%N; pose l := F#val.
-pose q := p - p@_m *: ('X_[l] \mPo S); have [z_q|nz_q] := eqVneq q 0.
-  exists (p@_m *: 'X_[l]); move/eqP: z_q; rewrite /q subr_eq0.
-  move/eqP/esym; rewrite comp_mpolyZ=> ->; split=> //.
-  rewrite (@leq_trans (mweight 'X_[R, l])) ?mmeasureZ_le //.
-  rewrite -?mlead_deg ?mleadc_eq0 //.
-  by rewrite (mweight_XLS (mlead_msym_sorted sym_p)).
-have lt_pq: (mlead q < mlead p)%O.
-  have mE := (mlead_XLS (mlead_msym_sorted sym_p)).
-  rewrite -/m -/c -/l -/S in mE; rewrite lto_neqAle andbC.
-  have := mleadB_le p (p@_m *: ('X_[l] \mPo S)).
-  rewrite mleadZ_proper ?mE ?maxoo // => [->/=|]; last first.
-    rewrite mulrC mulrI_eq0 ?mleadc_eq0 // -mE.
-    rewrite mleadc_XS; apply/lreg1.
-  apply/eqP=> eq_lm_pq; have := nz_q; rewrite -mleadc_eq0.
-  rewrite eq_lm_pq /q mcoeffB mcoeffZ -/m -{3}mE mleadc_XS.
-  by rewrite mulr1 subrr eqxx.
-elim: (ih q)=> //; first last.
-  rewrite /q rpredB // rpredZ // mcomp_sym // => i.
-  by rewrite -tnth_nth tnth_map mesym_sym.
-move=> t [/esym qE] wgt_t; exists (t + p@_m *: 'X_[l]).
-rewrite comp_mpolyD comp_mpolyZ -qE /q.
-rewrite addrAC -addrA subrr addr0; split=> //.
-apply/(leq_trans (mmeasureD_le _ _ _)); rewrite geq_max.
-rewrite (leq_trans (mmeasureZ_le _ _ _)) ?andbT.
-  rewrite (leq_trans wgt_t) // -!mlead_deg //.
-  by rewrite ltnS lem_mdeg // ltoW.
-rewrite mweight_XLS -?mlead_deg //.
+move=> sym_p; apply/and3P; split; last first.
++ rewrite /symf1; case: (p =P 0); try set X := 'X_[_].
+    by move=> -> /=; rewrite comp_mpoly0 addr0.
+  by move=> _; rewrite addrCA comp_mpolyZ subrr addr0.
++ rewrite /symf1; case: (p =P 0); first by rewrite rpred0.
+  set X := 'X_[_] => nz_p /=; apply/rpredB/rpredZ=> //.
+  rewrite mcomp_sym // => i; rewrite -tnth_nth tnth_map.
+  by apply/mesym_sym.
+case: eqP=> //; rewrite /symf1 orFb.
+case: (p =P 0)=> // /eqP nz_p.
+have := (mlead_XLS (mlead_msym_sorted sym_p)).
+set m := mlead p; set c := nth 0%N m.
+pose F i := (c i - c i.+1)%N; rewrite -/(F#val) => mE.
+set q : {mpoly R[n]} := p@_m *: (_ \mPo _).
+rewrite lto_neqAle andbC /= => nz_pBq.
+have := mleadB_le p q; rewrite mleadZ_proper; last first.
+  rewrite mE mulrC mulrI_eq0 ?mleadc_eq0 // -mE.
+  by rewrite mleadc_XS; apply/lreg1.
+rewrite mE maxoo // => -> /=; apply/eqP=> eq_lm_pq.
+have /eqP := nz_pBq; rewrite -mleadc_eq0.
+rewrite eq_lm_pq /q mcoeffB mcoeffZ -/m -{3}mE.
+by rewrite mleadc_XS mulr1 subrr eqxx.
+Qed.
+
+Lemma symfnP k (p : {mpoly R[n]}) : p \is symmetric ->
+  [&& ((symfn k p).2 == 0) || (mlead (symfn k p).2 < mlead p)%O
+    , (symfn k p).2 \is symmetric
+    & p == (symfn k p).1 \mPo S + (symfn k p).2].
+Proof.
+elim: k p=> [|k ih] p sym_p /=; first by apply/symf1P.
+have E T U (z : T * U): z = (z.1, z.2) by case: z.
+rewrite [symf1 p]E [symfn _ _]E /= => {E}.
+case/and3P: (symf1P sym_p); case/orP=> [/eqP-> _ /eqP pE|].
+  by rewrite symfnE0 /= eqxx rpred0 /= {1}pE !simpm.
+move=> le_q1_p /ih /and3P[]; case/orP=> [/eqP-> _|].
+  move=> /eqP q1E /eqP pE; rewrite eqxx rpred0 /=.
+  by rewrite {1}pE {1}q1E !simpm raddfD.
+move=> le_q2_q1 -> /eqP q1E /eqP pE.
+rewrite (lto_trans le_q2_q1) ?orbT //= {1}pE {1}q1E.
+by rewrite addrA raddfD.
+Qed.
+
+Lemma symfnS (p : {mpoly R[n]}) :
+  { n : nat | p \is symmetric -> (symfn n p).2 = 0 }.
+Proof.
+have: p \is symmetric -> { n : nat | (symfn n p).2 = 0 }.
+  elim/mleadrect: p => p ih sym_p; case/and3P: (symf1P sym_p).
+  case: ((symf1 p).2 =P 0)=> /= [z_q1|nz_q1]; first by exists 0%N.
+  move=> le_q1 /ih -/(_ le_q1) [k z_q2] /eqP pE.
+  exists k.+1=> /=; have E T U (z : T * U): z = (z.1, z.2) by case: z.
+  by rewrite [symf1 _]E [symfn _ _]E => {E}; rewrite z_q2.
+by case: (p \is symmetric)=> [[]// k eq|_]; [exists k | exists 0%N].
+Qed.
+
+Definition symf (p : {mpoly R[n]}) :=
+  nosimpl (symfn (tag (symfnS p)) p).1.
+
+Lemma symfP (p : {mpoly R[n]}) :
+  p \is symmetric -> p = (symf p) \mPo S.
+Proof.
+move=> sym_p; rewrite /symf; set k := tag _.
+case/and3P: (symfnP k sym_p)=> /= _ _ /eqP {1}->.
+by rewrite {}/k; case: symfnS=> /= k -> //; rewrite !simpm.
+Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma symf1_wgle (p : {mpoly R[n]}) : p \is symmetric ->
+  mweight (symf1 p).1 <= msize p.
+Proof.  
+move=> sym_p; rewrite /symf1; case: (p =P 0).
+  by rewrite mmeasure0.
+move=> /eqP nz_p; set X := 'X_[_] => /=.
+rewrite (@leq_trans (mweight X)) ?mmeasureZ_le //.
+rewrite -?mlead_deg ?mleadc_eq0 // mweight_XLS //.
 by apply/mlead_msym_sorted.
 Qed.
 
+Lemma symfn_wgle k (p : {mpoly R[n]}) : p \is symmetric ->
+  mweight (symfn k p).1 <= msize p.
+Proof.
+elim: k p => [|k ih] p sym_p /=; first by apply/symf1_wgle.
+have E T U (z : T * U): z = (z.1, z.2) by case: z.
+rewrite [symf1 p]E [symfn _ _]E /= => {E}.
+case/and3P: (symf1P sym_p); case/orP=> [/eqP-> _ /eqP pE|].
+  by rewrite symfnE0 /= addr0; apply/symf1_wgle.
+move=> le_q1_p sym_q2 /eqP pE.
+rewrite (leq_trans (mmeasureD_le _ _ _)) //.
+rewrite geq_max symf1_wgle //= (leq_trans (ih _ _)) //.
+have [->|nz_p] := eqVneq p 0; first by rewrite symf1E0 msize0.
+have [->|nz_f1p] := eqVneq (symf1 p).2 0; first by rewrite msize0.
+by rewrite -!mlead_deg // ltnS lem_mdeg // ltoW.
+Qed.
+
+(* -------------------------------------------------------------------- *)
+Lemma sym_fundamental (p : {mpoly R[n]}) : p \is symmetric ->
+  { t | t \mPo S = p /\ mweight t <= msize p}.
+Proof. by exists (symf p); rewrite {2}[p]symfP ?symfn_wgle. Qed.
+
+(* -------------------------------------------------------------------- *)
 Local Notation XS m := ('X_[R, m] \mPo S) (only parsing).
 
 Lemma msym_fundamental_un0 (t : {mpoly R[n]}) :
