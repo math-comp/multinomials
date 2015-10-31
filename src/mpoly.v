@@ -420,12 +420,21 @@ Notation "\sum_ ( i 'in' A ) F" :=
   (\big[+%MM/0%MM]_(i in A) F%MM) : multi_scope.
 
 (* -------------------------------------------------------------------- *)
-Lemma multinomUE n (m : 'X_{1..n}) :
-  m = (\sum_i (U_(i)) *+ (m i))%MM.
+Lemma multinomUE n (s : 'S_n) (m : 'X_{1..n}) :
+  m = (\sum_i (U_(s i)) *+ (m (s i)))%MM.
 Proof.
+rewrite (reindex (s^-1))%g //=; last first.
+  by exists s=> i _; rewrite ?(permK, permKV).
+rewrite (eq_bigr (fun i => U_(i) *+ m i)%MM) => [|i _]; rewrite ?permKV //.
 apply/mnmP=> i; rewrite mnm_sumE (bigD1 i) //=.
 rewrite big1; first by rewrite addn0 mulmnE mnm1E eqxx muln1.
 by move=> j ne_ji; rewrite mulmnE mnm1E (negbTE ne_ji) muln0.
+Qed.
+
+Lemma multinomUE_id n (m : 'X_{1..n}) :
+  m = (\sum_i (U_(i)) *+ (m i))%MM.
+Proof.
+by rewrite {1}[m](multinomUE 1%g); apply/eq_bigr=> /= i _; rewrite perm1.
 Qed.
 
 (* -------------------------------------------------------------------- *)
@@ -484,7 +493,7 @@ Lemma mdeg_eq1 (m : 'X_{1..n}) :
   (mdeg m == 1)%N = [exists i : 'I_n, m == U_(i)%MM].
 Proof.
 apply/eqP/idP=> [|/existsP [i /eqP ->]]; last by rewrite mdeg1.
-rewrite [m]multinomUE mdeg_sum (eq_bigr (fun i => m i)); last first.
+rewrite [m]multinomUE_id mdeg_sum (eq_bigr (fun i => m i)); last first.
   by move=> i _; rewrite mdegMn mdeg1 mul1n.
 case: (boolP [exists i, m i != 0%N]); last first.
   move=> h; rewrite big1 // => i _; apply/eqP.
@@ -1734,18 +1743,8 @@ Qed.
 Lemma mpolyXE (s : 'S_n) m :
   'X_[m] = \prod_(i < n) 'X_(s i) ^+ m (s i).
 Proof.
-pose sI := (s^-1)%g; pose h := fun (m : 'X_{1..n}) => 'X_[m].
-pose G := fun (i : 'I_n) => (U_(s i) *+ m (s i))%MM.
-rewrite (eq_bigr (h \o G)) => [|i _]; last by rewrite mpolyXn.
-rewrite -(big_map G xpredT) /index_enum -enumT /=.
-rewrite mpolyX_prod; congr 'X_[_]; rewrite big_map.
-rewrite enumT -/(index_enum _) {}/G (reindex sI) /=; last first.
-  by exists s=> i _; rewrite /sI ?(permK, permKV).
-rewrite (eq_bigr (fun i => (U_(i) *+ (m i))%MM)); last first.
-  by move=> i _; rewrite permKV.
-apply/mnmP=> i; rewrite mnm_sumE (bigD1 i) ?big1 //=; last first.
-  by move=> j ne_ij; rewrite mulmnE mnm1E (negbTE ne_ij) muln0.
-by rewrite addn0 mulmnE mnm1E eqxx muln1.
+rewrite {1}[m](multinomUE s) -mprodXE.
+by apply/eq_bigr=> i _; rewrite mpolyXn.
 Qed.
 
 Lemma mpolyXE_id m :
