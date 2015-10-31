@@ -420,6 +420,15 @@ Notation "\sum_ ( i 'in' A ) F" :=
   (\big[+%MM/0%MM]_(i in A) F%MM) : multi_scope.
 
 (* -------------------------------------------------------------------- *)
+Lemma multinomUE n (m : 'X_{1..n}) :
+  m = (\sum_i (U_(i)) *+ (m i))%MM.
+Proof.
+apply/mnmP=> i; rewrite mnm_sumE (bigD1 i) //=.
+rewrite big1; first by rewrite addn0 mulmnE mnm1E eqxx muln1.
+by move=> j ne_ji; rewrite mulmnE mnm1E (negbTE ne_ji) muln0.
+Qed.
+
+(* -------------------------------------------------------------------- *)
 Section MultinomDeg.
 Context {n : nat}.
 
@@ -446,6 +455,13 @@ Proof. by rewrite !mdegE -big_split //=; apply/eq_bigr=> i _; rewrite mnmE. Qed.
 Lemma mdegB m1 m2 : mdeg (m1 - m2) <= mdeg m1.
 Proof. by rewrite !mdegE; apply/leq_sum => i _; rewrite mnmE leq_subr.  Qed.
 
+Lemma mdegMn (m : 'X_{1..n}) k :
+  mdeg (m *+ k) = (mdeg m * k)%N.
+Proof. elim: k => [|k ih].
+by rewrite mulm0n muln0 mdeg0.
+by rewrite mulmSr mdegD ih.
+Qed.
+
 Lemma mdeg_sum (I : Type) (r : seq I) P F :
     mdeg (\big[+%MM/0%MM]_(x <- r | P x) (F x))
   = (\sum_(x <- r | P x) (mdeg (F x)))%N.
@@ -463,6 +479,26 @@ Proof. by rewrite -!mdeg_eq0 mdegD addn_eq0. Qed.
 
 Lemma mnm1_eq0 i : (U_(i) == 0 :> 'X_{1..n})%MM = false.
 Proof. by rewrite -mdeg_eq0 mdeg1. Qed.
+
+Lemma mdeg_eq1 (m : 'X_{1..n}) :
+  (mdeg m == 1)%N = [exists i : 'I_n, m == U_(i)%MM].
+Proof.
+apply/eqP/idP=> [|/existsP [i /eqP ->]]; last by rewrite mdeg1.
+rewrite [m]multinomUE mdeg_sum (eq_bigr (fun i => m i)); last first.
+  by move=> i _; rewrite mdegMn mdeg1 mul1n.
+case: (boolP [exists i, m i != 0%N]); last first.
+  move=> h; rewrite big1 // => i _; apply/eqP.
+  by apply/contraR: h => nz_mi; apply/existsP; exists i.
+case/existsP=> /= i nz_mi eq1; apply/existsP; exists i.
+rewrite (bigD1 i) //=; move: eq1; rewrite (bigD1 i) //=.
+case: (m i) nz_mi => [|[]] //= _; rewrite mulm1n => eq1.
+rewrite big1 ?addm0 // => j ne_ji; move: eq1.
+by rewrite (bigD1 j) //= add1n; case: (m j).
+Qed.
+
+Lemma mdeg1P (m : 'X_{1..n}) :
+  reflect (exists i, m == U_(i)%MM) (mdeg m == 1%N).
+Proof. by rewrite mdeg_eq1; apply/existsP. Qed.
 End MultinomDeg.
 
 (* -------------------------------------------------------------------- *)
