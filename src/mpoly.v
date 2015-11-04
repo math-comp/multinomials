@@ -379,6 +379,7 @@ Proof.
 elim: k => [|k ih]; first by rewrite mul0n mulm0n !mnmE.
 by rewrite mulmS mulSn mnmDE ih.
 Qed.
+
 End MultinomMonoid.
 
 (* -------------------------------------------------------------------- *)
@@ -418,6 +419,14 @@ Notation "\sum_ ( i 'in' A | P ) F" :=
   (\big[+%MM/0%MM]_(i in A | P%B) F%MM) : multi_scope.
 Notation "\sum_ ( i 'in' A ) F" :=
   (\big[+%MM/0%MM]_(i in A) F%MM) : multi_scope.
+
+Lemma mnm_sumUE {n : nat} (m : 'X_{1..n}) : m = (\sum_(i < n) U_(i) *+ (m i))%MM.
+Proof.
+  rewrite mnmP => i; rewrite mnm_sumE.
+  rewrite (bigID (xpred1 i)) /= big_pred1_eq big1; first last.
+    move=> j; rewrite mulmnE mnm1E => /negbTE ->; by rewrite muln0.
+  by rewrite addn0 mulmnE mnm1E eq_refl muln1.
+Qed.
 
 (* -------------------------------------------------------------------- *)
 Lemma multinomUE n (s : 'S_n) (m : 'X_{1..n}) :
@@ -1023,7 +1032,16 @@ Proof.
 move=> h; apply/negP=> /mmeasure_mnm_lt.
 by rewrite leqNgt ltnS h.
 Qed.
+
+Lemma measureE m : mf m = (\sum_(i < n) (m i) * mf U_(i)%MM )%N.
+Proof.
+  rewrite {1}(mnm_sumUE m) (big_morph mf mfD mf0); apply eq_bigr => i _.
+  elim: (m i) => [// | d IHd] /=; first by rewrite mul0n mulm0n mf0.
+  by rewrite mulmS mulSn mfD IHd.
+Qed.
+
 End MMeasure.
+
 
 (* -------------------------------------------------------------------- *)
 Section MSuppZMod.
@@ -1108,7 +1126,8 @@ by rewrite mnmDE mulnDl.
 Qed.
 End MWeight.
 
-Canonical mnmwgt_measure n := Eval hnf in @Measure n _ mnmwgt0 mnmwgtD.
+Canonical mnmwgt_measure n :=
+  Eval hnf in @Measure n _ mnmwgt0 mnmwgtD.
 
 (* -------------------------------------------------------------------- *)
 Notation mweight p := (@mmeasure _ _ [measure of mnmwgt] p).
@@ -4534,41 +4553,33 @@ Local Notation count_flatten :=
   SsrMultinomials.ssrcomplements.count_flatten.
 
 (* -------------------------------------------------------------------- *)
-Definition ishomog1 {n} {R : ringType} (d : nat) : qualifier 0 {mpoly R[n]} :=
-  [qualify p | all [pred m | mdeg m == d] (msupp p)].
+Definition ishomog1 {n} {R : ringType}
+           (d : nat) (mf : measure n) : qualifier 0 {mpoly R[n]} :=
+  [qualify p | all [pred m | mf m == d] (msupp p)].
 
 (* -------------------------------------------------------------------- *)
 Module MPolyHomog1Key.
-Fact homog1_key {n} {R : ringType} d : pred_key (@ishomog1 n R d).
+Fact homog1_key {n} {R : ringType} d mf : pred_key (@ishomog1 n R d mf).
 Proof. by []. Qed.
 
-Definition homog1_keyed {n R} d := KeyedQualifier (@homog1_key n R d).
+Definition homog1_keyed {n R} d mf := KeyedQualifier (@homog1_key n R d mf).
 End MPolyHomog1Key.
 
 Canonical MPolyHomog1Key.homog1_keyed.
 
-Notation "[ 'in' R [ n ] , d .-homog ]" := (@ishomog1 n R d)
-  (at level 0, R, n at level 2, d at level 0,
-     format "[ 'in'  R [ n ] ,  d .-homog ]") : form_scope.
-
-Notation "d .-homog" := (@ishomog1 _ _ d)
-  (at level 1, format "d .-homog") : form_scope.
 
 (* -------------------------------------------------------------------- *)
-Definition ishomog {n} {R : ringType}: qualifier 0 {mpoly R[n]} :=
-  [qualify p | (n == 0%N) || [exists d : 'I_(msize p), p \is d.-homog]].
-
+Definition ishomog {n} {R : ringType} mf : qualifier 0 {mpoly R[n]} :=
+  [qualify p | p \is ishomog1 (@mmeasure _ _ mf p).-1 mf].
 (* -------------------------------------------------------------------- *)
 Module MPolyHomogKey.
-Fact homog_key {n} {R : ringType}: pred_key (@ishomog n R).
+Fact homog_key {n} {R : ringType} mf : pred_key (@ishomog n R mf).
 Proof. by []. Qed.
 
-Definition homog_keyed {n R} := KeyedQualifier (@homog_key n R).
+Definition homog_keyed {n R} mf := KeyedQualifier (@homog_key n R mf).
 End MPolyHomogKey.
 
 Canonical MPolyHomogKey.homog_keyed.
-
-Notation homog := (@ishomog _ _).
 
 (* -------------------------------------------------------------------- *)
 Section MPolyHomogTheory.
@@ -4577,25 +4588,44 @@ Variable R : ringType.
 
 Implicit Types p q : {mpoly R[n]}.
 
+Variable mf : measure n.
+
+Local Notation "d .-homog" := (@ishomog1 _ _ d mf)
+  (at level 1, format "d .-homog") : form_scope.
+
+Local Notation homog := (@ishomog _ _ mf).
+
+Local Notation "[ 'in' R [ n ] , d .-homog ]" := (@ishomog1 n R d mf)
+  (at level 0, R, n at level 2, d at level 0,
+     format "[ 'in'  R [ n ] ,  d .-homog ]") : form_scope.
+
 Lemma dhomogE d p:
-  (p \is d.-homog) = (all [pred m | mdeg m == d] (msupp p)).
+  (p \is d.-homog) = (all [pred m | mf m == d] (msupp p)).
 Proof. by []. Qed.
 
 Lemma dhomogP d p:
   reflect
-    {in msupp p, forall m, mdeg m = d}
+    {in msupp p, forall m, mf m = d}
     (p \is d.-homog).
 Proof. by apply/(iffP allP)=> /= h m /h => [/eqP|->]. Qed.
 
-Lemma dhomog_mdeg d p:
-  p \is d.-homog -> {in msupp p, forall m, mdeg m = d}.
+Lemma dhomog_mf d p:
+  p \is d.-homog -> {in msupp p, forall m, mf m = d}.
 Proof. by move/dhomogP. Qed.
 
-Lemma dhomog_nemdeg_coeff d p m:
-  p \is d.-homog -> mdeg m != d -> p@_m = 0.
+Lemma dhomog_nemf_coeff d p m:
+  p \is d.-homog -> mf m != d -> p@_m = 0.
 Proof.
   move/dhomogP=> hg_p; apply/contraTeq; rewrite -mcoeff_msupp.
   by move/hg_p=> ->; rewrite negbK.
+Qed.
+
+Lemma dhomog1 : (1 : {mpoly R[n]}) \is 0.-homog.
+Proof. apply/dhomogP; rewrite msupp1=> m; rewrite inE=> /eqP ->; exact: mf0. Qed.
+
+Lemma dhomog_uniq p d e : p != 0 -> p \is d.-homog -> p \is e.-homog -> d = e.
+Proof.
+  by move=> Hp /dhomogP/(_ _ (mlead_supp Hp)) <- /dhomogP/(_ _ (mlead_supp Hp)).
 Qed.
 
 Lemma dhomog_submod_closed d : submod_closed [in R[n], d.-homog].
@@ -4614,7 +4644,7 @@ Canonical dhomog_submodPred d := SubmodPred (dhomog_submod_closed d).
 Lemma dhomog0 d: 0 \is [in R[n], d.-homog].
 Proof. by apply/rpred0. Qed.
 
-Lemma dhomogX d m: ('X_[m] \is [in R[n], d.-homog]) = (mdeg m == d).
+Lemma dhomogX d m: ('X_[m] \is [in R[n], d.-homog]) = (mf m == d).
 Proof. by rewrite dhomogE msuppX /= andbT. Qed.
 
 Lemma dhomogD d: {in d.-homog &, forall p q, p + q \is d.-homog}.
@@ -4625,10 +4655,209 @@ Proof. by apply/rpredN. Qed.
 
 Lemma dhomogZ d c p: p \in d.-homog -> (c *: p) \in d.-homog.
 Proof. by apply/rpredZ. Qed.
+
+Local Notation mfsize p := (@mmeasure _ _ mf p).
+
+Lemma homog_msize p : (p \is homog) = (p \is (mfsize p).-1.-homog).
+Proof. by []. Qed.
+
+Lemma dhomog_msize d p : p \is d.-homog -> p \is (mfsize p).-1.-homog.
+Proof.
+  rewrite mmeasureE.
+  case Hsupp : (size (msupp p)) => [| sz].
+    move: Hsupp => /eqP/nilP Hsupp _; rewrite Hsupp big_nil /=.
+    move: Hsupp => /msuppnil0 ->; exact: dhomog0.
+  rewrite -(in_tupleE (msupp p)) big_tuple; set f := BIG_F.
+  have /(eq_bigmax f) : 0 < #|'I_(size (msupp p))| by rewrite card_ord Hsupp.
+  move=> [] imx ->; rewrite {}/f /= => Hhom.
+  set mx := tnth _ _; suff <- : d = mf mx :> nat by [].
+  move/dhomogP : Hhom => Hhom.
+  by rewrite (Hhom _ (mem_tnth imx (in_tuple (msupp p)))).
+Qed.
+
+Lemma homogE d p : p \is d.-homog -> p \is homog.
+Proof. by move/dhomog_msize. Qed.
+
+Lemma homogP p : reflect (exists d, p \is d.-homog) (p \is homog).
+Proof.
+  rewrite unfold_in; apply (iffP idP).
+  - move=> H; by exists (mfsize p).-1.
+  - move=> [] d; exact: dhomog_msize.
+Qed.
+
+Lemma mpoly0 p : n = 0%N -> p = (p@_0%MM)%:MP.
+Proof.
+  move=> Hn; subst n; rewrite -mpolyP => m.
+  rewrite mcoeffC.
+  suff -> : m = 0%MM by rewrite eq_refl /= mulr1.
+  rewrite mnmP => i; exfalso.
+  by have := ltn_ord i.
+Qed.
+
+Lemma mpoly0_homog p : n = 0%N -> p \is 0.-homog.
+Proof.
+  move/(mpoly0 p) ->.
+  case: (altP (p@_0 =P 0)) => [-> | /negbTE H]; first exact: dhomog0.
+  apply/dhomogP => m; rewrite msuppC H inE => /eqP ->.
+  exact: mf0.
+Qed.
+
+Lemma dhomogM d p e q :
+  p \is d.-homog -> q \is e.-homog -> p * q \is (d + e).-homog.
+Proof.
+  move=> /dhomogP homp /dhomogP homq.
+  apply/dhomogP => m /msuppM_le/allpairsP [[m1 m2]] [] /= /homp <- /homq <- ->.
+  exact: mfD.
+Qed.
+
+Lemma dhomog_expr d p k :
+  p \is d.-homog -> p ^+ k \is (d * k).-homog.
+Proof.
+  elim: k => [| k IHk] Hp.
+    rewrite expr0 muln0; exact: dhomog1.
+  rewrite exprS /= mulnS; by apply: dhomogM; last exact: IHk.
+Qed.
+
+Lemma prod_homog (s : seq {mpoly R[n]}) :
+  all (fun p => p \is homog) s -> \prod_(p <- s) p \is homog.
+Proof.
+  move=> H; apply/homogP.
+  elim: s H => [_ | p s IHs] /=.
+    exists 0%N; rewrite big_nil; exact: dhomog1.
+  move=> /andP [] /homogP [] dp Hdp /IHs{IHs} [] drec Hrec.
+  exists (dp + drec)%N; rewrite big_cons.
+  exact: dhomogM.
+Qed.
+
 End MPolyHomogTheory.
+
+Notation "[ 'in' R [ n ] , d .-homog 'for' mf ]" := (@ishomog1 n R d mf)
+  (at level 0, R, n at level 2, d at level 0,
+     format "[ 'in'  R [ n ] , d .-homog 'for' mf ]") : form_scope.
+
+Notation "[ 'in' R [ n ] , d .-homog ]" := [in R[n], d.-homog for [measure of mdeg]]
+  (at level 0, R, n at level 2, d at level 0) : form_scope.
+
+Notation "d .-homog 'for' mf" := (@ishomog1 _ _ d mf)
+  (at level 1, format "d .-homog 'for' mf") : form_scope.
+
+Notation "d .-homog" := (d .-homog for [measure of mdeg])
+  (at level 1, format "d .-homog") : form_scope.
+
+Notation "'homog' mf" := (@ishomog _ _ mf)
+  (at level 1, format "'homog' mf") : form_scope.
+
+(* -------------------------------------------------------------------- *)
+Section ProjHomog.
+
+Variable n : nat.
+Variable R : ringType.
+Variable mf : measure n.
+
+Implicit Types p q r : {mpoly R[n]}.
+Implicit Types m : 'X_{1..n}.
+
+Local Notation mfsize p := (@mmeasure _ _ mf p).
+
+Section Def.
+Variable d : nat.
+
+Definition pihomog p : {mpoly R[n]} :=
+  \sum_(m <- msupp p | mf m == d) p@_m *: 'X_[m].
+
+Lemma pihomogE p :
+  pihomog p = \sum_(m <- msupp p | mf m == d) p@_m *: 'X_[m].
+Proof. by []. Qed.
+
+Lemma pihomogwE k p : msize p <= k ->
+  pihomog p = \sum_(m : 'X_{1..n < k} | mf m == d) p@_m *: 'X_[m].
+Proof.
+  move=> lt_pk.
+  pose I := [subFinType of 'X_{1..n < k}].
+  rewrite /pihomog.
+  rewrite [LHS](big_mksub_cond I) //=; first last.
+    - by move=> x /msize_mdeg_lt/leq_trans/(_ lt_pk) ->.
+    - by rewrite msupp_uniq.
+  rewrite [RHS](bigID (fun x  : 'X_{1..n < k} => val x \in msupp p)) /=.
+  rewrite [X in _ = _ + X]big1 ?addr0 // => m /andP [] _ /memN_msupp_eq0 ->.
+  by rewrite scale0r.
+Qed.
+
+Lemma pihomogX m : pihomog 'X_[m] = if mf m == d then 'X_[m] else 0.
+Proof. by rewrite pihomogE msuppX big_cons big_nil addr0 mcoeffX eq_refl scale1r. Qed.
+
+Lemma pihomog_is_linear : linear pihomog.
+Proof.
+  move=> c p q /=.
+  pose_big_enough l.
+    rewrite [LHS](pihomogwE _ (k := l)) //.
+    rewrite (pihomogwE _ (k := l) (p := p)) //.
+    rewrite (pihomogwE _ (k := l) (p := q)) //.
+    2: by close.
+  rewrite scaler_sumr -big_split /=; apply eq_bigr => m _.
+  by rewrite linearP /= scalerDl scalerA.
+Qed.
+Canonical pihomog_additive : {additive {mpoly R[n]} -> {mpoly R[n]}} :=
+  Additive pihomog_is_linear.
+Canonical pihomog_linear   := Linear   pihomog_is_linear.
+
+Lemma pihomog0     : pihomog 0 = 0               . Proof. exact: raddf0. Qed.
+Lemma pihomogN     : {morph pihomog: x / - x}    . Proof. exact: raddfN. Qed.
+Lemma pihomogD     : {morph pihomog: x y / x + y}. Proof. exact: raddfD. Qed.
+Lemma pihomogB     : {morph pihomog: x y / x - y}. Proof. exact: raddfB. Qed.
+Lemma pihomogMn  k : {morph pihomog: x / x *+ k} . Proof. exact: raddfMn. Qed.
+Lemma pihomogMNn k : {morph pihomog: x / x *- k} . Proof. exact: raddfMNn. Qed.
+
+Lemma pihomog_dE p : p \is d.-homog for mf-> pihomog p = p.
+Proof.
+  move/dhomogP => hom_p.
+  rewrite /pihomog {3}(mpolyE p) [LHS]big_seq_cond [RHS]big_seq_cond.
+  apply eq_bigl => m /=; rewrite andbT.
+  case: (boolP (m \in msupp p)) => //= /hom_p ->.
+  by rewrite eq_refl.
+Qed.
+
+Lemma pihomogP p : pihomog p \is d.-homog for mf.
+Proof.
+  apply rpred_sum => m /eqP Hdeg; apply rpredZ.
+  by apply/dhomogP => m0 /mem_msuppXP <-.
+Qed.
+
+Lemma pihomog_id p : pihomog (pihomog p) = pihomog p.
+Proof. by rewrite pihomog_dE; last exact: pihomogP. Qed.
+
+Lemma homog_piE p : p \is d.-homog for mf = (pihomog p == p).
+Proof.
+  apply (sameP idP); apply (iffP idP); last by move /pihomog_dE ->.
+  move=> /eqP <-; exact: pihomogP.
+Qed.
+
+End Def.
+
+Lemma pihomog_ne0 d b p : d != b -> p \is d.-homog for mf-> pihomog b p = 0.
+Proof.
+  move=> ne /dhomogP hom; rewrite /pihomog big_seq_cond.
+  apply big_pred0 => m; apply negbTE.
+  by move: ne; apply contra => /andP [] /hom ->.
+Qed.
+
+Lemma pihomog_partitionE k p : mfsize p <= k -> p = \sum_(d < k) pihomog d p.
+Proof.
+  move=> Hk; rewrite /pihomog (exchange_big_dep predT) //= {1}(mpolyE p).
+  apply eq_bigr => m _.
+  rewrite -scaler_sumr.
+  case: (ssrnat.leqP k (mf m)) => [|Hmk].
+    move/(leq_trans Hk)/mmeasure_mnm_ge/memN_msupp_eq0 ->; by rewrite !scale0r.
+  rewrite (eq_bigl (fun i : 'I_k => i == Ordinal Hmk)); first last.
+    by move=> i /=; rewrite eq_sym.
+  by rewrite big_pred1_eq.
+Qed.
+
+End ProjHomog.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyHomogType.
+
 Variable n : nat.
 Variable R : ringType.
 Variable d : nat.
@@ -4658,32 +4887,32 @@ Canonical mpoly_of_dhomog_additive := Additive mpoly_of_dhomog_is_linear.
 Canonical mpoly_of_dhomog_linear   := Linear   mpoly_of_dhomog_is_linear.
 End MPolyHomogType.
 
-Lemma dhomog_is_dhomog n (R : ringType) d (p : dhomog n R d):
-  (val p) \is [in R[n], d.-homog].
+Lemma dhomog_is_dhomog n (R : ringType) d (p : dhomog n R d) :
+  (val p) \is [in R[n], d.-homog for [measure of mdeg]].
 Proof. by case: p. Qed.
 
-Hint Extern 0 (is_true (_ \is _.-homog)) => by apply/dhomog_is_dhomog.
+Hint Extern 0 (is_true (_ \is _.-homog mf)) => by apply/dhomog_is_dhomog.
 
 Definition indhomog n (R : ringType) d : {mpoly R[n]} -> dhomog n R d :=
   fun p => insubd (0 : dhomog n R d) p.
 
 Notation "[ ''dhomog_' d p ]" := (@indhomog _ _ d p)
-  (at level 8, d, p at level 2, format "[ ''dhomog_' d  p ]").
+  (at level 8, d, p at level 2, format "[ ''dhomog_' d p ]").
 
 (* -------------------------------------------------------------------- *)
 Section MPolyHomogVec.
 Local Notation isorted s := (sorted leq [seq val i | i <- s]).
 
-Let basis n d : {set (d.-tuple 'I_n)} :=
+Definition basis n d : {set (d.-tuple 'I_n)} :=
   [set t in {: d.-tuple 'I_n } | isorted t].
 
-Let s2m n (m : seq 'I_n) :=
+Definition s2m n (m : seq 'I_n) :=
   [multinom count_mem i m | i < n].
 
-Let m2s n (m : 'X_{1..n}) :=
+Definition m2s n (m : 'X_{1..n}) :=
   flatten [seq nseq (m i) i | i <- enum 'I_n].
 
-Let inj_s2m n d: {in basis n d &, injective (@s2m n \o val)}.
+Lemma inj_s2m n d: {in basis n d &, injective (@s2m n \o val)}.
 Proof.
   move=> t1 t2; rewrite !inE=> srt_t1 srt_t2 eq_tm.
   apply/val_inj/(inj_map val_inj).
@@ -4692,7 +4921,7 @@ Proof.
   by rewrite !mnmE => ->.
 Qed.
 
-Let srt_m2s n (m : 'X_{1..n}): isorted (m2s m).
+Lemma srt_m2s n (m : 'X_{1..n}): isorted (m2s m).
 Proof.
   have h (T : eqType) (leT : rel T) (s : seq T) (F : T -> nat) x:
     reflexive leT -> transitive leT ->
@@ -4719,10 +4948,7 @@ Proof.
   by apply/hasP; case.
 Qed.
 
-Local Notation sbasis n d :=
-  [seq s2m t | t : d.-tuple 'I_n <- enum (basis n d)].
-
-Let size_m2s n (m : 'X_{1..n}): size (m2s m) = mdeg m.
+Lemma size_m2s n (m : 'X_{1..n}): size (m2s m) = mdeg m.
 Proof.
   rewrite /m2s size_flatten /shape -map_comp /=.
   rewrite (eq_map (f2 := fun i : 'I_n => m i)).
@@ -4730,7 +4956,7 @@ Proof.
   by move=> i /=; rewrite size_nseq.
 Qed.
 
-Let s2mK n (m : 'X_{1..n}): s2m (m2s m) = m.
+Lemma s2mK n (m : 'X_{1..n}): s2m (m2s m) = m.
 Proof.
   apply/mnmP=> i; rewrite mnmE /m2s /=.
   rewrite count_flatten enumT (bigD1 i) //=.
@@ -4739,8 +4965,11 @@ Proof.
   by apply/negP=> /nseqP [/esym/eqP]; rewrite (negbTE ne_ji).
 Qed.
 
-Let basis_cover n d (m : 'X_{1..n}): (mdeg m == d) = (m \in sbasis n d).
-Proof.  
+Local Notation sbasis n d :=
+  [seq s2m t | t : d.-tuple 'I_n <- enum (basis n d)].
+
+Lemma basis_cover n d (m : 'X_{1..n}): (mdeg m == d) = (m \in sbasis n d).
+Proof.
   apply/eqP/idP=> [eq_szm_d|].
     apply/mapP; have /eqP := size_m2s m; rewrite -eq_szm_d => sz_tm.
     exists (Tuple sz_tm); first by rewrite mem_enum inE /= srt_m2s.
@@ -4760,10 +4989,10 @@ Proof.
   by rewrite big_uniq ?undup_uniq.
 Qed.
 
-Let size_basis n d: size (sbasis n.+1 d) = 'C(d + n, d).
+Lemma size_basis n d: size (sbasis n.+1 d) = 'C(d + n, d).
 Proof. by rewrite size_map -cardE; apply/card_sorted_tuples. Qed.
 
-Let uniq_basis n d: uniq (sbasis n d).
+Lemma uniq_basis n d: uniq (sbasis n d).
 Proof.
   rewrite map_inj_in_uniq ?enum_uniq // => t1 t2.
   by rewrite !mem_enum; apply/inj_s2m.
@@ -4787,7 +5016,7 @@ Proof.
     \sum_(i < 'C(d + n, d)) (r 0 i) *: 'X_[M i].
   have dhg r: g r \is d.-homog.
     rewrite rpred_sum //= => i _; apply/rpredZ.
-    rewrite dhomogX  basis_cover /M (nth_map t); last first.
+    rewrite dhomogX basis_cover /M (nth_map t); last first.
       by rewrite -cardE card_sorted_tuples.
     by apply/map_f/mem_nth; rewrite -cardE card_sorted_tuples.
   exists (fun r => DHomog (dhg r)); last first.
@@ -4813,11 +5042,11 @@ Proof.
     rewrite mcoeffZ mcoeffX eqxx mulr1 big1 ?addr0 // => m' ne.
     by rewrite mcoeffZ mcoeffX (negbTE ne) mulr0.
   move=> m_notin_b; rewrite big_seq big1 /=.
-    apply/esym/(dhomog_nemdeg_coeff (d := d)).
+    apply/esym/(dhomog_nemf_coeff (d := d)).
       by apply/dhomog_is_dhomog. by rewrite basis_cover.
   move=> m'; apply/contraTeq; rewrite mcoeffZ mcoeffX.
   by case: (m' =P m)=> [->|_]; last rewrite mulr0 eqxx.
-Qed.    
+Qed.
 
 Definition dhomog_vectMixin :=
   VectMixin dhomog_vecaxiom.
