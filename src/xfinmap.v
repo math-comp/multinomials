@@ -1,8 +1,9 @@
 (* -------------------------------------------------------------------- *)
 Require Import ssreflect ssrbool ssrnat eqtype ssrfun seq.
-Require Import choice  path finset finfun fintype bigop.
+Require Import choice  path finset finfun fintype bigop bigenough.
 Require Export finmap.
 
+(* -------------------------------------------------------------------- *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -43,7 +44,6 @@ Lemma big_fset1 (a : I) (F : [fset a] -> R) :
 Proof. by rewrite /index_enum -enumT enum_fset1 big_seq1. Qed.
 End BigFSet.
 
-(* -------------------------------------------------------------------- *)
 Section BigFSetIncl.
 Variables (R : Type) (idx : R) (op : Monoid.com_law idx).
 Variables (T : choiceType) (A B : {fset T}) (F : T -> R).
@@ -56,3 +56,28 @@ Proof. admit. Qed.
 End BigFSetIncl.
 
 Implicit Arguments big_fset_incl [R idx op T A B].
+
+(* -------------------------------------------------------------------- *)
+Module BigEnoughFSet.
+Export BigEnough.
+
+Definition big_rel_fsubset_class K : big_rel_class_of (@fsubset K).
+Proof.
+exists fsubset (fun G => \big[fsetU/fset0]_(g <- G) g)=> [|g s|g1 g2 j] //.
+  by rewrite big_cons fsubsetUl.
+by rewrite big_cons => h; rewrite fsubsetU // h orbT.
+Qed.
+Canonical big_enough_fset K := BigRelOf (big_rel_fsubset_class K).
+
+Ltac fset_big_enough_trans :=
+  match goal with
+  | [leq : is_true (?A `<=` ?B) |- is_true (?X `<=` ?B)] =>
+       apply: fsubset_trans leq; big_enough; olddone
+  end.
+
+Ltac done := do [fset_big_enough_trans|BigEnough.done].
+
+Ltac pose_big_fset K i :=
+  evar (i : {fset K}); suff : closed i; first do
+    [move=> _; instantiate (1 := bigger_than (@fsubset K) _) in (Value of i)].
+End BigEnoughFSet.
