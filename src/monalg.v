@@ -803,8 +803,9 @@ Let fg1mulgz g1 g2 k1 k2 : k2 \notin msupp g2 ->
   << g1@_k1 * g2@_k2 *g (k1 * k2)%M >> = 0.
 Proof. by move/mcoeff_outdom=> ->; rewrite mulr0 monalgU0. Qed.
 
-Lemma fgmullw g1 g2 (d1 d2 : {fset K}) : msupp g1 `<=` d1 -> msupp g2 `<=` d2
-  -> fgmul g1 g2 = \sum_(k1 : d1) \sum_(k2 : d2) g1 *M_[val k1, val k2] g2.
+Lemma fgmullw (d1 d2 : {fset K}) g1 g2 :
+  msupp g1 `<=` d1 -> msupp g2 `<=` d2 -> fgmul g1 g2 =
+    \sum_(k1 : d1) \sum_(k2 : d2) g1 *M_[val k1, val k2] g2.
 Proof.
 move=> le_d1 le_d2; pose F k1 := g1 *Mg_[k1] g2.
 rewrite fgmull (big_fset_incl F le_d1) {}/F /=; last first.
@@ -813,17 +814,18 @@ apply/eq_bigr=> k1 _; rewrite (big_fset_incl fg1mulr le_d2) //.
 by move=> x _ /fg1mulgz.
 Qed.
 
-Lemma fgmulrw g1 g2 (d1 d2 : {fset K}) : msupp g1 `<=` d1 -> msupp g2 `<=` d2
+Lemma fgmulrw (d1 d2 : {fset K}) g1 g2 : msupp g1 `<=` d1 -> msupp g2 `<=` d2
   -> fgmul g1 g2 = \sum_(k2 : d2) \sum_(k1 : d1) g1 *M_[val k1, val k2] g2.
 Proof. by move=> le_d1 le_d2; rewrite (fgmullw le_d1 le_d2) exchange_big. Qed.
 
-Definition fgmullwl {g1 g2} (d1 : {fset K}) (le : msupp g1 `<=` d1) :=
-  @fgmullw g1 g2 _ _ le (fsubset_refl _).
+Definition fgmullwl (d1 : {fset K}) {g1 g2} (le : msupp g1 `<=` d1) :=
+  @fgmullw _ _ g1 g2 le (fsubset_refl _).
 
-Definition fgmulrwl {g1 g2} (d2 : {fset K}) (le : msupp g2 `<=` d2) :=
-  @fgmulrw g1 g2 _ _ (fsubset_refl _) le.
+Definition fgmulrwl (d2 : {fset K}) {g1 g2} (le : msupp g2 `<=` d2) :=
+  @fgmulrw _ _ g1 g2 (fsubset_refl _) le.
 
-Lemma fgmulElw g1 g2 (d1 d2 : {fset K}) k : msupp g1 `<=` d1 -> msupp g2 `<=` d2
+Lemma fgmulElw (d1 d2 : {fset K}) g1 g2 k : 
+    msupp g1 `<=` d1 -> msupp g2 `<=` d2
   -> (fgmul g1 g2)@_k = \sum_(k1 : d1) \sum_(k2 : d2)
         (g1@_(val k1) * g2@_(val k2)) *+ ((val k1 * val k2)%M == k).
 Proof.
@@ -832,7 +834,7 @@ apply/eq_bigr=> k1 _; rewrite raddf_sum /=; apply/eq_bigr=> k2 _.
 by rewrite mcoeffsE.
 Qed.
 
-Lemma fgmulErw g1 g2 (d1 d2 : {fset K}) k : msupp g1 `<=` d1 -> msupp g2 `<=` d2
+Lemma fgmulErw (d1 d2 : {fset K}) g1 g2 k : msupp g1 `<=` d1 -> msupp g2 `<=` d2
   -> (fgmul g1 g2)@_k = \sum_(k2 : d2) \sum_(k1 : d1)
         (g1@_(val k1) * g2@_(val k2)) *+ ((val k1 * val k2)%M == k).
 Proof. by move=> le1 le2; rewrite (fgmulElw _ le1 le2); rewrite exchange_big. Qed.
@@ -843,7 +845,7 @@ Proof. by rewrite fgmull msupp0 big_fset0. Qed.
 Lemma fgmulg0 g : fgmul g 0 = 0.
 Proof. by rewrite fgmulr msupp0 big_fset0. Qed.
 
-Lemma fgmulUg c k g (d : {fset K}) : msupp g `<=` d ->
+Lemma fgmulUg (d : {fset K}) c k g : msupp g `<=` d ->
  fgmul << c *g k >> g =
    \sum_(k' : d) << c * g@_(val k') *g (k * val k')%M >>.
 Proof.
@@ -851,7 +853,7 @@ move=> le; rewrite (fgmullw msuppU_le le) big_fset1 /=.
 by apply/eq_bigr=> /= k' _; rewrite mcoeffUU.
 Qed.
 
-Lemma fgmulgU c k g (d : {fset K}) : msupp g `<=` d ->
+Lemma fgmulgU (d : {fset K}) c k g : msupp g `<=` d ->
  fgmul g << c *g k >> =
    \sum_(k' : d) << g@_(val k') * c *g (val k' * k)%M >>.
 Proof.
@@ -863,15 +865,17 @@ Lemma fgmulUU c1 c2 k1 k2 :
   fgmul << c1 *g k1 >> << c2 *g k2 >> = << c1 * c2 *g (k1 * k2)%M >>.
 Proof. by rewrite (fgmullw msuppU_le msuppU_le) !big_fset1 /= !mcoeffUU. Qed.
 
-Lemma fgmulEl1w {g1 g2} (d1 : {fset K}) : msupp g1 `<=` d1 -> fgmul g1 g2 =
-  \sum_(k1 : d1) fgmul << g1@_(val k1) *g val k1 >> g2.
+Lemma fgmulEl1w (d1 : {fset K}) {g1 g2}  :
+  msupp g1 `<=` d1 -> fgmul g1 g2
+    = \sum_(k1 : d1) fgmul << g1@_(val k1) *g val k1 >> g2.
 Proof.
 move=> le; rewrite (fgmullwl le); apply/eq_bigr=> /= k _.
 by rewrite -fgmulUg // fsubset_refl.
 Qed.
 
-Lemma fgmulEr1w {g1 g2} (d2 : {fset K}) : msupp g2 `<=` d2 -> fgmul g1 g2 =
-  \sum_(k2 : d2) fgmul g1 << g2@_(val k2) *g val k2 >>.
+Lemma fgmulEr1w (d2 : {fset K}) {g1 g2} :
+  msupp g2 `<=` d2 -> fgmul g1 g2
+    = \sum_(k2 : d2) fgmul g1 << g2@_(val k2) *g val k2 >>.
 Proof.
 move=> le; rewrite (fgmulrwl le); apply/eq_bigr=> /= k _.
 by rewrite -fgmulgU // fsubset_refl.
@@ -879,20 +883,18 @@ Qed.
 
 Lemma fgmullUg_is_additive c k : additive (fgmul << c *g k >>).
 Proof.
-move=> g1 g2 /=; rewrite (fgmulUg _ _ (msuppB_le g1 g2)).
-rewrite (fgmulUg _ _ (fsubsetUl _ (msupp g2))).
-rewrite (fgmulUg _ _ (fsubsetUr (msupp g1) _)).
-rewrite -sumrB; apply/eq_bigr=> /= k' _.
-by rewrite mcoeffB -monalgUB mulrBr.
+move=> g1 g2 /=; pose_big_fset K E; rewrite 3?(@fgmulUg E) //.
+  rewrite -sumrB; apply/eq_bigr=> /= k' _.
+  by rewrite mcoeffB -monalgUB mulrBr.
+by close.
 Qed.
 
 Lemma fgmullgU_is_additive c k : additive (fun g => fgmul^~ << c *g k >> g).
 Proof.
-move=> g1 g2 /=; rewrite (fgmulgU _ _ (msuppB_le g1 g2)).
-rewrite (fgmulgU _ _ (fsubsetUl _ (msupp g2))).
-rewrite (fgmulgU _ _ (fsubsetUr (msupp g1) _)).
-rewrite -sumrB; apply/eq_bigr=> /= k' _.
-by rewrite mcoeffB -monalgUB mulrBl.
+move=> g1 g2 /=; pose_big_fset K E; rewrite 3?(@fgmulgU E) //.
+  rewrite -sumrB; apply/eq_bigr=> /= k' _.
+  by rewrite mcoeffB -monalgUB mulrBl.
+by close.
 Qed.
 
 Definition fgmullUg_additive c k := Additive (fgmullUg_is_additive c k).
@@ -907,15 +909,15 @@ move=> g1 g2 g3; pose_big_fset K E.
   transitivity (\sum_(k1 : E) \sum_(k2 : E) \sum_(k3 : E)
     << g1@_(val k1) * g2@_(val k2) * g3@_(val k3) *g
          (val k1 * val k2 * val k3)%M >>).
-  + rewrite (fgmulEl1w (d1 := E)) //; apply/eq_bigr=> /= k1 _.
-    rewrite [X in fgmul _ X](fgmullw (d1 := E) (d2 := E)) //.
+  + rewrite (@fgmulEl1w E) //; apply/eq_bigr=> /= k1 _.
+    rewrite [X in fgmul _ X](@fgmullw E E) //.
     have /= raddf := raddf_sum (fgmullUg_additive g1@_(val k1) (val k1)).
     rewrite raddf; apply/eq_bigr=> /= k2 _; rewrite raddf.
     by apply/eq_bigr=> /= k3 _; rewrite fgmulUU mulrA mulmA.
   2: by close.
 rewrite [LHS](eq_bigr _ (fun _ _ => exchange_big _ _ _ _ _ _)) /=.
-rewrite exchange_big /=; apply/esym; rewrite (@fgmulEr1w _ _ E) //.
-apply/eq_bigr=> /= k3 _; rewrite (@fgmullw g1 _ E E) //.
+rewrite exchange_big /=; apply/esym; rewrite (@fgmulEr1w E) //.
+apply/eq_bigr=> /= k3 _; rewrite (@fgmullw E E g1) //.
 have /= raddf := raddf_sum (fgmullgU_additive g3@_(val k3) (val k3)).
 rewrite raddf; apply/eq_bigr=> /= k1 _; rewrite raddf.
 by apply/eq_bigr=> /= k2 _; rewrite fgmulUU.
@@ -984,7 +986,7 @@ Lemma malgME g1 g2 :
     << g1@_(val k1) * g2@_(val k2) *g (val k1 * val k2)%M >>.
 Proof. by []. Qed.
 
-Lemma malgMEw g1 g2 (d1 d2 : {fset K}) :
+Lemma malgMEw (d1 d2 : {fset K}) g1 g2 :
   msupp g1 `<=` d1 -> msupp g2 `<=` d2 ->
   g1 * g2 = \sum_(k1 : d1) \sum_(k2 : d2)
     << g1@_(val k1) * g2@_(val k2) *g (val k1 * val k2)%M >>.
@@ -1002,13 +1004,13 @@ Lemma mcoeffMr g1 g2 k :
 Proof. by apply/fgmulErw; apply/fsubset_refl. Qed.
 
 (* -------------------------------------------------------------------- *)
-Lemma mcoeffMlw g1 g2 (d1 d2 : {fset K}) k :
+Lemma mcoeffMlw (d1 d2 : {fset K}) g1 g2 k :
   msupp g1 `<=` d1 -> msupp g2 `<=` d2 ->
   (g1 * g2)@_k = \sum_(k1 : d1) \sum_(k2 : d2)
     (g1@_(val k1) * g2@_(val k2)) *+ (val k1 * val k2 == k)%M.
 Proof. by apply/fgmulElw. Qed.
 
-Lemma mcoeffMrw g1 g2 (d1 d2 : {fset K}) k :
+Lemma mcoeffMrw (d1 d2 : {fset K}) g1 g2 k :
   msupp g1 `<=` d1 -> msupp g2 `<=` d2 ->
   (g1 * g2)@_k = \sum_(k2 : d2) \sum_(k1 : d1)
     (g1@_(val k1) * g2@_(val k2)) *+ (val k1 * val k2 == k)%M.
@@ -1065,12 +1067,9 @@ Proof. exact: rmorphM. Qed.
 Lemma mcoeff1g_is_multiplicative :
   multiplicative (mcoeff 1%M : {malg R[K]} -> R).
 Proof.
-split=> [g1 g2|]; rewrite ?malgCK //.
-pose E := 1%M |` (msupp g1 `|` msupp g2).
-have le1: msupp g1 `<=` E by rewrite fsubsetU // fsubsetUl ?orbT.
-have le2: msupp g2 `<=` E by rewrite fsubsetU // fsubsetUr ?orbT.
-have E1: 1%M \in E by rewrite in_fsetU in_fset1 eqxx.
-rewrite (malgMEw le1 le2) (bigD1 (FSetSub E1)) //=.
+split=> [g1 g2|]; rewrite ?malgCK //; pose_big_fset K E.
+have E1: 1%M \in E by by rewrite -fsub1set.
+rewrite (@malgMEw E E) // (bigD1 (FSetSub E1)) //=. 2: by close.
 rewrite (bigD1 (FSetSub E1)) //= mulm1 2!mcoeffD mcoeffUU.
 rewrite !raddf_sum !big1 ?simpm //= => k; rewrite -val_eqE /= => ne1_k.
   rewrite raddf_sum big1 ?mcoeff0 //= => k' _; rewrite mcoeffU.
@@ -1078,7 +1077,7 @@ rewrite !raddf_sum !big1 ?simpm //= => k; rewrite -val_eqE /= => ne1_k.
 by rewrite mcoeffU mul1m (negbTE ne1_k).
 Qed.
 
-Canonical mcoeff1g_rmorphism  := AddRMorphism mcoeff1g_is_multiplicative.
+Canonical mcoeff1g_rmorphism := AddRMorphism mcoeff1g_is_multiplicative.
 End MAlgRingTheory.
 
 (* -------------------------------------------------------------------- *)
@@ -1141,7 +1140,7 @@ Variables (K : choiceType) (G : zmodType) (S : ringType).
 
 Context {f : {additive G -> S}} {h : K -> S}.
 
-Lemma mmapEw g (d : {fset K}) : msupp g `<=` d ->
+Lemma mmapEw (d : {fset K}) g : msupp g `<=` d ->
   g^[f, h] = \sum_(k : d) (f g@_(val k)) * (h (val k)).
 Proof.
 move=> le; pose F k := (f g@_k) * (h k); rewrite mmapE.
@@ -1161,11 +1160,9 @@ Context {f : {additive G -> S}} {h : K -> S}.
 
 Lemma mmap_is_additive : additive (mmap f h).
 Proof.
-move=> g1 g2 /=; rewrite (mmapEw (msuppB_le _ _)).
-rewrite (mmapEw (fsubsetUl _ (msupp g2))).
-rewrite (mmapEw (fsubsetUr (msupp g1) _)).
-rewrite -sumrB; apply/eq_bigr=> k _.
-by rewrite !raddfB /= mulrBl.
+move=> g1 g2 /=; pose_big_fset K E; rewrite 3?(mmapEw (d := E)) //.
+  by rewrite -sumrB; apply/eq_bigr=> k _; rewrite !raddfB /= mulrBl.
+by close.
 Qed.
 
 Canonical mmap_additive := Additive mmap_is_additive.
@@ -1203,15 +1200,13 @@ Hypothesis commr_f: forall g m m', GRing.comm (f g@_m) (h m').
 
 Lemma commr_mmap_is_multiplicative: multiplicative (mmap f h).
 Proof.
-split=> [g1 g2|]; last by rewrite mmap1.
-pose E := msupp g1 `|` msupp g2.
-have [le1 le2]: (msupp g1 `<=` E) /\ (msupp g2 `<=` E).
-  by rewrite !fsubsetU ?fsubset_refl ?simpm.
+split=> [g1 g2|]; [pose_big_fset K E | by rewrite mmap1].
 rewrite [_*_](malgMEw (d1 := E) (d2 := E)) //.
-apply/esym; rewrite 2?(mmapEw (d := E)) // raddf_sum /=.
-rewrite big_distrlr /=; apply/eq_bigr=> k1 _; rewrite raddf_sum /=.
-apply/eq_bigr=> k2 _; rewrite mmapU mmorphM /= rmorphM.
-by rewrite -mulrA [X in _*X=_]mulrA -commr_f !mulrA.
+  apply/esym; rewrite 2?(mmapEw (d := E)) // raddf_sum /=.
+  rewrite big_distrlr /=; apply/eq_bigr=> k1 _; rewrite raddf_sum /=.
+  apply/eq_bigr=> k2 _; rewrite mmapU mmorphM /= rmorphM.
+  by rewrite -mulrA [X in _*X=_]mulrA -commr_f !mulrA.
+by close.
 Qed.
 End CommrMultiplicative.
 
