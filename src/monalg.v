@@ -13,7 +13,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import Monoid GRing.Theory Num.Theory.
+Import Monoid GRing.Theory Num.Theory BigEnoughFSet.
 
 Local Open Scope fset.
 Local Open Scope fmap.
@@ -903,22 +903,16 @@ Proof. by rewrite mcoeffU1 eq_sym. Qed.
 
 Lemma fgmulA : associative fgmul.
 Proof.
-move=> g1 g2 g3; have FE (G : seq {fset K}) :
-  { E : {fset K} | all [pred g | g `<=` E] G }.
-  exists (\big[fsetU/fset0]_(g <- G) g); apply/allP=> /=.
-  move=> g; elim: G=> // a G ih /=; case/orP=> [/eqP->|/ih {ih} ih].
-  by rewrite big_cons fsubsetUl.
-  by rewrite big_cons fsubsetU // ih orbT.
-case: (FE [seq msupp g | g <- [:: g1; g2; g3; fgmul g1 g2; fgmul g2 g3]]).
-move=> E /and5P []/= le1 le2 le3 le12 /andP[le23 _] {FE}.
-transitivity (\sum_(k1 : E) \sum_(k2 : E) \sum_(k3 : E)
-  << g1@_(val k1) * g2@_(val k2) * g3@_(val k3) *g
-       (val k1 * val k2 * val k3)%M >>).
-+ rewrite (fgmulEl1w (d1 := E)) //; apply/eq_bigr=> /= k1 _.
-  rewrite [X in fgmul _ X](fgmullw (d1 := E) (d2 := E)) //.
-  have /= raddf := raddf_sum (fgmullUg_additive g1@_(val k1) (val k1)).
-  rewrite raddf; apply/eq_bigr=> /= k2 _; rewrite raddf.
-  by apply/eq_bigr=> /= k3 _; rewrite fgmulUU mulrA mulmA.
+move=> g1 g2 g3; pose_big_fset K E.
+  transitivity (\sum_(k1 : E) \sum_(k2 : E) \sum_(k3 : E)
+    << g1@_(val k1) * g2@_(val k2) * g3@_(val k3) *g
+         (val k1 * val k2 * val k3)%M >>).
+  + rewrite (fgmulEl1w (d1 := E)) //; apply/eq_bigr=> /= k1 _.
+    rewrite [X in fgmul _ X](fgmullw (d1 := E) (d2 := E)) //.
+    have /= raddf := raddf_sum (fgmullUg_additive g1@_(val k1) (val k1)).
+    rewrite raddf; apply/eq_bigr=> /= k2 _; rewrite raddf.
+    by apply/eq_bigr=> /= k3 _; rewrite fgmulUU mulrA mulmA.
+  2: by close.
 rewrite [LHS](eq_bigr _ (fun _ _ => exchange_big _ _ _ _ _ _)) /=.
 rewrite exchange_big /=; apply/esym; rewrite (@fgmulEr1w _ _ E) //.
 apply/eq_bigr=> /= k3 _; rewrite (@fgmullw g1 _ E E) //.
