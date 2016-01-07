@@ -138,6 +138,8 @@ Reserved Notation "s @_ i"
    (at level 3, i at level 2, left associativity, format "s @_ i").
 Reserved Notation "e .@[ x ]"
   (at level 2, left associativity, format "e .@[ x ]").
+Reserved Notation "e .@[< x >]"
+  (at level 2, left associativity, format "e .@[< x >]").
 Reserved Notation "p \mPo q"
   (at level 50).
 Reserved Notation "x ^[ f ]"
@@ -2903,12 +2905,12 @@ Variable n : nat.
 Variable R : ringType.
 
 Implicit Types p q r : {mpoly R[n]}.
-Implicit Types v : n.-tuple R.
+Implicit Types v : 'I_n -> R.
 
-Definition meval v p := mmap idfun (tnth v) p.
+Definition meval v p := mmap idfun v p.
 
 Lemma mevalE v p : meval v p =
-  \sum_(m <- msupp p) p@_m * (\prod_i (tnth v i)^+(m i)).
+  \sum_(m <- msupp p) p@_m * (\prod_i (v i)^+(m i)).
 Proof. by []. Qed.
 
 Lemma meval_is_additive v : additive (meval v).
@@ -2929,7 +2931,7 @@ Proof. by rewrite /meval mmapC. Qed.
 Lemma meval1 v : meval v 1 = 1.
 Proof. by apply/mevalC. Qed.
 
-Lemma mevalX v i : meval v 'X_i = tnth v i.
+Lemma mevalX v i : meval v 'X_i = v i.
 Proof. by rewrite /meval mmapX mmap1U. Qed.
 
 Lemma meval_is_scalable v : scalable_for *%R (meval v).
@@ -2940,6 +2942,7 @@ Proof. exact: meval_is_scalable. Qed.
 End MEval.
 
 Notation "p .@[ v ]" := (@meval _ _ v p).
+Notation "p .@[< v >]" := (@meval _ _ (nth v) p).
 
 (* -------------------------------------------------------------------- *)
 Section MEvalCom.
@@ -2947,7 +2950,7 @@ Variable n : nat.
 Variable R : comRingType.
 
 Implicit Types p q r : {mpoly R[n]}.
-Implicit Types v : n.-tuple R.
+Implicit Types v : 'I_n -> R.
 
 Lemma meval_is_lrmorphism v : lrmorphism_for *%R (meval v).
 Proof.
@@ -3116,12 +3119,12 @@ Lemma mpolyOverX m : 'X_[m] \in mpolyOver kS.
 Proof. by rewrite qualifE msuppX /= mcoeffX eqxx rpred1. Qed.
 
 Lemma rpred_mhorner :
-  {in mpolyOver kS, forall p (v : n.-tuple R),
-     (all [pred x | x \in kS] v) -> p.@[v] \in kS}.
+  {in mpolyOver kS, forall p (v : 'I_n -> R),
+     [forall i : 'I_n, v i \in kS] -> p.@[v] \in kS}.
 Proof.
 move=> p /mpolyOverP Sp v Sv; rewrite mevalE rpred_sum // => m _.
 rewrite rpredM // rpred_prod //= => /= i _.
-by rewrite rpredX //; move/allP: Sv; apply; apply/mem_tnth.
+by rewrite rpredX //; move/forallP: Sv; apply; apply/mem_tnth.
 Qed.
 End MPolyOverSemiring.
 
@@ -4247,7 +4250,7 @@ Qed.
 
 Lemma mroots_coeff (R : idomainType) n (cs : n.-tuple R) (k : 'I_n.+1) :
     (\prod_(c <- cs) ('X - c%:P))`_(n - k)
-  = (-1)^+k * 's_(n, k).@[cs].
+  = (-1)^+k * 's_(n, k).@[tnth cs].
 Proof.
 pose P := (\prod_(i < n) ('X - ('X_i)%:P) : {poly {mpoly int[n]}}).
 pose f := mmap intr (tnth cs): {mpoly int[n]} -> R.
