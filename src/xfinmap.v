@@ -1,6 +1,8 @@
 (* -------------------------------------------------------------------- *)
-Require Import ssreflect ssrbool ssrnat eqtype ssrfun seq.
-Require Import choice  path finset finfun fintype bigop bigenough.
+(*## From mathcomp *) Require Import ssreflect ssrbool ssrnat eqtype ssrfun.
+(*## From mathcomp *) Require Import choice seq path finset finfun fintype bigop.
+
+Require Import bigenough.
 Require Export finmap.
 
 (* -------------------------------------------------------------------- *)
@@ -52,7 +54,7 @@ Lemma big_fset_incl :
     A `<=` B
   -> (forall x, x \in B -> x \notin A -> F x = idx)
   -> \big[op/idx]_(x : A) F (val x) = \big[op/idx]_(x : B) F (val x).
-Proof. admit. Qed.
+Proof. Admitted.
 End BigFSetIncl.
 
 Implicit Arguments big_fset_incl [R idx op T A B].

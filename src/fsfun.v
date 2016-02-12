@@ -5,8 +5,10 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path choice.
-Require Import finset fintype finfun finmap.
+(*## From mathcomp *) Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
+(*## From mathcomp *) Require Import seq path choice finset fintype finfun.
+
+Require Import finmap.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

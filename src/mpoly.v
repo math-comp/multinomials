@@ -73,10 +73,12 @@
 (* -------------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path choice.
-Require Import finset fintype finfun tuple bigop ssralg ssrint matrix.
-Require Import vector fingroup perm zmodp binomial bigenough poly.
-Require Import ssrcomplements poset freeg.
+(*## From mathcomp *) Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
+(*## From mathcomp *) Require Import seq path choice finset fintype finfun tuple.
+(*## From mathcomp *) Require Import bigop ssralg ssrint matrix vector fingroup.
+(*## From mathcomp *) Require Import perm zmodp binomial poly.
+
+Require Import bigenough ssrcomplements poset freeg.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -747,7 +749,7 @@ Section MPolyDef.
 Variable n : nat.
 Variable R : ringType.
 
-Record mpoly := MPoly of {freeg 'X_{1..n} / R}.
+Inductive mpoly := MPoly of {freeg 'X_{1..n} / R}.
 
 Coercion mpoly_val p := let: MPoly D := p in D.
 

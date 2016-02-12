@@ -1,0 +1,99 @@
+#! /usr/bin/env python
+
+# --------------------------------------------------------------------
+import sys, os, re, subprocess as sp, optparse as op
+
+# --------------------------------------------------------------------
+class Object(object):
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
+
+# --------------------------------------------------------------------
+class Mode(object):
+    Coq84 = 1
+    Coq85 = 2
+
+# --------------------------------------------------------------------
+class CannotGetVersion(Exception):
+    pass
+
+# --------------------------------------------------------------------
+def _detect_coq_version(coqc='coqc'):
+    try:
+        x = sp.check_output([coqc, '--version'])
+        x = (x.splitlines()[:1] or [''])[0]
+        x = re.search(r'\bversion\s+(\S+)', x)
+
+        if x is None: raise CannotGetVersion
+
+        x = x.groups()[0].split('.')
+
+        if len(x) != 2: raise CannotGetVersion
+
+        m = re.search('^(\d+)(\w+)(\d+)$', x[-1])
+        if m is None:
+            x, pl = x, ('', 0)
+        else:
+            x, pl = x[:-1] + [m.group(1)], (m.group(2), int(m.group(3)))
+
+        x = map(int, x)
+
+    except (ValueError, OSError, sp.CalledProcessError):
+        raise CannotGetVersion
+
+    return tuple(x), pl
+
+# ---------------------------------------------------------------------
+PFROM_RE = r'\bFrom\s+(?P<w>\S+)'
+CFROM_P  = (r'\(\*\s*##\s*', r'\s*\*\)')
+CFROM_RE = r'(?P<cb>%s)?%s(?P<ce>(?(1)%s)?)\s*' \
+             % (CFROM_P[0], PFROM_RE, CFROM_P[1])
+
+def _fix_coq_script(fname, mode = Mode.Coq85):
+    with open(fname, 'r') as stream:
+        contents = stream.read()
+
+    def _cb(m):
+        mo = Object(**m.groupdict())
+
+        if mode == Mode.Coq84:
+            if mo.cb is not None:
+                return m.group(0)
+            return '(*## From %s *) ' % (mo.w,)
+
+        if mode == Mode.Coq85:
+            if mo.cb is None:
+                return m.group(0)
+            return 'From %s ' % (mo.w,)
+
+        assert False
+
+    contents = re.sub(CFROM_RE, _cb, contents)
+
+    with open(fname, 'w') as stream:
+        stream.write(contents)
+
+# --------------------------------------------------------------------
+def _main():
+    oparser = op.OptionParser()
+    oparser.add_option \
+        ('-c', '--coqc',
+         dest     = 'coqc',
+         metavar  = 'COQC',
+         default  = 'coqc',
+         help     = 'use COQC as Coq compiler')
+
+    (options, args) = oparser.parse_args()
+
+    if options.coqc == '':
+        options.coqc = 'coqc'
+
+    coqv = _detect_coq_version(coqc = options.coqc)
+    mode = Mode.Coq84 if coqv[0] < (8, 5) else Mode.Coq85
+
+    for fname in args:
+        _fix_coq_script(fname, mode)
+
+# --------------------------------------------------------------------
+if __name__ == '__main__':
+    _main()

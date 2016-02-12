@@ -1,5 +1,7 @@
 (* (c) Copyright Microsoft Corporation and Inria. All rights reserved. *)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype.
+
+(*## From mathcomp *) Require Import ssreflect ssrfun ssrbool eqtype.
+(*## From mathcomp *) Require Import ssrnat seq choice fintype.
 
 (****************************************************************************)
 (* This is a small library to do epsilon - N reasonning.                    *)

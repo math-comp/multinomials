@@ -4,8 +4,9 @@
 .PHONY: all config build clean distclean __always__
 .SUFFIXES:
 
-TOP     = $(dir $(lastword $(MAKEFILE_LIST)))
-COQMAKE = $(MAKE) -f Makefile.coq
+TOP     := $(dir $(lastword $(MAKEFILE_LIST)))
+COQMAKE := $(MAKE) -f Makefile.coq
+COQC    ?= $(COQBIN)coqc
 
 # --------------------------------------------------------------------
 all: config build

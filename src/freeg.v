@@ -23,8 +23,9 @@
 (***********************************************************************)
 
 (* -------------------------------------------------------------------- *)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype.
-Require Import bigop ssralg ssrnum ssrint generic_quotient.
+(*## From mathcomp *) Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
+(*## From mathcomp *) Require Import seq choice fintype bigop ssralg ssrnum ssrint.
+(*## From mathcomp *) Require Import generic_quotient.
 
 Import GRing.Theory.
 Import Num.Theory.
@@ -85,7 +86,7 @@ Module FreegDefs.
     Proof. by move=> D; apply reduced_uniq; apply prefreeg_reduced. Qed.
 
     Canonical prefreeg_subType :=
-      [subType for seq_of_prefreeg by prefreeg_rect].
+      [subType for seq_of_prefreeg].
 
     Definition prefreeg_eqMixin := Eval hnf in [eqMixin of prefreeg by <:].
     Canonical  prefreeg_eqType  := Eval hnf in EqType _ prefreeg_eqMixin.
