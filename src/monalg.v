@@ -5,9 +5,9 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-(*## From mathcomp *) Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
-(*## From mathcomp *) Require Import seq path choice finset fintype finfun.
-(*## From mathcomp *) Require Import tuple bigop ssralg ssrint ssrnum.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
+From mathcomp Require Import seq path choice finset fintype finfun.
+From mathcomp Require Import tuple bigop ssralg ssrint ssrnum.
 
 Require Import xfinmap fsfun.
 

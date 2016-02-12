@@ -5,8 +5,8 @@
 (* License CeCILL-B                                                      *)
 (*************************************************************************)
 
-(*## From mathcomp *) Require Import ssreflect ssrbool ssrnat eqtype ssrfun seq.
-(*## From mathcomp *) Require Import choice  path finset finfun fintype bigop.
+From mathcomp Require Import ssreflect ssrbool ssrnat eqtype ssrfun seq.
+From mathcomp Require Import choice  path finset finfun fintype bigop.
 
 (*****************************************************************************)
 (* This file provides a representation of finitely supported maps where      *)

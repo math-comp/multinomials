@@ -5,9 +5,9 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-(*## From mathcomp *) Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
-(*## From mathcomp *) Require Import seq path choice finset fintype finfun.
-(*## From mathcomp *) Require Import tuple bigop ssralg.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
+From mathcomp Require Import seq path choice finset fintype finfun.
+From mathcomp Require Import tuple bigop ssralg.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

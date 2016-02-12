@@ -23,9 +23,9 @@
 (***********************************************************************)
 
 (* -------------------------------------------------------------------- *)
-(*## From mathcomp *) Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
-(*## From mathcomp *) Require Import seq choice fintype bigop ssralg ssrnum ssrint.
-(*## From mathcomp *) Require Import generic_quotient.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
+From mathcomp Require Import seq choice fintype bigop ssralg ssrnum ssrint.
+From mathcomp Require Import generic_quotient.
 
 Import GRing.Theory.
 Import Num.Theory.
