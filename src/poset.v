@@ -626,3 +626,88 @@ Section BigMaxTheory.
       by move=> x /andP []; apply/leFm.
   Qed.
 End BigMaxTheory.
+
+
+(* -------------------------------------------------------------------- *)
+Section Min.
+  Context {T : posetType}.
+
+  Implicit Types x y z : T.
+
+  Definition mino x y := if x < y then x else y.
+
+End Min.
+
+(* -------------------------------------------------------------------- *)
+Section MinTheory.
+  Variable T : cpoType.
+
+  Hypothesis total: total (@le T).
+
+  Local Notation min := (@mino T) (only parsing).
+
+  Lemma minoC: commutative min.
+  Proof.
+    move=> x y; rewrite /mino lttNge // leo_eqVlt.
+    by case: eqP=> [->|_] /=; [rewrite ltoo | case: (_ < _)].
+  Qed.
+
+  Lemma minoA: associative min.
+  Proof.
+    move=> x y z; rewrite /mino; case: (boolP (y < z))=> c_yz.
+      case: (boolP (x < y))=> c_xy; rewrite ?c_yz //.
+      by rewrite  (lto_trans c_xy c_yz).
+    case: (boolP (x < y))=> c_xy; rewrite ?(negbTE c_yz) //.
+    rewrite lttNge //; move: c_xy c_yz; rewrite -!letNgt //.
+    by move=> h /leo_trans=> ->.
+  Qed.
+
+  Lemma minoAC: right_commutative min.
+  Proof. by move=> x y z; rewrite -!minoA [mino z _]minoC. Qed.
+
+  Lemma minoCA: left_commutative min.
+  Proof. by move=> x y z; rewrite !minoA [mino y _]minoC. Qed.
+
+  Lemma minoACA : interchange min min.
+  Proof. by move=> x y z t; rewrite -!minoA [mino y _]minoCA. Qed.
+
+  Lemma mino_idPr {x y} : reflect (min x y = y) (y <= x).
+  Proof.
+    apply: (iffP idP)=> [le_yx|].
+      by rewrite /mino lttNge // le_yx.
+    move=> eq_min; rewrite letNgt //; apply/negP.
+    rewrite lto_neqAle; case/andP=> ne_yx le_yx.
+    move: eq_min; rewrite /mino lto_neqAle ne_yx le_yx /=.
+    by have/eqP := ne_yx.
+  Qed.
+
+  Lemma mino_idPl {x y} : reflect (min x y = x) (x <= y).
+  Proof. by rewrite minoC; apply/mino_idPr. Qed.
+
+  Lemma minoo: idempotent min.
+  Proof. by move=> x; apply/mino_idPl. Qed.
+
+  Lemma geo_min x y1 y2: (min y1 y2 <= x) = (y1 <= x) || (y2 <= x).
+  Proof.
+    without loss le_y21: y1 y2 / y2 <= y1.
+      by case/orP: (total y2 y1) => le_y12; last rewrite minoC orbC; apply.
+    by rewrite (mino_idPr le_y21) orb_idl // => /(leo_trans _)->.
+  Qed.
+
+  Lemma gto_min x y1 y2: (min y1 y2 < x) = (y1 < x) || (y2 < x).
+  Proof.
+    without loss le_y21: y1 y2 / y2 <= y1.
+      by case/orP: (total y2 y1) => le_y12; last rewrite minoC orbC; apply.
+    by rewrite (mino_idPr le_y21) orb_idl // => /(leo_lto_trans _)->.
+  Qed.
+
+  Lemma geo_minl x y: min x y <= x. Proof. by rewrite geo_min leoo. Qed.
+  Lemma geo_minr x y: min x y <= y. Proof. by rewrite minoC geo_minl. Qed.
+
+  Lemma lto_min x y1 y2: (x < min y1 y2) = (x < y1) && (x < y2).
+  Proof. by rewrite !lttNge // geo_min negb_or. Qed.
+
+  Lemma leo_min x y1 y2: (x <= min y1 y2) = (x <= y1) && (x <= y2).
+  Proof. by rewrite letNgt // gto_min negb_or -!letNgt. Qed.
+End MinTheory.  
+
