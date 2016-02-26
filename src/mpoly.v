@@ -27,6 +27,7 @@
 (* 0, 'U_i, m1 + m2,  == 'X_{1..n} is equipped with a semi-group structure,   *)
 (* m1 - m2, m *+ n, ...  all operations being point-wise. The substraction    *)
 (*                       is truncated when (m1 <= m2)%MM does not hold.       *)
+(*      mlcm m1 m2    == the monomial that is the least common multiple       *)
 (*       {mpoly R[n]} == the type of multivariate polynomials in n variables  *)
 (*                       and with coefficients of type R represented as       *)
 (*                       {free 'X_{1..n} / R}, i.e. as a formal sum over      *)
@@ -50,6 +51,9 @@
 (*            mlead p == the leading monomial of p; this is the maximum       *)
 (*                       monomial of p for the degrevlex monimial ordering.   *)
 (*                       mlead p defaults to 0%MM when p is 0.                *)
+(*            mlast p == the smallest non-zero monomial of p for the          *)
+(*                         degrevlex monimial ordering.                       *)
+(*                       mlast p defaults to 0%MM when p is 0.                *)
 (*           mleadc p == the coefficient of the highest monomial in p;        *)
 (*                       this is a notation for p@_(mlead p).                 *)
 (* p \is a mpolyOver S <=> the coefficients of p satisfy S; S should have a   *)
@@ -660,6 +664,16 @@ apply: (iffP idP) => [/ltxP|].
    by apply/h1. by rewrite ltnP; apply/h2.
 Qed.
 
+Lemma lem_leo m1 m2 : (m1 <= m2)%MM -> (m1 <= m2)%O.
+Proof. by move=> ml; rewrite -(submK ml) -{1}[m1]add0m lem_add // le0o. Qed.
+
+Lemma lem_addr m1 m2 : (m1 <= m1 + m2)%MM.
+Proof. by apply/forallP=> /= i; rewrite mnmDE leq_addr. Qed.
+
+Lemma lem_addl m1 m2 : (m2 <= m1 + m2)%MM.
+Proof. by apply/forallP=> /= i; rewrite mnmDE leq_addl. Qed.
+
+
 Section WF.
 Variable P : 'X_{1..n} -> Type.
 
@@ -678,8 +692,14 @@ move=> Q {ih} ih x; elim: x {-2}x (leqnn x).
 move=> k wih l le_l_Sk; apply/ih=> y; rewrite ltnP=> lt_yl.
 by apply/wih; have := leq_trans lt_yl le_l_Sk; rewrite ltnS.
 Qed.
+
 End WF.
+
+Lemma ltom_wf : well_founded (@lt multinom_posetType).
+Proof.  by apply: ltmwf=> m1 IH; apply: Acc_intro => m2 /IH. Qed.
+
 End MultinomOrder.
+
 
 Lemma poset_lem_total n: @total [posetType of 'X_{1..n}] <=%O.
 Proof. by apply/lem_total. Qed.
@@ -743,6 +763,43 @@ Canonical bmnm_finMixin   := Eval hnf in FinMixin bmnm_enumP.
 Canonical bmnm_finType    := Eval hnf in FinType 'X_{1..n < b} bmnm_finMixin.
 Canonical bmnm_subFinType := Eval hnf in [subFinType of 'X_{1..n < b}].
 End FinDegBound.
+
+Section Mlcm.
+
+Variable n : nat.
+Implicit Types m : 'X_{1..n}.
+
+Definition mlcm m1 m2 := [multinom (maxn (m1 i) (m2 i)) | i < n].
+
+Lemma mlcmC : commutative mlcm.
+Proof.
+by move=> m1 m2; apply/mnmP=> i; rewrite /mlcm /= !mnmE maxnC.
+Qed.
+
+Lemma mlc0m : left_id 0%MM mlcm.
+Proof. by move=> m; apply/mnmP=> i; rewrite /mlcm /= !mnmE max0n. Qed.
+
+Lemma mlcm0 : right_id 0%MM mlcm.
+Proof. by move=> m; rewrite mlcmC mlc0m. Qed.
+
+Lemma mlcmE m1 m2 : mlcm m1 m2 = (m1 + (m2 - m1))%MM.
+Proof. by apply/mnmP=> i; rewrite /mlcm /= !mnmE maxnE. Qed.
+
+Lemma lem_mlcm m m1 m2 : (mlcm m1 m2 <= m)%MM = (m1 <= m)%MM && (m2 <= m)%MM.
+Proof.
+apply/forallP/andP => [H|[/forallP H1 /forallP H2] i]; first split.
+- by apply/forallP=> i; apply: leq_trans (H i); rewrite mnmE leq_maxl.
+- by apply/forallP=> i; apply: leq_trans (H i); rewrite mnmE leq_maxr.
+by rewrite mnmE geq_max H1 H2.
+Qed.
+
+Lemma lem_mlcml m1 m2 : (m1 <= mlcm m1 m2)%MM.
+Proof. by apply/forallP=> i; rewrite /mlcm /= !mnmE leq_maxl. Qed.
+
+Lemma lem_mlcmr m1 m2 : (m2 <= mlcm m1 m2)%MM.
+Proof. by apply/forallP=> i; rewrite /mlcm /= !mnmE leq_maxr. Qed.
+
+End Mlcm.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyDef.
@@ -2244,6 +2301,21 @@ rewrite -mleadcZ mcoeff_eq0 negbK => ltm /msupp_le_mlead lem.
 by move: (lto_leo_trans ltm lem); rewrite ltoo.
 Qed.
 
+Lemma ltm_mleadD p (q := p - p@_(mlead p) *: 'X_[mlead p]) : 
+    p != 0 -> q != 0 ->  (mlead q < mlead p)%O.
+Proof.
+move=> Zp Zq.
+have : mlead q \in (rem (mlead p) (msupp p)).
+  by rewrite -(perm_eq_mem (msupp_rem p _)) // mlead_supp.
+rewrite (rem_filter _ (msupp_uniq p)) mem_filter /= => /andP[H].
+have : (mlead q <= mlead p)%O.
+  apply: leo_trans (mleadB_le _ _) _.
+  rewrite geo_max; last by exact: lem_total.
+  rewrite leo_refl /= (leo_trans (mleadZ_le _ _) _) //.
+  by rewrite mleadXm leo_refl.
+by rewrite leo_eqVlt (negPf H).
+Qed.
+
 Lemma msizeZ_le (p : {mpoly R[n]}) c : msize (c *: p) <= msize p.
 Proof. by apply/mmeasureZ_le. Qed.
 
@@ -2270,6 +2342,68 @@ Qed.
 End MPolyLead.
 
 Notation mleadc p := (p@_(mlead p)).
+
+
+(* -------------------------------------------------------------------- *)
+Section MPolyLast.
+
+Variable n : nat.
+Variable R : ringType.
+
+(* Last element in a polynomial *)
+Definition mlast (p : {mpoly R[n]}) : 'X_{1..n} :=
+  \big[@mino _/(head 0%MM (msupp p))]_(m <- msupp p) m.
+
+Lemma mlast0 : mlast 0 = 0%MM.
+Proof. by rewrite /mlast msupp0 big_nil. Qed.
+
+Lemma mlast_supp p : p != 0 -> mlast p \in msupp p.
+Proof.
+move/mlead_supp; rewrite /mlast; case: msupp=> //= a l _.
+rewrite big_cons.
+elim: l a => //= [a|a l IH a1].
+  by rewrite big_nil minoo // inE eqxx.
+rewrite big_cons minoCA; last by exact: lem_total.
+rewrite {1}/mino; case: (_ < _)%O; first by rewrite !inE orbC eqxx.
+move: (IH a1); rewrite !inE => /orP[/eqP->|->]; rewrite ?eqxx //=.
+by rewrite !orbT.
+Qed.
+
+Lemma mlast_leo m p : m \in msupp p -> (mlast p <= m)%O.
+Proof.
+rewrite /mlast; case: msupp; rewrite //= => m1 l.
+rewrite big_cons !inE => /orP[/eqP<-|].
+  by apply: geo_minl.
+elim: l => //= m2 l IH; rewrite inE big_cons=> /orP[/eqP<-|/IH H].
+  by apply: leo_trans (geo_minr _ _ _) (geo_minl _ _ _).
+rewrite minoCA; last exact: lem_total.
+by apply: leo_trans (geo_minr _ _ _) H.
+Qed.
+
+
+Lemma mlastE (p : {mpoly R[n]}) (m  : 'X_{1..n}) :
+   m \in msupp p -> (forall m1 , m1 \in msupp p -> (m <= m1)%O) -> mlast p = m.
+Proof.
+move=> Hm Pm; apply/eqP; rewrite eqo_leq mlast_leo //=.
+rewrite /mlast.
+have: (m <= head 0%MM (msupp p))%O.
+  case: msupp Hm Pm => a l; rewrite  //= inE => /orP[/eqP->|H->] //.
+  by rewrite inE eqxx.
+elim: msupp (head _ _) Pm => [a|/= a l IH b H Lm]; first by rewrite big_nil => //.
+rewrite big_cons {1}/mino; case: (_ < _)%O; first by apply: H; rewrite !inE eqxx.
+by apply: IH => // m1 Hm1; apply H; rewrite inE orbC Hm1.
+Qed.
+
+  
+Lemma mcoeff_lt_mlast (p : {mpoly R[n]}) m : (m < mlast p)%O -> p@_m = 0.
+Proof.
+move=> Lm; have [/mlast_leo/leo_lto_trans/(_ Lm)|] := boolP (m \in msupp p).
+  by rewrite ltoo.
+by rewrite mcoeff_msupp negbK => /eqP.
+Qed.
+
+End MPolyLast.
+
 
 (* -------------------------------------------------------------------- *)
 Section MPoly0.
@@ -3180,6 +3314,13 @@ move=> nz_c; have [->|nz_p] := eqVneq p 0.
 by rewrite mleadZ_proper // mulf_neq0 // mleadc_eq0.
 Qed.
 
+Lemma mleadcZE a p : mleadc (a *: p) = a * mleadc p.
+Proof.
+have [/eqP->|Za] := boolP (a == 0).
+  by rewrite scale0r mleadc0 mul0r.
+by rewrite mleadZ // mcoeffZ.
+Qed.
+
 Lemma msizeM p q : p != 0 -> q != 0 ->
   msize (p * q) = (msize p + msize q).-1.
 Proof.
@@ -3191,6 +3332,13 @@ Lemma msuppZ c p : c != 0 -> perm_eq (msupp (c *: p)) (msupp p).
 Proof.
 move=> nz_c; apply/uniq_perm_eq=> // m.
 by rewrite !mcoeff_msupp mcoeffZ mulf_eq0 (negbTE nz_c).
+Qed.
+
+Lemma mscalerI a p : (a *: p == 0) = (a == 0) || (p == 0).
+Proof. 
+have [/eqP->| /(msuppZ p)/perm_eq_size] := boolP (a == 0).
+  by rewrite scale0r eqxx.
+by rewrite -!msupp_eq0; case: msupp => [|a1 l1]; case: msupp.
 Qed.
 
 Lemma mmeasureZ c p mf : c != 0 -> mmeasure mf (c *: p) = mmeasure mf p.
