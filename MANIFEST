@@ -12,3 +12,4 @@ src/*.v
 # Build scripts
 scripts/install-sh
 scripts/distribution.py
+scripts/coq-compat
