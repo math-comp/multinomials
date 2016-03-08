@@ -3,6 +3,7 @@
 # (c) Copyright 2012--2014 - Pierre-Yves Strub
 
 # --------------------------------------------------------------------
+from __future__ import print_function
 import sys, os, re, itertools as it, subprocess as sp
 import glob, fnmatch
 
@@ -12,12 +13,12 @@ INSTALL = os.path.join(MYROOT, 'install-sh')
 
 # --------------------------------------------------------------------
 def _error(message):
-    print >>sys.stderr, "%s: %s" % (sys.argv[0], message)
+    print("%s: %s" % (sys.argv[0], message), file=sys.stderr)
     exit(1)
 
 # --------------------------------------------------------------------
 def _exec(command):
-    print >>sys.stderr, ' '.join(command)
+    print(' '.join(command), file=sys.stderr)
     sp.check_call(command)
 
 # --------------------------------------------------------------------
@@ -71,7 +72,7 @@ def _exclude(x):
 # --------------------------------------------------------------------
 def _main():
     if len(sys.argv)-1 != 2:
-        print >>sys.stderr, "Usage: %s [dist-dir] [MANIFEST]" % (sys.argv[0])
+        print("Usage: %s [dist-dir] [MANIFEST]" % (sys.argv[0]), file=sys.stderr)
         exit (1)
 
     distdir  = sys.argv[1]
@@ -106,7 +107,7 @@ def _main():
             xexec = os.access(x, os.X_OK)
             bygroup.setdefault(xdir, []).append((xbase, xexec))
 
-    for x, v in bygroup.iteritems():
+    for x, v in bygroup.items():
         install_dir(distdir, x)
         install_files(distdir, x, v)
 

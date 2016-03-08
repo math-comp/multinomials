@@ -22,15 +22,15 @@ def _detect_coq_version(coqc='coqc'):
     try:
         x = sp.check_output([coqc, '--version'])
         x = (x.splitlines()[:1] or [''])[0]
-        x = re.search(r'\bversion\s+(\S+)', x)
+        x = re.search(br'\bversion\s+(\S+)', x)
 
         if x is None: raise CannotGetVersion
 
-        x = x.groups()[0].split('.')
+        x = x.groups()[0].split(b'.')
 
         if len(x) != 2: raise CannotGetVersion
 
-        m = re.search('^(\d+)(\w+)(\d+)$', x[-1])
+        m = re.search(b'^(\d+)(\w+)(\d+)$', x[-1])
         if m is None:
             x, pl = x, ('', 0)
         else:
