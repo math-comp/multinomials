@@ -486,7 +486,7 @@ Proof. by []. Qed.
 
 (* -------------------------------------------------------------------- *)
 Lemma mcoeff_is_additive k: additive (mcoeff k).
-Proof. by move=> g1 g2 /=; rewrite !fgE. Qed.
+Proof. by move=> g1 g2 /=; rewrite fgaddE fgoppE. (* !fgE *) Qed.
 
 Canonical mcoeff_additive k := Additive (mcoeff_is_additive k).
 

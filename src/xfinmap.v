@@ -24,12 +24,12 @@ Lemma enum_fset0 (T : choiceType) :
 Proof. by rewrite enumT unlock. Qed.
 
 Lemma enum_fset1 (T : choiceType) (x : T) :
-  enum [finType of [fset x]] = [:: (FSetSub (fset11 x))].
+  enum [finType of [fset x]] = [:: [`fset11 x]].
 Proof.
-rewrite enumT unlock /=; have ->//=: sort_keys [:: x] = [:: x].
-  by apply/perm_eq_small/uniq_perm_eq=> // y; rewrite sort_keysE.
-apply/eqP; rewrite insubT ?in_fset1 //= => h.
-by rewrite eqE /= andbT -val_eqE.
+apply/perm_eq_small=> //; apply/uniq_perm_eq => //.
+  by apply/enum_uniq.
+case=> [y hy]; rewrite mem_seq1 mem_enum /in_mem /=.
+by rewrite eqE /=; rewrite in_fset1 in hy.
 Qed.
 
 (* -------------------------------------------------------------------- *)

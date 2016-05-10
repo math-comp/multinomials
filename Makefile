@@ -5,6 +5,8 @@ NAME     := SsrMultinomials
 SUBDIRS  :=
 COQFILES := \
 	finmap/finmap.v \
+	finmap/lattice.v \
+	finmap/multiset.v \
 	src/xfinmap.v \
 	src/ssrcomplements.v \
 	src/fsfun.v \

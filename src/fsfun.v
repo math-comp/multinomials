@@ -94,14 +94,14 @@ Section MkFsfun.
 Variable (K : choiceType) (T : eqType) (x : T).
 
 Definition fsfun_reduce (g : {fmap K -> T}) : {fmap K -> T} :=
-  g.[\ [fset k : domf g | g k == x]].
+  g.[\ [fsetval k : domf g | g k == x]].
 
 Lemma canonical_fsfun_reduce (g : {fmap K -> T}) :
   canonical_fsfun x (fsfun_reduce g).
 Proof.
 apply/forallP=> [[y y_in_rg]]; have := y_in_rg; rewrite mem_remf.
 case/andP=> [nz_gy y_in_g]; rewrite getf_restrict //.
-by apply/contra: nz_gy=> z_gy; rewrite in_FSet /=.
+by apply/contra: nz_gy=> z_gy; apply/imfsetP; exists [` y_in_g].
 Qed.
 
 Lemma canonical_fsfunK (g : {fmap K -> T}) :
@@ -183,12 +183,12 @@ by apply/canonical_getfI; apply/canonical_fsfun_reduce.
 Qed.
 
 Lemma domf_fsfunE (g : {fmap K -> T}) :
-  domf [fsfun g / x] = [fset k : domf g | g k != x].
+  domf [fsfun g / x] = [fsetval k : domf g | g k != x].
 Proof.
 rewrite /finMap_of_fsfun mkfsfunK domf_rem; apply/fsetP.
 move=> k; rewrite in_fsetD andbC; case: (boolP (_ \in _))=> /=.
   move=> k_in_g; have ->: k = val (FSetSub k_in_g) by [].
-  by rewrite !val_in_FSet /= -!topredE /=.
+  by rewrite !val_in_fset /= -!topredE /=.
 move=> k_notin_g; apply/esym/imfsetP=> h; move: h k_notin_g.
 by case=> [[y]] y_in_g /= _ -> /negP.
 Qed.
@@ -198,7 +198,7 @@ Lemma fsfun_eqdfl (f : {fsfun K -> T / x}) y :
 Proof.
 elim/fsfunW: f => g; rewrite fsfun_fnd domf_fsfunE.
 case: fndP=> yf /=; first have: y = val (FSetSub yf) by [].
-  by move=> {2}->; rewrite val_in_FSet -topredE /= negbK.
+  by move=> {2}->; rewrite val_in_fset -topredE /= negbK.
 rewrite eqxx; apply/esym/imfsetP=> h; case: h yf.
 by case=> /= z ? _ -> /negP.
 Qed.

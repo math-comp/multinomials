@@ -2531,12 +2531,12 @@ by rewrite addmC -scalerDl natrD.
 Qed.
 
 Lemma mderiv_comm i j p : p^`M(i)^`M(j) = p^`M(j)^`M(i).
-Proof.
+Proof.                          (* FIXME: f_equal *)
 pose_big_enough k; first pose mderivE := (mderivwE k).
   rewrite ![p^`M(_)]mderivE // !raddf_sum /=; apply/eq_bigr.
   move=> l _; rewrite !mderivZ !mderivX !scalerA.
   rewrite !submDA addmC -!commr_nat -!mulrA -!natrM.
-  congr (_ * _%:R *: _); rewrite !mnmBE !mnm1E eq_sym.
+  f_equal; congr (_ * _%:R); rewrite !mnmBE !mnm1E eq_sym.
   by case: eqP=> [->//|_] /=; rewrite !subn0 mulnC.
 by close.
 Qed.
