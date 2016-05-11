@@ -9,7 +9,6 @@ COQFILES := \
 	finmap/multiset.v \
 	src/xfinmap.v \
 	src/ssrcomplements.v \
-	src/fsfun.v \
 	src/monalg.v \
 	src/poset.v \
 	src/freeg.v \

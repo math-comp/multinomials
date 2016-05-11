@@ -9,7 +9,7 @@ From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
 From mathcomp Require Import seq path choice finset fintype finfun.
 From mathcomp Require Import tuple bigop ssralg ssrint ssrnum.
 
-Require Import xfinmap fsfun.
+Require Import xfinmap.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -43,7 +43,9 @@ Reserved Notation "{ 'malg' K }"
 Reserved Notation "[ 'malg' g ]"
   (at level 0, g at level 2, format "[ 'malg'  g ]").
 Reserved Notation "[ 'malg' x : aT => E ]"
-  (at level 0, x ident, format "[ 'malg'  x : aT  =>  E ]").
+  (at level 0, x ident, format "[ 'malg'  x  :  aT  =>  E ]").
+Reserved Notation "[ 'malg' x => E ]"
+  (at level 0, x ident, format "[ 'malg'  x  =>  E ]").
 Reserved Notation "{ 'mpoly' T [ n ] }"
   (at level 0, T, n at level 2, format "{ 'mpoly'  T [ n ] }").
 Reserved Notation "<< z *p k >>"
@@ -284,15 +286,20 @@ Proof. by case: f=> [? []]. Qed.
 End MMorphismTheory.
 
 (* -------------------------------------------------------------------- *)
+Reserved Notation "{ 'finsfun' K -> T / x }"
+  (at level 0, K, T, x at level 2, format "{ 'finsfun'  K  ->  T  /  x }").
+
+Notation "{ 'finsfun' K -> T / x }" := (@finsfun K T (fun _ => x)).
+
 Section MalgDef.
 Variable (K : choiceType) (G : zmodType).
 
-Inductive malg : predArgType := Malg of {fsfun K -> G / 0}.
+Inductive malg : predArgType := Malg of {finsfun K -> G / 0}.
 
 Definition malg_val g := let: Malg g := g in g.
 Definition malg_of (_ : phant K) (_ : phant G) := malg.
 
-Coercion malg_val : malg >-> fsfun_of.
+Coercion malg_val : malg >-> finsfun.
 
 Fact malg_key : unit. Proof. by []. Qed.
 
@@ -324,18 +331,20 @@ End MalgCanonicals.
 Section MkMalg.
 Variable (K : choiceType) (G : zmodType).
 
-Definition mkmalg (g : {fsfun K -> G / 0}) : {malg G[K]} :=
+Definition mkmalg (g : {finsfun K -> G / 0}) : {malg G[K]} :=
   nosimpl (Malg g).
 
 Definition mkmalgU (k : K) (x : G) :=
-  nosimpl (mkmalg [fsfun [fmap].[k <- x] / 0]).
+  nosimpl (mkmalg [finsfun y => [fmap].[k <- x] y]).
 End MkMalg.
 
 (* -------------------------------------------------------------------- *)
 Notation "[ 'malg' g ]"
-  := (mkmalg [fsfun g / 0]) : ring_scope.
+  := (mkmalg g) : ring_scope.
 Notation "[ 'malg' x : aT => E ]"
-  := (mkmalg [fsfun [fmap x : aT => E] / 0]) : ring_scope.
+  := (mkmalg [finsfun x : aT => E]) : ring_scope.
+Notation "[ 'malg' x => E ]"
+  := (mkmalg [finsfun x => E]) : ring_scope.
 Notation "<< z *g k >>"
   := (mkmalgU k z).
 Notation "<< k >>"
@@ -346,10 +355,10 @@ Section MalgBaseOp.
 Variable (K : choiceType) (G : zmodType).
 
 Definition msupp (g : {malg G[K]}) :=
-  nosimpl (domf (malg_val g)).
+  nosimpl (finsupp g).
 
 Definition mcoeff (x : K) (g : {malg G[K]}) :=
-  nosimpl (malg_val g x).
+  nosimpl (g x).
 End MalgBaseOp.
 
 Notation "g @_ k" := (mcoeff k g).
@@ -371,8 +380,8 @@ Notation "c %:MP" := (@malgC _ _ c).
 Section MalgTheory.
 Variable (K : choiceType) (G : zmodType).
 
-Lemma mkmalgK (g : {fsfun K -> G / 0}) :
-  mkmalg g = g :> {fsfun _ -> _ / _}.
+Lemma mkmalgK (g : {finsfun K -> G / 0}) :
+  mkmalg g = g :> {finsfun _ -> _ / _}.
 Proof. by []. Qed.
 
 Lemma malgP (g1 g2 : {malg G[K]}) :
@@ -380,21 +389,21 @@ Lemma malgP (g1 g2 : {malg G[K]}) :
 Proof.
 apply: (iffP eqP)=> [->//|]; move: g1 g2.
 case=> [g1] [g2] h; apply/eqP; rewrite -val_eqE /=.
-by apply/fsfunP=> k; move/(_ k): h.
+by apply/eqP/finsfunP=> k; move/(_ k): h.
 Qed.
 
 Lemma mcoeff_fnd (g : {fmap K -> G}) k :
-  (mkmalg [fsfun g / 0])@_k = odflt 0 g.[?k].
-Proof. by apply/fsfun_fnd. Qed.
+  [malg x => g x]@_k = odflt 0 g.[?k].
+Proof. by apply/finsfun_ffun. Qed.
 
 Lemma mcoeffE (domf : {fset K}) (E : K -> G) k :
     [malg k : domf => E (val k)]@_k
   = if k \in domf then E k else 0.
-Proof. by apply/fsfunE. Qed.
+Proof. by apply/finsfun_fun. Qed.
 
 Lemma mcoeff_eq0 (g : {malg G[K]}) (k : K) :
   (g@_k == 0) = (k \notin msupp g).
-Proof. by apply/fsfun_eqdfl. Qed.
+Proof. by rewrite memNfinsupp. Qed.
 
 Lemma mcoeff_neq0 (g : {malg G[K]}) (k : K) :
   (g@_k != 0) = (k \in msupp g).
@@ -402,14 +411,16 @@ Proof. by rewrite mcoeff_eq0 negbK. Qed.
 
 Lemma mcoeff_outdom (g : {malg G[K]}) (k : K) :
   k \notin msupp g -> g@_k = 0.
-Proof. by apply/fsfun_outdom. Qed.
+Proof. by move/finsfun_dflt. Qed.
 
 CoInductive msupp_spec (g : {malg G[K]}) (k : K) : bool -> G -> Type :=
 | MsuppIn  (_ : k \in    msupp g) : msupp_spec g k true  g@_k
 | MsuppOut (_ : k \notin msupp g) : msupp_spec g k false 0.
 
 Lemma msuppP (g : {malg G[K]}) (k : K) : msupp_spec g k (k \in msupp g) g@_k.
-Proof. by rewrite /msupp /mcoeff; case: fsfunEP; constructor. Qed.
+Proof.
+by rewrite /mcoeff /msupp /=; case: finsuppP => h; constructor.
+Qed.
 End MalgTheory.
 
 (* -------------------------------------------------------------------- *)
@@ -423,7 +434,7 @@ Let EN g     k := - g@_k.
 Let ED g1 g2 k := g1@_k + g2@_k.
 
 Definition fgzero : {malg G[K]} :=
-  [malg [fmap]].
+  [malg x => [fmap] x].
 
 Definition fgopp g :=
   [malg k : msupp g => - g@_(val k)].
@@ -1490,12 +1501,12 @@ Section ComMonomial.
 Section Def.
 Variable (I : choiceType).
 
-Inductive cmonom : predArgType := CMonom of {fsfun I -> nat / 0%N}.
+Inductive cmonom : predArgType := CMonom of {finsfun I -> [eqType of nat] / 0%N}.
 
 Definition cmonom_val m := let: CMonom m := m in m.
 Definition cmonom_of (_ : phant I) := cmonom.
 
-Coercion cmonom_val : cmonom >-> fsfun_of.
+Coercion cmonom_val : cmonom >-> finsfun.
 
 Fact cmonom_key : unit. Proof. by []. Qed.
 
@@ -1536,40 +1547,43 @@ Context {I : choiceType}.
 Implicit Types m : {cmonom I}.
 Implicit Types i j : I.
 
-Lemma cmE (f : {fsfun I -> nat / 0%N}) : mkcmonom f =1 CMonom f.
+Lemma cmE (f : {finsfun I -> [eqType of nat] / 0%N}) : mkcmonom f =1 CMonom f.
 Proof. by move=> i; rewrite unlock. Qed.
 
 Lemma cmP m1 m2 : reflect (forall i, m1 i = m2 i) (m1 == m2).
 Proof.
 apply: (iffP eqP)=> [->//|]; case: m1 m2 => [m1] [m2] eq.
-by apply/val_eqP/fsfunP=> i; rewrite eq.
+by apply/val_eqP/eqP/finsfunP=> i; rewrite eq.
 Qed.
 
 Definition cmone : {cmonom I} :=
-  mkcmonom [fsfun [fmap]].
+  mkcmonom [finsfun x => [fmap] x].
 
 Definition cmu i : {cmonom I} :=
-  mkcmonom [fsfun [fmap].[i <- 1%N]].
+  mkcmonom [finsfun x => [fmap].[i <- 1%N] x].
 
-Definition cmmul m1 m2 : {cmonom I} := mkcmonom [fsfun
-  [fmap i : domf m1 `|` domf m2 => (m1 (val i) + m2 (val i))%N]].
+Definition cmmul m1 m2 : {cmonom I} := mkcmonom [finsfun
+  i : finsupp m1 `|` finsupp m2 => (m1 (val i) + m2 (val i))%N].
 
 Lemma cmoneE i : cmone i = 0%N.
-Proof. by rewrite cmE fsfun_fnd fnd_fmap0. Qed.
+Proof. by rewrite cmE finsfun_ffun insubF. Qed.
 
 Lemma cmuE i j : (cmu i) j = (i == j) :> nat.
-Proof. by rewrite cmE fsfun_fnd fnd_set eq_sym fnd_fmap0; case: eqP. Qed.
+Proof.
+rewrite cmE finsfun_ffun -/(fnd _ _) fnd_set eq_sym.
+by case: (i == j) => //; rewrite fnd_fmap0.
+Qed.
 
 Lemma cmmulE m1 m2 i : (cmmul m1 m2) i = (m1 i + m2 i)%N.
 Proof.
-rewrite cmE (fsfunE _ _ (fun i => m1 i + m2 i)%N) in_fsetE.
-by case: (fsfunEP m1); case: (fsfunEP m2).
+rewrite cmE /= (finsfun_fun _ _ _ ((fun i => m1 i + m2 i)%N)) in_fsetE.
+by case: (finsuppP m1); case: (finsuppP m2).
 Qed.
 
 Let cmE := (cmoneE, cmmulE).
 
 Lemma cmmulA : associative cmmul.
-Proof. by move=> m1 m2 m3; apply/eqP/fsfunP=> i; rewrite !cmE addnA. Qed.
+Proof. by move=> m1 m2 m3; apply/eqP/cmP=> i; rewrite !cmE addnA. Qed.
 
 Lemma cmmulC : commutative cmmul.
 Proof. by move=> m1 m2; apply/eqP/cmP=> i; rewrite !cmE addnC. Qed.
@@ -1583,7 +1597,7 @@ Proof. by move=> m; apply/eqP/cmP=> i; rewrite !cmE addn0. Qed.
 Lemma cmmul_eq0 m1 m2 : cmmul m1 m2 = cmone -> m1 = cmone /\ m2 = cmone.
 Proof.
 move: m1 m2; have gen m1 m2 : cmmul m1 m2 = cmone -> m1 = cmone.
-  move/eqP/fsfunP=> h; apply/eqP/fsfunP=> i; move/(_ i)/eqP: h.
+  move/eqP/cmP=> h; apply/eqP/cmP=> i; move/(_ i)/eqP: h.
   by rewrite !cmE addn_eq0 => /andP[] /eqP->.
 by move=> m1 m2 h; split; move: h; last rewrite cmmulC; apply/gen.
 Qed.
@@ -1598,7 +1612,7 @@ End Structures.
 
 (* -------------------------------------------------------------------- *)
 Definition mdeg {I : choiceType} (m : {cmonom I}) :=
-  nosimpl (\sum_(k : domf m) (m (val k)))%N.
+  nosimpl (\sum_(k : finsupp m) (m (val k)))%N.
 
 Definition mnmwgt {n} (m : {cmonom 'I_n}) :=
   nosimpl (\sum_i m i * i.+1)%N.
@@ -1624,35 +1638,35 @@ Proof. by rewrite cmU eqxx. Qed.
 Lemma cmM i m1 m2 : (m1 * m2)%M i = (m1 i + m2 i)%N.
 Proof. by apply/cmmulE. Qed.
 
-Lemma cmE_eq0 m i : (m i == 0%N) = (i \notin domf m).
-Proof. by apply/fsfun_eqdfl. Qed.
+Lemma cmE_eq0 m i : (m i == 0%N) = (i \notin finsupp m).
+Proof. by rewrite memNfinsupp. Qed.
 
-Lemma cmE_neq0 m i : (m i != 0%N) = (i \in domf m).
+Lemma cmE_neq0 m i : (m i != 0%N) = (i \in finsupp m).
 Proof. by rewrite cmE_eq0 negbK. Qed.
 
 CoInductive mdom_spec m (i : I) : bool -> nat -> Type :=
-| MdomIn  (_ : i \in    domf m) : mdom_spec m i true  (m i)
-| MdomOut (_ : i \notin domf m) : mdom_spec m i false 0%N.
+| MdomIn  (_ : i \in    finsupp m) : mdom_spec m i true  (m i)
+| MdomOut (_ : i \notin finsupp m) : mdom_spec m i false 0%N.
 
-Lemma mdomP m i : mdom_spec m i (i \in domf m) (m i).
-Proof. by case: fsfunEP; constructor. Qed.
+Lemma mdomP m i : mdom_spec m i (i \in finsupp m) (m i).
+Proof. by case: finsuppP=> h; constructor. Qed.
 
-Lemma mdom1 : domf (1 : {cmonom I})%M = fset0 :> {fset I}.
+Lemma mdom1 : finsupp (1 : {cmonom I})%M = fset0 :> {fset I}.
 Proof. by apply/fsetP=> i; rewrite in_fset0 -cmE_neq0 cm1 eqxx. Qed.
 
-Lemma mdomU i : domf U_(i) = [fset i].
+Lemma mdomU i : finsupp U_(i) = [fset i].
 Proof. by apply/fsetP=> j; rewrite -!cmE_neq0 cmU in_fset1 eqb0 negbK. Qed.
 
-Lemma mdomD m1 m2 : domf (m1 * m2)%M = domf m1 `|` domf m2.
+Lemma mdomD m1 m2 : finsupp (m1 * m2)%M = finsupp m1 `|` finsupp m2.
 Proof.
 apply/fsetP=> i; rewrite in_fsetU -!cmE_neq0 cmM.
 by rewrite addn_eq0 negb_and.
 Qed.
 
-Lemma mdegE m : mdeg m = (\sum_(i : domf m) (m (val i)))%N.
+Lemma mdegE m : mdeg m = (\sum_(i : finsupp m) (m (val i)))%N.
 Proof. by []. Qed.
 
-Lemma mdegEw m (d : {fset I}) : domf m `<=` d ->
+Lemma mdegEw m (d : {fset I}) : finsupp m `<=` d ->
   mdeg m = (\sum_(i : d) (m (val i)))%N.
 Proof. 
 move=> le; pose F i := m i; rewrite mdegE (big_fset_incl F le) //.
@@ -1668,7 +1682,9 @@ Proof. by rewrite mdegE mdomU big_fset1 cmUU. Qed.
 Lemma mdegM : {morph mdeg: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N }.
 Proof.
 move=> m1 m2 /=; rewrite mdegE mdomD.
-rewrite (mdegEw (fsubsetUl _ (domf m2))) (mdegEw (fsubsetUr (domf m1) _)).
+rewrite
+  (mdegEw (fsubsetUl _ (finsupp m2)))
+  (mdegEw (fsubsetUr (finsupp m1) _)).
 by rewrite -big_split /=; apply/eq_bigr=> /= i _; rewrite cmM.
 Qed.
 
