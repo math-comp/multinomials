@@ -1823,7 +1823,7 @@ elim: i=> [|i ih]; first by rewrite expr0 mulm0n mpolyX0.
 by rewrite mulmS mpolyXD -ih exprS.
 Qed.
 
-Lemma mprodXnE (F : 'I_n -> 'X_{1..n}) P m (r : seq _) :
+Lemma mprodXnE (I : finType) (F : I -> 'X_{1..n}) P (m : I -> nat) (r : seq _) :
     \prod_(i <- r | P i) 'X_[R, F i] ^+ m i
   = 'X_[\sum_(i <- r | P i) (F i *+ m i)].
 Proof.
@@ -1831,15 +1831,11 @@ elim: r => [|x r ih]; first by rewrite !big_nil mpolyX0.
 by rewrite !big_cons; case: (P x); rewrite ?(mpolyXD, mpolyXn) ih.
 Qed.
 
-Lemma mprodXE (F : 'I_n -> 'X_{1..n}) P (r : seq _) :
+Lemma mprodXE (I : finType) (F : I -> 'X_{1..n}) P (r : seq _) :
     \prod_(i <- r | P i) 'X_[R, F i] = 'X_[\sum_(i <- r | P i) F i].
 Proof.
-pose m   := [multinom 1%N | i < n].
-pose G i := 'X_[R, F i] ^+ m i.
-rewrite (eq_bigr G) => [|i _]; last first.
-  by rewrite /G /m mnmE expr1.
-rewrite mprodXnE; congr 'X_[_]; apply/eq_bigr=> i _.
-by rewrite /m mnmE.
+rewrite (eq_bigr (fun i => 'X_[R, F i] ^+ 1)) => [|i _]; last by rewrite expr1.
+by rewrite mprodXnE.
 Qed.
 
 Lemma mpolyXE (s : 'S_n) m :
@@ -4861,23 +4857,6 @@ move=> homs; apply/homogP; elim: s homs => [_ | p s ihs] /=.
 case/andP=> /homogP [dp p_hdp] {ihs}/ihs [d ih].
 by exists (dp + d)%N; rewrite big_cons; apply/dhomogM.
 Qed.
-
-Lemma dhomog_prod l (dt : l.-tuple nat) (mt : l.-tuple {mpoly R[n]}) :
-  (forall i : 'I_l, tnth mt i \is (tnth dt i).-homog) ->
-  \prod_(i <- mt) i \is (\sum_(i <- dt) i).-homog.
-Proof.
-elim: l dt mt => [| l ihl] dt mt hom.
-  rewrite tuple0 big_nil tuple0 big_nil; exact: dhomog1.
-case/tupleP: dt hom => d dt.
-case/tupleP: mt => p mt /= hom.
-rewrite !big_cons; apply dhomogM.
-  have:= hom ord0 => /=; by rewrite (tnth_nth 0) (tnth_nth 0%N).
-apply ihl => i.
-have:= hom (inord i.+1).
-rewrite !(tnth_nth 0) !(tnth_nth 0%N) /=.
-by rewrite !inordK; last exact: (ltn_ord i).
-Qed.
-
 End MPolyHomogTheory.
 
 Notation "[ 'in' R [ n ] , d .-homog 'for' mf ]" := (@ishomog1 n R d mf)
@@ -5211,68 +5190,3 @@ Definition dhomog_vectMixin :=
 Canonical dhomog_vectType :=
   Eval hnf in VectType R (dhomog n.+1 R d) dhomog_vectMixin.
 End MPolyHomogVec.
-
-
-(* -------------------------------------------------------------------- *)
-Section MESymFundamentalHomog.
-
-Variable n : nat.
-Variable R : comRingType.
-
-Local Notation S := [tuple mesym n R i.+1  | i < n].
-
-Lemma dhomog_mesym d : mesym n R d \is d.-homog.
-Proof using.
-apply/dhomogP => m.
-rewrite msupp_mesymP => /existsP [] s /andP [] /eqP <- {d} /eqP -> {m}.
-exact: mdeg_mesym1.
-Qed.
-
-Lemma dhomog_XS (m : 'X_{1..n}) : 'X_[m] \mPo S \is (mnmwgt m).-homog.
-Proof.
-rewrite comp_mpolyX.
-pose dt := [tuple (i.+1 * (m i))%N | i < n].
-pose mt := [tuple (mesym n R i.+1) ^+ m i | i < n] : n.-tuple {mpoly R[n]}.
-rewrite (eq_bigr (fun i : 'I_n => tnth mt i)); first last.
-  by move=> i _ /=; rewrite !tnth_mktuple.
-rewrite -(big_tuple _ _ mt xpredT id).
-rewrite /mnmwgt (eq_bigr (fun i : 'I_n => tnth dt i)); first last.
-  by move=> i _ /=; rewrite !tnth_mktuple mulnC.
-rewrite -(big_tuple _ _ dt xpredT id).
-apply dhomog_prod => i.
-rewrite !tnth_mktuple {mt dt}; apply: dhomogMn.
-exact: dhomog_mesym.
-Qed.
-
-Lemma pihomog_mPo p d :
-  pihomog [measure of mdeg] d (p \mPo S) =
-  (pihomog [measure of mnmwgt] d p) \mPo S.
-Proof using .
-elim/mpolyind: p => [| c m p msupp cn0 ihp] /=; first by rewrite !linear0.
-rewrite !linearP /= {}ihp; congr (c *: _ + _).
-case: (altP (mnmwgt m =P d)) => wgtm.
-- have/eqP := wgtm; rewrite -(dhomogX R) => /pihomog_dE ->.
-  have:= dhomog_XS m; by rewrite wgtm => /pihomog_dE ->.
-- rewrite (pihomog_ne0 wgtm (dhomog_XS m)).
-  rewrite (pihomog_ne0 wgtm); first by rewrite linear0.
-  by rewrite dhomogX.
-Qed.
-
-Lemma mwmwgt_homogE (p : {mpoly R[n]}) d :
-  (p \is d.-homog for [measure of mnmwgt]) = (p \mPo S \is d.-homog).
-Proof using .
-rewrite !homog_piE; rewrite pihomog_mPo.
-by apply/idP/idP => [/eqP |  /eqP/msym_fundamental_un ] ->.
-Qed.
-
-Lemma sym_fundamental_homog (p : {mpoly R[n]}) (d : nat) :
-  p \is symmetric -> p \is d.-homog ->
-  { t | t \mPo S = p /\ t \is d.-homog for [measure of mnmwgt] }.
-Proof.
-move=> /sym_fundamental [t [tSp _]] homp.
-exists (pihomog [measure of mnmwgt] d t); split.
-- by rewrite -pihomog_mPo tSp pihomog_dE.
-- exact: pihomogP.
-Qed.
-
-End MESymFundamentalHomog.
