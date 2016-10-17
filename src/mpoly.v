@@ -3904,6 +3904,12 @@ rewrite [X in _+X]big1 ?addr0; last first.
 by rewrite mprodXE mesym1_setT.
 Qed.
 
+Lemma mesym_geqnE i : i > n -> mesym i = 0.
+Proof.
+rewrite /mesym => Hn; apply big1 => s /eqP Hs; exfalso.
+by have:= subset_leq_card (subsetT s); rewrite Hs cardsT card_ord leqNgt Hn.
+Qed.
+
 Definition mesymlmnm k : {set 'I_n} := [set i : 'I_n | i < k].
 Definition mesymlm   k : 'X_{1..n}  := mesym1 (mesymlmnm k).
 
