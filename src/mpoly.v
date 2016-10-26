@@ -3033,7 +3033,6 @@ Canonical comp_mpoly_lrmorphism := [lrmorphism of (comp_mpoly lp)].
 
 End MPolyCompComm.
 
-
 (* -------------------------------------------------------------------- *)
 Section MPolyCompHomo.
 Variable n : nat.
