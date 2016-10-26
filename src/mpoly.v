@@ -3018,6 +3018,21 @@ End MPolyComp.
 
 Notation "p \mPo lq" := (@comp_mpoly _ _ _ lq p).
 
+Section MPolyCompComm.
+
+Variable n : nat.
+Variable R : comRingType.
+Variable k : nat.
+Variable lp : n.-tuple {mpoly R[k]}.
+
+Lemma comp_mpoly_is_multiplicative : multiplicative (comp_mpoly lp).
+Proof. exact: mmap_is_multiplicative. Qed.
+
+Canonical comp_mpoly_rmorphism := AddRMorphism comp_mpoly_is_multiplicative.
+Canonical comp_mpoly_lrmorphism := [lrmorphism of (comp_mpoly lp)].
+
+End MPolyCompComm.
+
 (* -------------------------------------------------------------------- *)
 Section MPolyCompHomo.
 Variable n : nat.
