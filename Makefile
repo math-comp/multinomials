@@ -10,7 +10,6 @@ COQFILES := \
 	src/xfinmap.v \
 	src/ssrcomplements.v \
 	src/monalg.v \
-	src/poset.v \
 	src/freeg.v \
 	src/mpoly.v
 

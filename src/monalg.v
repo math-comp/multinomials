@@ -289,7 +289,7 @@ End MMorphismTheory.
 Reserved Notation "{ 'finsfun' K -> T / x }"
   (at level 0, K, T, x at level 2, format "{ 'finsfun'  K  ->  T  /  x }").
 
-Notation "{ 'finsfun' K -> T / x }" := (@finsfun K T (fun _ => x)).
+Notation "{ 'finsfun' K -> T / x }" := (finsfun (fun _ : K => x : T)).
 
 Section MalgDef.
 Variable (K : choiceType) (G : zmodType).
@@ -1501,7 +1501,7 @@ Section ComMonomial.
 Section Def.
 Variable (I : choiceType).
 
-Inductive cmonom : predArgType := CMonom of {finsfun I -> [eqType of nat] / 0%N}.
+Inductive cmonom : predArgType := CMonom of {finsfun I -> nat / 0%N}.
 
 Definition cmonom_val m := let: CMonom m := m in m.
 Definition cmonom_of (_ : phant I) := cmonom.
@@ -1547,7 +1547,7 @@ Context {I : choiceType}.
 Implicit Types m : {cmonom I}.
 Implicit Types i j : I.
 
-Lemma cmE (f : {finsfun I -> [eqType of nat] / 0%N}) : mkcmonom f =1 CMonom f.
+Lemma cmE (f : {finsfun I -> nat / 0%N}) : mkcmonom f =1 CMonom f.
 Proof. by move=> i; rewrite unlock. Qed.
 
 Lemma cmP m1 m2 : reflect (forall i, m1 i = m2 i) (m1 == m2).

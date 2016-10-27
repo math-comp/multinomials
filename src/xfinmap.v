@@ -54,7 +54,22 @@ Lemma big_fset_incl :
     A `<=` B
   -> (forall x, x \in B -> x \notin A -> F x = idx)
   -> \big[op/idx]_(x : A) F (val x) = \big[op/idx]_(x : B) F (val x).
-Proof. Admitted.
+Proof.
+move=> leAB Fid; rewrite [RHS](bigID (mem A \o val)) /=.
+rewrite [X in op _ X]big1 => [|b /Fid ->//].
+rewrite Monoid.mulm1 -[RHS]big_filter.
+rewrite -[LHS](big_map _ xpredT) -[RHS](big_map _ xpredT).
+apply/eq_big_perm/uniq_perm_eq.
++ rewrite map_inj_uniq; last by apply/val_inj.
+  by rewrite /index_enum -enumT enum_uniq.
++ rewrite map_inj_uniq; [apply/filter_uniq | by apply/val_inj].
+  by rewrite /index_enum -enumT enum_uniq.
+move=> x; apply/mapP/mapP=> -[] => [a _ ->|b].
++ exists (fincl leAB a) => //; rewrite mem_filter /=.
+  by rewrite fsvalP /= /index_enum -enumT mem_enum.
+rewrite mem_filter => /andP[inA _] ->; exists [`inA] => //.
+by rewrite /index_enum -enumT mem_enum.
+Qed.
 End BigFSetIncl.
 
 Implicit Arguments big_fset_incl [R idx op T A B].
