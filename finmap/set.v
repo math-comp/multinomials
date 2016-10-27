@@ -3,7 +3,6 @@ Require Import ssreflect ssrbool eqtype ssrfun ssrnat choice seq.
 From mathcomp
 Require Import fintype tuple bigop path finset.
 
-From mathcomp
 Require Import order.
 
 Set Implicit Arguments.
