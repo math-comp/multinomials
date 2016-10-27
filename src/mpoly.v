@@ -82,15 +82,15 @@ From mathcomp Require Import seq path choice finset fintype finfun tuple.
 From mathcomp Require Import bigop ssralg ssrint matrix vector fingroup.
 From mathcomp Require Import perm zmodp binomial poly.
 
-Require Import bigenough ssrcomplements lattice freeg.
+Require Import bigenough ssrcomplements order freeg.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import Monoid GRing.Theory BigEnough.
-Import Order Order.Syntax Order.Theory Order.SeqLexOrder.
-Import Order.TotalLattice Order.TotalTheory.
+Import Order Order.Syntax Order.Theory.
+Import Order.SeqLexPOrder Order.TotalLattice Order.TotalTheory.
 Import Order.ReverseLattice.
 
 Local Open Scope ring_scope.
@@ -116,9 +116,10 @@ Definition dup (P : Prop) (h : P) := DupC h h.
 
 (* -------------------------------------------------------------------- *)
 Section LatticeMisc.
-Context {T : eqType} {U : blatticeType} (P : pred T) (F : T -> U).
+Context {T : eqType} {disp : unit} {U : blatticeType disp}.
+Context (P : pred T) (F : T -> U).
 
-Hypothesis letot : total (@le U).
+Hypothesis letot : @total U (<=%O)%O.
 
 Lemma eq_bigjoin (r : seq T) : r != [::] ->
   {x : T | (x \in r) && ((\join_(i <- r) F i)%O == F x)}.
@@ -159,20 +160,20 @@ End LatticeMisc.
 Local Open Scope order_scope.
 
 Section Lexico.
-Context {T : porderType} {n : nat}.
+Context {disp : unit} {T : porderType disp} {n : nat}.
 
 Implicit Types (s : seq T) (t : n.-tuple T).
 
 Definition ltxi s1 s2 := (s1 != s2) && (lexi s1 s2).
 
 Definition seq_POrderMixin :=
-  @POrderMixin _ (@lexi T) ltxi (fun s1 s2 => erefl _)
-  (@lexi_refl T) (@lexi_anti T) (@lexi_trans T).
+  @POrderMixin _ (@lexi _ T) ltxi (fun s1 s2 => erefl _)
+  (@lexi_refl _ T) (@lexi_anti _ T) (@lexi_trans _ T).
 
 Canonical seq_POrderType :=
-  Eval hnf in POrderType (seq T) seq_POrderMixin.
+  Eval hnf in POrderType disp (seq T) seq_POrderMixin.
 
-Lemma lexi_total : total (<=%O : rel T) -> total (@lexi T).
+Lemma lexi_total : total (<=%O : rel T) -> total (@lexi _ T).
 Proof.
 move=> ht; elim=> [|x s1 ih] // [|y s2] //=.
 by case: TotalLattice.ltgtP => /=.
@@ -223,7 +224,8 @@ End Lexico.
 
 (* -------------------------------------------------------------------- *)
 Section WFTuple.
-Context {T : porderType} {n : nat} (P : n.-tuple T -> Type).
+Context {disp : unit} {T : porderType disp} {n : nat}.
+Context (P : n.-tuple T -> Type).
 
 Implicit Types t : n.-tuple T.
 
@@ -255,7 +257,7 @@ End WFTuple.
 
 (* -------------------------------------------------------------------- *)
 Section SubOrder.
-Context {T : porderType} (P : pred T) (sT : subType P).
+Context {disp : unit} {T : porderType disp} (P : pred T) (sT : subType P).
 
 Definition les (x y : sT) := (val x <= val y :> T).
 Definition lts (x y : sT) := (val x < val y :> T).
@@ -274,11 +276,12 @@ Definition sub_POrderMixin :=
   les_refl les_anti les_trans.
 
 Canonical sub_POrderType :=
-  Eval hnf in POrderType sT sub_POrderMixin.
+  Eval hnf in POrderType disp sT sub_POrderMixin.
 End SubOrder.
 
+(* -------------------------------------------------------------------- *)
 Section SubOrderTheory.
-Context {T : porderType} (P : pred T) (sT : subType P).
+Context {disp : unit} {T : porderType disp} (P : pred T) (sT : subType P).
 
 Lemma leEsub (x y : sT) : (x <= y) = (val x <= val y).
 Proof. by []. Qed.
@@ -291,11 +294,11 @@ Notation "[ 'porderMixin' 'of' T 'by' <: ]" :=
   (sub_POrderMixin _ : porderMixin [eqType of T])
   (at level 0, format "[ 'porderMixin'  'of'  T  'by'  <: ]") : form_scope.
 
-Definition tuple_porderMixin (T : porderType) n :=
+Definition tuple_porderMixin {disp} (T : porderType disp) n :=
   [porderMixin of n.-tuple T by <:].
 
-Canonical tuple_porderType (T : porderType) n :=
-  Eval hnf in POrderType (n.-tuple T) (tuple_porderMixin T n).
+Canonical tuple_porderType {disp} (T : porderType disp) n :=
+  Eval hnf in POrderType disp (n.-tuple T) (tuple_porderMixin T n).
 
 Close Scope order_scope.
 
@@ -739,7 +742,7 @@ Definition multinom_porderMixin :=
   POrderMixin (fun m1 m2 => erefl _) lemc_refl lemc_anti lemc_trans.
 
 Canonical multinom_porderType :=
-  Eval hnf in POrderType 'X_{1..n} multinom_porderMixin.
+  Eval hnf in POrderType nat_display 'X_{1..n} multinom_porderMixin.
 
 Lemma leEmnm m1 m2 :
   (m1 <= m2)%O = lexi (mdeg m1 :: m1) (mdeg m2 :: m2).
@@ -752,9 +755,7 @@ Definition multinom_latticeMixin := TotalLattice.Mixin lemc_total.
 Canonical multinom_latticeType :=
   Eval hnf in LatticeType 'X_{1..n} multinom_latticeMixin.
 
-Definition multinom_orderMixin := OrderMixin lemc_total.
-Canonical multinom_orderType :=
-  Eval hnf in OrderType 'X_{1..n} multinom_orderMixin.
+Canonical multinom_orderType := OrderType 'X_{1..n} lemc_total.
 
 Lemma le0m (m : 'X_{1..n}) : (0%MM <= m)%O.
 Proof.
@@ -853,14 +854,14 @@ Proof. by rewrite addmC lemc_addr. Qed.
 Lemma lemc_lt_add (m1 m2 n1 n2 : 'X_{1..n}) :
   (m1 <= n1 -> m2 < n2 -> (m1 + m2)%MM < (n1 + n2)%MM)%O.
 Proof.
-move=> le lt; apply/(@le_lt_trans _ (n1 + m2)%MM).
+move=> le lt; apply/(le_lt_trans (y := n1 + m2)%MM).
   by rewrite lemc_add2l. by rewrite ltmc_add2r.
 Qed.
 
 Lemma ltmc_le_add (m1 m2 n1 n2 : 'X_{1..n}) :
   (m1 < n1 -> m2 <= n2 -> (m1 + m2)%MM < (n1 + n2)%MM)%O.
 Proof.
-move=> lt le; apply/(@lt_le_trans _ (n1 + m2)%MM).
+move=> lt le; apply/(lt_le_trans (y := n1 + m2)%MM).
   by rewrite ltmc_add2l. by rewrite lemc_add2r.
 Qed.
 
@@ -871,7 +872,7 @@ Proof. by move=> lt1 /ltW /(ltmc_le_add lt1). Qed.
 Lemma lem_add (m1 m2 n1 n2 : 'X_{1..n}) :
   (m1 <= n1 -> m2 <= n2 -> (m1 + m2)%MM <= (n1 + n2)%MM)%O.
 Proof.
-move=> le1 le2; apply/(@le_trans _ (m1 + n2)%MM).
+move=> le1 le2; apply/(le_trans (y := m1 + n2)%MM).
   by rewrite lemc_add2r. by rewrite lemc_add2l.
 Qed.
 
@@ -894,7 +895,7 @@ Lemma ltmwf :
 Proof.
 pose tof m := [tuple of mdeg m :: m].
 move=> ih m; move: {2}(tof _) (erefl (tof m))=> t.
-elim/(@ltxwf [porderType of nat]): t m=> //=; last first.
+elim/(@ltxwf _ [porderType of nat]): t m=> //=; last first.
   move=> t wih m Em; apply/ih=> m' lt_m'm.
   apply/(wih (tof m'))=> //; rewrite -Em.
   by rewrite /tof -ltEmnm.
@@ -906,7 +907,7 @@ by apply/wih; have := leq_trans lt_yl le_l_Sk; rewrite ltnS.
 Qed.
 End WF.
 
-Lemma ltom_wf : well_founded (@lt multinom_orderType).
+Lemma ltom_wf : @well_founded 'X_{1..n} (<%O)%O.
 Proof. by apply: ltmwf=> m1 IH; apply: Acc_intro => m2 /IH. Qed.
 End MultinomOrder.
 

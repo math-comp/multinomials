@@ -4,9 +4,10 @@
 NAME     := SsrMultinomials
 SUBDIRS  :=
 COQFILES := \
-	finmap/finmap.v \
-	finmap/lattice.v \
-	finmap/multiset.v \
+  finmap/finmap.v \
+  finmap/multiset.v \
+  finmap/order.v \
+  finmap/set.v \
 	src/xfinmap.v \
 	src/ssrcomplements.v \
 	src/monalg.v \
