@@ -2028,7 +2028,7 @@ elim: i=> [|i ih]; first by rewrite expr0 mulm0n mpolyX0.
 by rewrite mulmS mpolyXD -ih exprS.
 Qed.
 
-Lemma mprodXnE (F : 'I_n -> 'X_{1..n}) P m (r : seq _) :
+Lemma mprodXnE (I : Type) (F : I -> 'X_{1..n}) P (m : I -> nat) (r : seq _) :
     \prod_(i <- r | P i) 'X_[R, F i] ^+ m i
   = 'X_[\sum_(i <- r | P i) (F i *+ m i)].
 Proof.
@@ -2036,15 +2036,11 @@ elim: r => [|x r ih]; first by rewrite !big_nil mpolyX0.
 by rewrite !big_cons; case: (P x); rewrite ?(mpolyXD, mpolyXn) ih.
 Qed.
 
-Lemma mprodXE (F : 'I_n -> 'X_{1..n}) P (r : seq _) :
+Lemma mprodXE (I : Type) (F : I -> 'X_{1..n}) P (r : seq _) :
     \prod_(i <- r | P i) 'X_[R, F i] = 'X_[\sum_(i <- r | P i) F i].
 Proof.
-pose m   := [multinom 1%N | i < n].
-pose G i := 'X_[R, F i] ^+ m i.
-rewrite (eq_bigr G) => [|i _]; last first.
-  by rewrite /G /m mnmE expr1.
-rewrite mprodXnE; congr 'X_[_]; apply/eq_bigr=> i _.
-by rewrite /m mnmE.
+rewrite (eq_bigr (fun i => 'X_[R, F i] ^+ 1)) => [|i _]; last by rewrite expr1.
+by rewrite mprodXnE.
 Qed.
 
 Lemma mpolyXE (s : 'S_n) m :
