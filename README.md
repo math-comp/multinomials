@@ -1,4 +1,4 @@
-A Coq/SSReflect Library for Multinomials
+A Coq/SSReflect Library for Monoidal Rings && Multinomials
 ========================================================================
 
   This library is based on SSReflect/MathComp Library version 1.5/1.6.
