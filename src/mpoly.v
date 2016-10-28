@@ -5063,6 +5063,20 @@ move=> homs; apply/homogP; elim: s homs => [_ | p s ihs] /=.
 case/andP=> /homogP [dp p_hdp] {ihs}/ihs [d ih].
 by exists (dp + d)%N; rewrite big_cons; apply/dhomogM.
 Qed.
+
+Lemma dhomog_prod {l} (dt : l.-tuple nat) (mt : l.-tuple {mpoly R[n]}) :
+     (forall i : 'I_l, tnth mt i \is (tnth dt i).-homog)
+  -> \prod_(i <- mt) i \is (\sum_(i <- dt) i).-homog.
+Proof.
+elim: l dt mt => [| l ihl] dt mt hom.
+  by rewrite tuple0 big_nil tuple0 big_nil dhomog1.
+case/tupleP: dt hom => d dt; case/tupleP: mt => p mt /= hom.
+rewrite !big_cons; apply/dhomogM.
+  by move: (hom ord0); rewrite (tnth_nth 0) (tnth_nth 0%N).
+apply/ihl => i; have:= hom (inord i.+1).
+by rewrite !(tnth_nth 0) !(tnth_nth 0%N) !inordK ?ltnS.
+Qed.
+
 End MPolyHomogTheory.
 
 Notation "[ 'in' R [ n ] , d .-homog 'for' mf ]" := (@ishomog1 n R d mf)
@@ -5396,3 +5410,61 @@ Definition dhomog_vectMixin :=
 Canonical dhomog_vectType :=
   Eval hnf in VectType R (dhomog n.+1 R d) dhomog_vectMixin.
 End MPolyHomogVec.
+
+(* -------------------------------------------------------------------- *)
+Section MESymFundamentalHomog.
+Variable n : nat.
+Variable R : comRingType.
+
+Local Notation S := [tuple mesym n R i.+1  | i < n].
+
+Lemma dhomog_mesym d : mesym n R d \is d.-homog.
+Proof.
+apply/dhomogP => m; rewrite msupp_mesymP => /existsP [/= s].
+by case/andP=> /eqP<- {d} /eqP -> {m}; exact/mdeg_mesym1.
+Qed.
+
+Lemma dhomog_XS (m : 'X_{1..n}) : 'X_[m] \mPo S \is (mnmwgt m).-homog.
+Proof.
+pose dt := [tuple (i.+1 * (m i))%N | i < n].
+pose mt := [tuple (mesym n R i.+1) ^+ m i | i < n].
+rewrite [X in X \is _](_ : _ = \prod_(i <- mt) i); last first.
+  rewrite comp_mpolyX (eq_bigr (tnth mt)) ?big_tuple //.
+  by move=> i _ /=; rewrite !tnth_mktuple.
+rewrite [X in X.-homog](_ : _ = (\sum_(i <- dt) i)%N); last first.
+  rewrite /mnmwgt big_tuple (eq_bigr (tnth dt)) //.
+  by move=> i _ /=; rewrite !tnth_mktuple mulnC.
+apply/dhomog_prod => i; rewrite !tnth_mktuple => {mt dt}.
+by apply/dhomogMn/dhomog_mesym.
+Qed.
+
+Lemma pihomog_mPo p d :
+    pihomog [measure of mdeg] d (p \mPo S)
+  = (pihomog [measure of mnmwgt] d p) \mPo S.
+Proof.
+elim/mpolyind: p; first by rewrite !linear0.
+move=> c m p msupp cn0 ihp; rewrite !linearP /= {}ihp.
+congr (c *: _ + _); case: (altP (mnmwgt m =P d)) => wgtm.
++ have /eqP := wgtm; rewrite -(dhomogX R) => /pihomog_dE ->.
+  by have := dhomog_XS m; rewrite wgtm => /pihomog_dE ->.
+rewrite (pihomog_ne0 wgtm (dhomog_XS m)).
+by rewrite (pihomog_ne0 wgtm) ?linear0 // dhomogX.
+Qed.
+
+Lemma mwmwgt_homogE (p : {mpoly R[n]}) d :
+  (p \is d.-homog for [measure of mnmwgt]) = (p \mPo S \is d.-homog).
+Proof.
+rewrite !homog_piE pihomog_mPo; apply/eqP/eqP=> [->//|].
+by move/msym_fundamental_un => ->.
+Qed.
+
+Lemma sym_fundamental_homog (p : {mpoly R[n]}) (d : nat) :
+  p \is symmetric -> p \is d.-homog ->
+  { t | t \mPo S = p /\ t \is d.-homog for [measure of mnmwgt] }.
+Proof.
+move/sym_fundamental => [t [tSp _]] homp.
+exists (pihomog [measure of mnmwgt] d t); split.
++ by rewrite -pihomog_mPo tSp pihomog_dE.
++ exact: pihomogP.
+Qed.
+End MESymFundamentalHomog.
