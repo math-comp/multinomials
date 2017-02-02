@@ -89,9 +89,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import Monoid GRing.Theory BigEnough.
-Import Order Order.Syntax Order.Theory.
-Import Order.SeqLexPOrder Order.TotalLattice Order.TotalTheory.
-Import Order.ReverseLattice.
+Import Order.Def Order.Syntax Order.Theory.
 
 Local Open Scope ring_scope.
 
@@ -127,7 +125,7 @@ Proof.
 case: r => // x r _; elim: r => [|y r ih].
   by exists x; rewrite mem_seq1 big_seq1 !eqxx.
 pose v := (\join_(i <- x :: r) F i)%O.
-case: (TotalLattice.leP letot v (F y)) => [le|lt].
+case: (Order.TotalLattice.leP letot v (F y)) => [le|lt].
   exists y; rewrite !(in_cons, eqxx) orbT /=.
   rewrite !big_cons joinCA; apply/eqP/join_idPr.
   by apply/(le_trans _ le); rewrite /v big_cons.
@@ -176,7 +174,7 @@ Canonical seq_POrderType :=
 Lemma lexi_total : total (<=%O : rel T) -> total (@lexi _ T).
 Proof.
 move=> ht; elim=> [|x s1 ih] // [|y s2] //=.
-by case: TotalLattice.ltgtP => /=.
+by case: Order.TotalLattice.ltgtP => /=.
 Qed.
 
 Lemma ltxiP x (s1 s2 : seq T) : size s1 = size s2 ->
@@ -751,7 +749,7 @@ Proof. by []. Qed.
 Lemma lemc_total : total mnmc_le.
 Proof. by move=> m1 m2; apply/lexi_total/leq_total. Qed.
 
-Definition multinom_latticeMixin := TotalLattice.Mixin lemc_total.
+Definition multinom_latticeMixin := Order.TotalLattice.Mixin lemc_total.
 Canonical multinom_latticeType :=
   Eval hnf in LatticeType 'X_{1..n} multinom_latticeMixin.
 
@@ -803,7 +801,7 @@ by rewrite ltEnat lt ltn_eqF.
 Qed.
 
 Lemma mdeg_max (m1 m2 : 'X_{1..n}) :
-  mdeg (m1 `|` m2) = maxn (mdeg m1) (mdeg m2).
+  mdeg (max m1 m2) = maxn (mdeg m1) (mdeg m2).
 Proof.
 case: (leP m1 m2) => [/dup[]|].
   by move=> /join_idPl-> /lemc_mdeg/maxn_idPr->.
@@ -811,7 +809,7 @@ by move/ltW=> /dup[] /join_idPr-> /lemc_mdeg/maxn_idPl.
 Qed.
 
 Lemma mdeg_bigmax (r : seq 'X_{1..n}) :
-  mdeg (\join_(m <- r) m)%O = \max_(m <- r) mdeg m.
+  mdeg (\max_(m <- r) m)%O = \max_(m <- r) mdeg m.
 Proof.
 elim: r => [|m r ih]; first by rewrite !big_nil mdeg0.
 by rewrite !big_cons mdeg_max ih.
@@ -2201,8 +2199,7 @@ Variable R : ringType.
 
 Implicit Types p q r : {mpoly R[n]}.
 
-Definition mlead p : 'X_{1..n} :=
-  (\join_(m <- msupp p) m)%O.
+Definition mlead p : 'X_{1..n} := (\max_(m <- msupp p) m)%O.
 
 Lemma mleadC (c : R) : mlead c%:MP = 0%MM.
 Proof.
@@ -2291,7 +2288,7 @@ Qed.
 
 Lemma mlead_sum_le {T} (r : seq T) P F :
   (mlead (\sum_(p <- r | P p) F p)
-    <= \join_(p <- r | P p) (mlead (F p)))%O.
+    <= \max_(p <- r | P p) (mlead (F p)))%O.
 Proof.
 elim/big_rec2: _ => /= [|x m p Px le]; first by rewrite mlead0.
 by apply/(le_trans (mleadD_le _ _))/leU2.
@@ -2301,7 +2298,7 @@ Lemma mlead_sum {T} (r : seq T) P F :
   uniq [seq mlead (F p) | p <- r & P p] ->
 
      mlead (\sum_(p <- r | P p) F p)
-  = (\join_(p <- r | P p) (mlead (F p)))%O.
+  = (\max_(p <- r | P p) (mlead (F p)))%O.
 Proof.
 elim: r=> [|p r ih]; first by rewrite !big_nil mlead0.
 rewrite !big_cons /=; case: (P p)=> //= /andP[Fp_ml uq_ml].
