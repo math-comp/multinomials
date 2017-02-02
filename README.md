@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/math-comp/multinomials.svg?branch=master)](https://travis-ci.org/math-comp/multinomials)
+
 A Coq/SSReflect Library for Monoidal Rings && Multinomials
 ========================================================================
 
