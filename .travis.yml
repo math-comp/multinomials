@@ -3,8 +3,6 @@ dist: trusty
 language: coq
 cache:
   apt: true
-  directories:
-    - $HOME/.opam
 install:
 - sudo add-apt-repository --yes ppa:avsm/ppa
 - sudo apt-get update -qq
