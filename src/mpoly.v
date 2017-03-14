@@ -81,8 +81,9 @@ From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
 From mathcomp Require Import seq path choice finset fintype finfun tuple.
 From mathcomp Require Import bigop ssralg ssrint matrix vector fingroup.
 From mathcomp Require Import perm zmodp binomial poly.
+From mathcomp Require Import bigenough order.
 
-Require Import bigenough ssrcomplements order freeg.
+Require Import ssrcomplements freeg.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

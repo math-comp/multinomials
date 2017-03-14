@@ -3,28 +3,13 @@
 # --------------------------------------------------------------------
 NAME     := SsrMultinomials
 SUBDIRS  :=
+INCFLAGS := -R src $(NAME)
 COQFILES := \
-  finmap/finmap.v \
-  finmap/multiset.v \
-  finmap/order.v \
-  finmap/set.v \
 	src/xfinmap.v \
 	src/ssrcomplements.v \
 	src/monalg.v \
 	src/freeg.v \
 	src/mpoly.v
-
-ifeq ($(SSR_TOP),)
-INCFLAGS := -R 3rdparty $(NAME)
-SUBDIRS  +=
-COQFILES += $(wildcard 3rdparty/*.v)
-else
-INCFLAGS := -I ${SSR_TOP}/ -R ${SSR_TOP} mathcomp
-SUBDIRS  +=
-COQFILES +=
-endif
-
-INCFLAGS += -R finmap $(NAME) -R src $(NAME)
 
 include Makefile.common
 

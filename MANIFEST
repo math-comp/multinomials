@@ -6,10 +6,6 @@ Makefile
 Makefile.common
 src/*.v
 
-# 3rd party
-3rdparty/*.v
-
 # Build scripts
 scripts/install-sh
 scripts/distribution.py
-scripts/coq-compat
