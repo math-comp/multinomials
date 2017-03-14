@@ -6,10 +6,17 @@ Makefile
 Makefile.common
 src/*.v
 
+# Finmap
+finmap/_CoqProject
+finmap/CeCILL-B
+finmap/Makefile
+finmap/README
+finmap/opam
+finmap/*.v
+
 # 3rd party
 3rdparty/*.v
 
 # Build scripts
 scripts/install-sh
 scripts/distribution.py
-scripts/coq-compat

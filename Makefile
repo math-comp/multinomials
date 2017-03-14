@@ -4,10 +4,10 @@
 NAME     := SsrMultinomials
 SUBDIRS  :=
 COQFILES := \
-  finmap/finmap.v \
-  finmap/multiset.v \
-  finmap/order.v \
-  finmap/set.v \
+	finmap/finmap.v \
+	finmap/multiset.v \
+	finmap/order.v \
+	finmap/set.v \
 	src/xfinmap.v \
 	src/ssrcomplements.v \
 	src/monalg.v \
@@ -36,7 +36,7 @@ install:
 
 # --------------------------------------------------------------------
 this-clean::
-	rm -f *.glob *.d *.vo
+	rm -f src/.*.aux finmap/.*.aux 3rdparty/.*.aux
 
 this-distclean::
 	rm -f $(shell find . -name '*~')
