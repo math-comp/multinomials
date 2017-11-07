@@ -12,7 +12,7 @@ Require Import choice path finset finfun fintype bigop.
 
 (*****************************************************************************)
 (* This file provides a representation of finitely supported maps where      *)
-(* the keys K lie in an ordType and the values V in an arbitrary type.       *)
+(* the keys K lie in a choiceType and the values V in an arbitrary type.     *)
 (*                                                                           *)
 (*         {fset K} == finite sets of elements of K                          *)
 (*    {fmap K -> V} == finitely supported maps from K to V.                  *)
@@ -49,19 +49,19 @@ Require Import choice path finset finfun fintype bigop.
 (* represented by elements A (resp B) from {fset K}.                         *)
 (*                                                                           *)
 (*    [fset x in p | P] == the set of all x of type K, such that             *)
-(*                         x \in A and P x where P is a predicate on K       *)
+(*                         x \in p and P x where P is a predicate on K       *)
 (*  [fset x in p | P & Q] := [set x in p | P && Q].                          *)
 (*                                                                           *)
 (* [fset E | x in p] == the set of all the values of the expression E, for x *)
-(*                     drawn from the collective finite predicate A.         *)
-(* [fset E | x in p & P] == the set of values of E for x drawn from A, such  *)
+(*                     drawn from the collective finite predicate p.         *)
+(* [fset E | x in p & P] == the set of values of E for x drawn from p, such  *)
 (*                     that P is true.                                       *)
-(* [fset E | x in p, y in q] == the set of values of E for x drawn from A and*)
-(*                     and y drawn from B; B may depend on x.                *)
+(* [fset E | x in p, y in q] == the set of values of E for x drawn from p and*)
+(*                     and y drawn from q; q may depend on x.                *)
 (* [fset E | x in p, y in q & P] == the set of values of E for x drawn from  *)
-(*                    A and y drawn from B; such that P is true.             *)
+(*                    p and y drawn from q; such that P is true.             *)
 (* [fsetval x in p] == the set of (val x) for x in the finite predicate p    *)
-(* [fsetval x in p | P ] == the set of (val x) for x in A, such that P       *)
+(* [fsetval x in p | P ] == the set of (val x) for x in p, such that P       *)
 (* [fsetval x in p | P & Q] := [fsetval x in p | P && Q]                     *)
 (*                                                                           *)
 (* For each notation above, there is an additional one with ':' instead of   *)
@@ -562,8 +562,8 @@ Notation "[ 'fset' x 'in' A | P & Q ]" := [fset x in A | P && Q]
 
 Section Ops.
 
-Context {K : choiceType}.
-Implicit Types (a b c : K) (A B C D : {fset K}) (s : seq K).
+Context {K K': choiceType}.
+Implicit Types (a b c : K) (A B C D : {fset K}) (E : {fset K'}) (s : seq K).
 
 Definition fset0 : {fset K} :=
   @mkFinSet K [::] (introT eqP (@sort_keys_nil K)).
@@ -578,8 +578,8 @@ Definition fsetI A B := [fset x in A | x \in B].
 
 Definition fsetD A B := [fset x in A | x \notin B].
 
-Definition fsetM A B := seq_fset
-  [seq (x, y) | x <- enum_fset A, y <- enum_fset B].
+Definition fsetM A E := seq_fset
+  [seq (x, y) | x <- enum_fset A, y <- enum_fset E].
 
 Definition fsubset A B := fsetI A B == A.
 
@@ -777,8 +777,9 @@ End imfset2.
 
 Section Theory.
 
-Variables (K : choiceType).
-Implicit Types (a b x : K) (A B C D : {fset K}) (pA pB pC : pred K) (s : seq K).
+Variables (K K': choiceType).
+Implicit Types (a b x : K) (A B C D : {fset K}) (E : {fset K'})
+         (pA pB pC : pred K) (s : seq K).
 
 Lemma fsetP {A B} : A =i B <-> A = B.
 Proof. by split=> [eqAB|-> //]; apply/val_inj/canonical_eq_keys => //= a. Qed.
@@ -816,7 +817,7 @@ Proof. by rewrite in_fset andbC. Qed.
 Lemma in_fsetD1 A b a : (a \in A `\ b) = (a != b) && (a \in A).
 Proof. by rewrite in_fsetD in_fset1. Qed.
 
-Lemma in_fsetM A B (u : K * K) : (u \in A `*` B) = (u.1 \in A) && (u.2 \in B).
+Lemma in_fsetM A E (u : K * K') : (u \in A `*` E) = (u.1 \in A) && (u.2 \in E).
 Proof.
 rewrite seq_fsetE; apply/allpairsP/idP => [[[/= a b] [aA bB -> /=]]|].
   by rewrite aA bB.
@@ -1224,7 +1225,9 @@ by move/negPf=> nBa; apply/fsetP=> x; rewrite !inE; case: eqP => // ->.
 Qed.
 
 Lemma fset2P x a b : reflect (x = a \/ x = b) (x \in [fset a; b]).
-Proof. by rewrite !inE; apply: (iffP orP) => [] [] /eqP; intuition. Qed.
+Proof.
+by rewrite !inE; apply: (iffP orP) => [] [] /eqP ->; [left|right|left|right].
+Qed.
 
 Lemma in_fset2 x a b : (x \in [fset a; b]) = (x == a) || (x == b).
 Proof. by rewrite !inE. Qed.
@@ -1685,6 +1688,17 @@ Lemma card_imfset (T K : choiceType) (f : T -> K)
    (P : pred T) (A : {fset T}) (p : finmempred P A) :
    injective f -> #|` (imfset f p)| = #|` A|.
 Proof. by move=> f_inj; rewrite card_in_imfset //= => x y ? ?; apply: f_inj. Qed.
+
+Lemma leq_imfset_card (T K : choiceType) (f : T -> K) (P : pred T) (A : {fset T})
+  (p : finmempred P A) : (#|` imfset f p| <= #|` A|)%N.
+Proof.
+have vP (x : A) : P (val x) by rewrite -(finmempredE p) (valP x).
+rewrite (leq_trans _ (leq_imset_card (fun x : A => [` in_imfset f p (vP x)]) _)) //.
+apply/subset_leq_card/subsetP=> /= x _; apply/imsetP => /=.
+have /imfsetP [t Pt x_def] := valP x.
+have tA : t \in A by rewrite (finmempredE p).
+by exists [` tA] => //; apply/val_inj.
+Qed.
 
 End Card.
 
@@ -2294,7 +2308,7 @@ Local Notation "f + g" := (catf f g) : fset_scope.
 
 Lemma domf_cat f g : domf (f + g) = domf f `|` domf g.
 Proof.
-by apply/fsetP=> x; rewrite !inE; case: (boolP (_ \in _)); rewrite ?orbT.
+by apply/fsetP=> x; rewrite !inE; case: (boolP (_ \in domf _)); rewrite ?orbT.
 Qed.
 
 Lemma mem_catf f g k : k \in domf (f + g) = (k \in f) || (k \in g).
@@ -2428,7 +2442,7 @@ Lemma restrict_catfsI f g h : f + g = f + h -> g.[& domf h] = h.[& domf g].
 Proof.
 move=> /fmapP eq_fg_fh; apply/fmapP => k; have := eq_fg_fh k.
 rewrite !fnd_cat !fnd_restrict.
-by do ![case: (boolP (_ \in _)) => ? //=] => _; rewrite not_fnd.
+by do ![case: (boolP (_ \in domf _)) => ? //=] => _; rewrite not_fnd.
 Qed.
 
 Lemma disjoint_catfsI h f g :
