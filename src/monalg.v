@@ -1,5 +1,6 @@
 (* --------------------------------------------------------------------
  * (c) Copyright 2014--2015 IMDEA Software Institute.
+ * (c) Copyright 2016--2017 École Polytechnique
  *
  * You may distribute this file under the terms of the CeCILL-B license
  * -------------------------------------------------------------------- *)
