@@ -3271,12 +3271,19 @@ Lemma mevalZ v c p : meval v (c *: p) = c * (meval v p).
 Proof. exact: meval_is_scalable. Qed.
 End MEval.
 
+Lemma meval_eq n (R : ringType) (e1 e2 : 'I_n -> R) (p : {mpoly R[n]}) :
+  e1 =1 e2 -> meval e1 p = meval e2 p.
+Proof.
+move=> He; rewrite !mevalE; apply eq_bigr => m _; congr *%R.
+by apply eq_bigr => i _; rewrite He.
+Qed.
+
 Notation "p .@[ v ]" := (@meval _ _ v p).
 Notation "p .@[< v >]" := (@meval _ _ (nth v) p).
 
 (* -------------------------------------------------------------------- *)
 Section MEvalCom.
-Variable n : nat.
+Variable n k : nat.
 Variable R : comRingType.
 
 Implicit Types p q r : {mpoly R[n]}.
@@ -3296,6 +3303,17 @@ Canonical meval_lrmorphism v := [lrmorphism of meval v].
 
 Lemma mevalM v : {morph meval v: x y / x * y}.
 Proof. exact: rmorphM. Qed.
+
+Lemma comp_mpoly_meval (lq : k.-tuple {mpoly R[n]}) (p : {mpoly R[k]}) v :
+  (p \mPo lq).@[v] = p.@[fun i => (tnth lq i).@[v]].
+Proof.
+rewrite comp_mpolyEX {3}(mpolyE p) !raddf_sum.
+apply eq_bigr => m _ /=.
+rewrite !mevalZ; congr *%R.
+rewrite /comp_mpoly /meval !mmapX rmorph_prod.
+by apply eq_bigr => i _; rewrite rmorphX.
+Qed.
+
 End MEvalCom.
 
 (* -------------------------------------------------------------------- *)
@@ -3336,6 +3354,10 @@ pose_big_enough i; first rewrite (map_mpolyE i) //.
   by rewrite (mcoeff_mpoly (fun m => (f p@_m))).
 by close.
 Qed.
+
+Lemma map_mpolyC c :
+  map_mpoly f c%:MP_[n] = (f c)%:MP_[n].
+Proof. by rewrite /map_mpoly mmapC. Qed.
 End Additive.
 
 Section Multiplicative.
@@ -3352,8 +3374,48 @@ Qed.
 
 Canonical map_mpoly_multiplicative :=
   AddRMorphism map_mpoly_is_multiplicative.
+
+Lemma map_mpolyX (m : 'X_{1..n}) :
+  map_mpoly f 'X_[m] = 'X_[m].
+Proof. by rewrite /map_mpoly mmapX mmap1_id. Qed.
+
+Lemma map_mpolyZ (c : R) (p : {mpoly R[n]}) :
+  map_mpoly f (c *: p) = (f c) *: (map_mpoly f p).
+Proof.
+apply /mpolyP => m.
+by rewrite mcoeff_map_mpoly !mcoeffZ mcoeff_map_mpoly /= rmorphM.
+Qed.
+
+Lemma msupp_map_mpoly (injf : injective f) (p : {mpoly R[n]}) :
+  perm_eq (msupp (map_mpoly f p)) (msupp p).
+Proof.
+rewrite /map_mpoly /mmap.
+set s := BigOp.bigop _ _ _.
+have -> : s = \big[+%R/0%R]_(m <- msupp p) (f p@_m *: 'X_[m]).
+{ by apply eq_bigr => m _; rewrite /= mmap1_id mul_mpolyC. }
+apply (msupp_sumX (msupp_uniq _)).
+by move=> m; rewrite mcoeff_msupp (rmorph_eq_nat _ O injf).
+Qed.
 End Multiplicative.
 End MPolyMap.
+
+(* -------------------------------------------------------------------- *)
+Section MPolyMapComp.
+Variable n k : nat.
+Variable R S : ringType.
+Variable f : {rmorphism R -> S}.
+
+Lemma map_mpoly_comp (injf : injective f)
+    (lq : n.-tuple {mpoly R[k]}) (p : {mpoly R[n]}) :
+  map_mpoly f (p \mPo lq) = (map_mpoly f p) \mPo (map_tuple (map_mpoly f) lq).
+Proof.
+apply /mpolyP => m.
+rewrite mcoeff_map_mpoly !raddf_sum (eq_big_perm _ (msupp_map_mpoly injf p)) /=.
+apply eq_bigr => m' _; rewrite mcoeff_map_mpoly !mcoeffCM rmorphM; congr *%R.
+rewrite /mmap1 -mcoeff_map_mpoly rmorph_prod; congr mcoeff.
+by apply eq_bigr => i _; rewrite tnth_map rmorphX.
+Qed.
+End MPolyMapComp.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyOver.
