@@ -7,7 +7,7 @@ A Coq/SSReflect Library for Monoidal Rings && Multinomials
 
   It can be installed from the unstable Coq opam repository:
 
-    https://coq.inria.fr/howto-opam
+  https://coq.inria.fr/howto-opam
 
 Authors
 ========================================================================
