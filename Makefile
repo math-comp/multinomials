@@ -1,23 +1,7 @@
 # -*- Makefile -*-
 
 # --------------------------------------------------------------------
-NAME     := SsrMultinomials
-SUBDIRS  :=
-INCFLAGS := -R src $(NAME)
-COQFILES := \
-	src/xfinmap.v \
-	src/ssrcomplements.v \
-	src/monalg.v \
-	src/freeg.v \
-	src/mpoly.v
-
 include Makefile.common
-
-# --------------------------------------------------------------------
-.PHONY: install
-
-install:
-	$(MAKE) -f Makefile.coq install
 
 # --------------------------------------------------------------------
 this-clean::
@@ -39,6 +23,3 @@ dist:
 	BZIP2=-9 tar $(TAROPT) -cjf $(DISTDIR).tar.bz2 $(DISTDIR)
 	rm -rf $(DISTDIR)
 
-count:
-	@coqwc $(COQFILES) | tail -1 | \
-	  awk '{printf ("%d (spec=%d+proof=%d)\n", $$1+$$2, $$1, $$2)}'
