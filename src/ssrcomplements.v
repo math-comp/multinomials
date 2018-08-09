@@ -246,8 +246,8 @@ Section BigMkSub.
   Qed.
 End BigMkSub.
 
-Implicit Arguments big_sub_widen [S idx op T sT rT].
-Implicit Arguments big_sub_widen [S idx op T sT rT].
+Arguments big_sub_widen [S idx op T sT rT].
+Arguments big_sub_widen [S idx op T sT rT].
 
 (* -------------------------------------------------------------------- *)
 Section Product.

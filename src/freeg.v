@@ -75,8 +75,6 @@ Module FreegDefs.
       _ : reduced seq_of_prefreeg
     }.
 
-    Implicit Arguments mkPrefreeg [].
-
     Local Coercion seq_of_prefreeg : prefreeg >-> seq.
 
     Lemma prefreeg_reduced: forall (D : prefreeg), reduced D.
@@ -95,7 +93,7 @@ Module FreegDefs.
     Canonical  prefreeg_choiceType  := Eval hnf in ChoiceType prefreeg prefreeg_choiceMixin.
   End Defs.
 
-  Implicit Arguments mkPrefreeg [G K].
+  Arguments mkPrefreeg [G K].
 
   Section Quotient.
     Variable G : zmodType.
