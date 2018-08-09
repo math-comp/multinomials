@@ -1,0 +1,7 @@
+src/xfinmap.v
+src/ssrcomplements.v
+src/monalg.v
+src/freeg.v
+src/mpoly.v
+
+-R src SsrMultinomials

@@ -3,7 +3,7 @@
 A Coq/SSReflect Library for Monoidal Rings && Multinomials
 ========================================================================
 
-  This library is based on SSReflect/MathComp Library version 1.5/1.6.
+  This library is based on SSReflect/MathComp Library version >= 1.6.
 
   It can be installed from the unstable Coq opam repository:
 
@@ -22,5 +22,5 @@ Contributors:
 This library is also the result of discussions with:
 
   - Sophie Bernard
-  - [Cyril Cohen](http://perso.crans.org/cohen/)
+  - [Cyril Cohen](http://www.cyrilcohen.fr/)
   - [Laurence Rideau](http://www-sop.inria.fr/members/Laurence.Rideau/)

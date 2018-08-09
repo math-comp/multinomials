@@ -937,7 +937,7 @@ Proof. by rewrite mdeg0. Qed.
 End DegBoundMultinom.
 
 Definition bm0 n b := BMultinom (bm0_proof n b).
-Implicit Arguments bm0 [n b].
+Arguments bm0 [n b].
 
 Notation "''X_{1..' n  <  b '}'"       := (bmultinom n b).
 Notation "''X_{1..' n  <  b1 , b2 '}'" := ('X_{1..n < b1} * 'X_{1..n < b2})%type.
@@ -1641,7 +1641,7 @@ rewrite [X in _=X]big_uncond //= => j /memN_msupp_eq0.
 by move=> ->; rewrite mulr0 freegU0.
 Qed.
 
-Implicit Arguments mpoly_mulwE [p q].
+Arguments mpoly_mulwE [p q].
 
 Lemma mpoly_mul_revwE p q kp kq : msize p <= kp -> msize q <= kq ->
   p *M q = [mpoly \sum_(m : 'X_{1..n < kq, kp}) (p *M_[(m.2, m.1)] q)].
@@ -1650,7 +1650,7 @@ move=> lep leq;  rewrite -pair_bigA_curry exchange_big /=.
 by rewrite pair_bigA /= -mpoly_mulwE //.
 Qed.
 
-Implicit Arguments mpoly_mul_revwE [p q].
+Arguments mpoly_mul_revwE [p q].
 
 Lemma mcoeff_poly_mul p q m k : !|m| < k ->
   (p *M q)@_m =
@@ -1713,7 +1713,7 @@ rewrite -(pair_big_dep xpredT P F) (bigID Q) /= addrC.
   move/mnmP/(_ i); rewrite mnmDE=> eq; move: Nle.
   by rewrite eq leq_addr.
 Qed.
-Implicit Arguments mcoeff_poly_mul_lin [p q m].
+Arguments mcoeff_poly_mul_lin [p q m].
 
 Local Notation mcoeff_pml := mcoeff_poly_mul_lin.
 
@@ -1736,7 +1736,7 @@ rewrite ltn_neqAle -subn_eq0 => /andP [ne_mhi /eqP le_mhi].
 apply/negbTE/eqP/mnmP=> /(_ i); rewrite !mnmBE => /eqP.
 by rewrite le_mhi subn0 (negbTE ne_mhi).
 Qed.
-Implicit Arguments mcoeff_poly_mul_lin_rev [p q m].
+Arguments mcoeff_poly_mul_lin_rev [p q m].
 
 Local Notation mcoeff_pmlr := mcoeff_poly_mul_lin_rev.
 
@@ -2619,7 +2619,7 @@ move=> le_pk; rewrite /mderiv (big_mksub I) /=; first last.
 rewrite big_uncond //= => j /memN_msupp_eq0 ->.
 by rewrite mulr0 scale0r.
 Qed.
-Implicit Arguments mderivwE [p i].
+Arguments mderivwE [i p].
 
 Lemma mcoeff_deriv i m p : p^`M(i)@_m = p@_(m + U_(i)) *+ (m i).+1.
 Proof.
@@ -3006,7 +3006,7 @@ rewrite /mmap (big_mksub I) ?msupp_uniq //=; first last.
 rewrite big_uncond //= => j /memN_msupp_eq0 ->.
 by rewrite raddf0 mul0r.
 Qed.
-Implicit Arguments mmapE [p].
+Arguments mmapE [p].
 
 Lemma mmap_is_additive : additive (mmap f h).
 Proof.
@@ -3035,7 +3035,7 @@ by rewrite mcoeffC eqxx mulr1.
 Qed.
 End Additive.
 
-Implicit Arguments mmapE [f h p].
+Arguments mmapE [h f p].
 
 Section Multiplicative.
 Variable h : 'I_n -> S.
@@ -3070,7 +3070,7 @@ Qed.
 End Multiplicative.
 End MPolyMorphism.
 
-Implicit Arguments mmapE [n R S h f p].
+Arguments mmapE [n R S h f p].
 
 (* -------------------------------------------------------------------- *)
 Lemma mmap1_eq n (R : ringType) (f1 f2 : 'I_n -> R) m :
@@ -3328,7 +3328,7 @@ Proof.
 rewrite /map_mpoly; move/mmapE=> -> /=; apply/eq_bigr.
 by move=> i _; rewrite mmap1_id mul_mpolyC.
 Qed.
-Implicit Arguments map_mpolyE [p].
+Arguments map_mpolyE [p].
 
 Lemma mcoeff_map_mpoly m p : p^f@_m = f p@_m.
 Proof.
@@ -3688,7 +3688,7 @@ rewrite [X in _='X_[X]](reindex (fun i : 'I_n => s i)) /=.
 by exists (s^-1)%g=> i _; rewrite (permK, permKV).
 Qed.
 
-Implicit Arguments msymE [p].
+Arguments msymE [p].
 
 Lemma mcoeff_sym p (s : 'S_n) m : (msym s p)@_m = p@_(m#s).
 Proof.
@@ -3842,8 +3842,8 @@ by move/msupp_le_mlead; rewrite leNgt => /negbTE=> ->.
 Qed.
 End MPolySym.
 
-Implicit Arguments inj_msym [n R].
-Implicit Arguments symmetric [n R].
+Arguments inj_msym [n R].
+Arguments symmetric [n R].
 
 (* -------------------------------------------------------------------- *)
 Section MPolySymComp.

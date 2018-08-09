@@ -71,7 +71,7 @@ by rewrite /index_enum -enumT mem_enum.
 Qed.
 End BigFSetIncl.
 
-Implicit Arguments big_fset_incl [R idx op T A B].
+Arguments big_fset_incl [R idx op T A B].
 
 (* -------------------------------------------------------------------- *)
 Module BigEnoughFSet.
