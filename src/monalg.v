@@ -1274,7 +1274,7 @@ Context {K : choiceType} {G : zmodType}.
 
 Definition monalgOver (S : pred_class) :=
   [qualify a g : {malg G[K]} |
-     [forall m : msupp g, g@_(val m) \in S]].
+   all (fun m => g@_m \in S) (enum_fset (msupp g))].
 
 Fact monalgOver_key S : pred_key (monalgOver S). Proof. by []. Qed.
 Canonical monalgOver_keyed S := KeyedQualifier (monalgOver_key S).
@@ -1289,25 +1289,22 @@ Local Notation monalgOver := (@monalgOver K G).
 Lemma monalgOverS (S1 S2 : pred_class) :
   {subset S1 <= S2} -> {subset monalgOver S1 <= monalgOver S2}.
 Proof.
-move=> le_S1S2 g /forallP /= S1g; apply/forallP.
-by move=> /= x; apply/le_S1S2/S1g.
+move=> le_S1S2 g /allP /= S1g; apply/allP => /= x Hx.
+exact/le_S1S2/S1g.
 Qed.
 
 Lemma monalgOverU c k S :
   << c *g k >> \in monalgOver S = (c == 0) || (c \in S).
 Proof.
-rewrite qualifE msuppU; case: (c =P 0)=> [->|] /=.
-  by apply/forallP=> [[k']]; rewrite /= monalgU0 in_fset0.
-move=> nz_c; apply/forallP/idP=> /= h.
-  by move/(_ (FSetSub (fset11 k))): h; rewrite mcoeffUU.
-by case=> /= k'; rewrite in_fset1=> /eqP->; rewrite mcoeffUU.
+rewrite qualifE msuppU; case: (c =P 0)=> [->|] //=.
+move=> nz_c; apply/allP/idP=> /= [h | h x].
+  by move/(_ k): h; rewrite mcoeffUU; apply; rewrite in_fset1.
+by rewrite in_fset1=> /eqP->; rewrite mcoeffUU.
 Qed.
 
 Lemma monalgOver0 S: 0 \is a monalgOver S.
-Proof.
-rewrite qualifE msupp0; apply/forallP=> //=.
-by case=> /= x; rewrite in_fset0.
-Qed.
+Proof. by rewrite qualifE msupp0; apply/allP. Qed.
+
 End Theory.
 
 (* -------------------------------------------------------------------- *)
@@ -1323,8 +1320,8 @@ Local Notation monalgOver := (@monalgOver K G).
 Lemma monalgOverP {g} :
   reflect (forall m, g@_m \in kS) (g \in monalgOver kS).
 Proof.
-apply: (iffP forallP)=> /= h k; last by rewrite h.
-by case: msuppP=> [kg|]; rewrite ?rpred0 // (h (FSetSub kg)).
+apply: (iffP allP)=> /= h k; last by rewrite h.
+by case: msuppP=> [kg|]; rewrite ?rpred0 // (h k).
 Qed.
 
 Lemma monalgOver_addr_closed : addr_closed (monalgOver kS).
@@ -1581,7 +1578,7 @@ Definition cmu i : {cmonom I} :=
   mkcmonom [fsfun x => [fmap].[i <- 1%N] x].
 
 Definition cmmul m1 m2 : {cmonom I} := mkcmonom [fsfun
-  i : finsupp m1 `|` finsupp m2 => (m1 (val i) + m2 (val i))%N].
+  i in finsupp m1 `|` finsupp m2 => (m1 i + m2 i)%N].
 
 Lemma cmoneE i : cmone i = 0%N.
 Proof. by rewrite cmE fsfun_ffun insubF. Qed.
