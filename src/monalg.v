@@ -42,8 +42,6 @@ Reserved Notation "{ 'malg' K }"
   (at level 0, K at level 2, format "{ 'malg'  K }").
 Reserved Notation "[ 'malg' g ]"
   (at level 0, g at level 2, format "[ 'malg'  g ]").
-(* Reserved Notation "[ 'malg' x : aT => E ]"
-  (at level 0, x ident, format "[ 'malg'  x  :  aT  =>  E ]"). *)
 Reserved Notation "[ 'malg' x 'in' aT => E ]"
   (at level 0, x ident, format "[ 'malg'  x  'in'  aT  =>  E ]").
 Reserved Notation "[ 'malg' x => E ]"
@@ -1045,8 +1043,6 @@ Qed.
 Lemma mcoeffCM c g k : (c%:MP * g)@_k = c * g@_k :> R.
 Proof. by rewrite mul_malgC mcoeffZ. Qed.
 
-(* I don't know here how to avoid going through finType due to the use  *)
-(* of boolean [exists ...]                                              *)
 (* -------------------------------------------------------------------- *)
 Lemma msuppM_le_finType g1 g2 k :
   k \in msupp (g1 * g2) ->
@@ -1056,17 +1052,32 @@ move=> k_in_g1Mg2; apply/(existsPP (fun _ => exists_eqP)).
 apply/contraLR: k_in_g1Mg2=> hk; rewrite -mcoeff_eq0.
 rewrite mcoeffMl big_seq big1 // => /= k1 Hk1.
 rewrite big_seq big1 // => k2 Hk2.
-case: eqP=> // kE; case/negP: hk; apply/existsP.
-by exists [` Hk1]; apply/existsP; exists [` Hk2]; rewrite kE.
+case: eqP=> // kE; case/negP: hk.
+by apply/existsP; exists [` Hk1]; apply/existsP; exists [` Hk2]; rewrite kE.
 Qed.
 
-(* -------------------------------------------------------------------- *)
 Lemma msuppM_le g1 g2 k :
   k \in msupp (g1 * g2) ->
     exists k1 k2, [/\ k1 \in msupp g1, k2 \in msupp g2 & k = (k1 * k2)%M].
 Proof.
 move/msuppM_le_finType => [] [k1 Hk1] [] [k2 Hk2] /= Hk.
 by exists k1; exists k2.
+Qed.
+
+(* Alternative equivalent statement *)
+Lemma msuppM_incl g1 g2 :
+  msupp (g1 * g2) `<=` [fset (k1 * k2)%M | k1 in msupp g1, k2 in msupp g2].
+Proof.
+have sum_neq0 f (s : seq K) (H : \sum_(i <- s) f i != 0) :
+     exists2 i, i \in s & f i != 0 :> R.
+  suff : ~~ all (fun i => f i == 0) s by move/allPn => [] i Hi Hf; exists i.
+  apply/contra: H => /allP H.
+  by rewrite big_seq; apply/eqP/big1 => i /H/eqP.
+apply/fsubsetP => k.
+rewrite -mcoeff_neq0 mcoeffMl => /sum_neq0 [k1 Hk1] /sum_neq0 [k2 Hk2] H.
+apply/imfset2P; exists k1 => //; exists k2 => //.
+apply/esym/eqP; move: H; rewrite eq_sym; apply contraR => /negbTE ->.
+by rewrite mulr0n.
 Qed.
 
 (* -------------------------------------------------------------------- *)
@@ -1478,11 +1489,11 @@ Qed.
 Lemma mmeasureN g : mmeasure (-g) = mmeasure g.
 Proof. by rewrite mmeasureE msuppN. Qed.
 
-(* Lemmas about max apply only on fintypes and not seq *)
 Lemma mmeasureD_le g1 g2 :
   (mmeasure (g1 + g2) <= maxn (mmeasure g1) (mmeasure g2))%N.
 Proof.
 rewrite {1}mmeasureE big_seq_fsetE /=.
+(* Going briefly through finType as lemmas about max apply only to them *)
 apply/bigmax_leqP=> [[i ki]] _ /=.
 have /fsubsetP /(_ i ki) := (msuppD_le g1 g2); rewrite in_fsetU.
 by rewrite leq_max; case/orP=> /mmeasure_mnm_lt->; rewrite !simpm.
