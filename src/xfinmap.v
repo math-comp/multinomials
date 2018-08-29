@@ -2,7 +2,7 @@
 From mathcomp Require Import ssreflect ssrbool ssrnat eqtype ssrfun.
 From mathcomp Require Import choice seq path finset finfun fintype bigop.
 From mathcomp Require Import bigenough.
-From Devel Require Export finmap.
+From mathcomp Require Export finmap.
 
 (* -------------------------------------------------------------------- *)
 Set Implicit Arguments.
@@ -11,11 +11,6 @@ Unset Printing Implicit Defensive.
 
 Local Open Scope fset.
 Local Open Scope fmap.
-
-(* -------------------------------------------------------------------- *)
-Lemma fnd_fmap0 (T : choiceType) (U : Type) x :
-  ([fmap] : {fmap T -> U}).[?x] = None.
-Proof. by rewrite not_fnd // in_fset0. Qed.
 
 (* -------------------------------------------------------------------- *)
 Module BigEnoughFSet.
