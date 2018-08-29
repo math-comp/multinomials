@@ -42,8 +42,10 @@ Reserved Notation "{ 'malg' K }"
   (at level 0, K at level 2, format "{ 'malg'  K }").
 Reserved Notation "[ 'malg' g ]"
   (at level 0, g at level 2, format "[ 'malg'  g ]").
-Reserved Notation "[ 'malg' x : aT => E ]"
-  (at level 0, x ident, format "[ 'malg'  x  :  aT  =>  E ]").
+(* Reserved Notation "[ 'malg' x : aT => E ]"
+  (at level 0, x ident, format "[ 'malg'  x  :  aT  =>  E ]"). *)
+Reserved Notation "[ 'malg' x 'in' aT => E ]"
+  (at level 0, x ident, format "[ 'malg'  x  'in'  aT  =>  E ]").
 Reserved Notation "[ 'malg' x => E ]"
   (at level 0, x ident, format "[ 'malg'  x  =>  E ]").
 Reserved Notation "{ 'mpoly' T [ n ] }"
@@ -341,8 +343,8 @@ End MkMalg.
 (* -------------------------------------------------------------------- *)
 Notation "[ 'malg' g ]"
   := (mkmalg g) : ring_scope.
-Notation "[ 'malg' x : aT => E ]"
-  := (mkmalg [fsfun x : aT => E]) : ring_scope.
+Notation "[ 'malg' x 'in' aT => E ]"
+  := (mkmalg [fsfun x in aT => E]) : ring_scope.
 Notation "[ 'malg' x => E ]"
   := (mkmalg [fsfun x => E]) : ring_scope.
 Notation "<< z *g k >>"
@@ -397,7 +399,7 @@ Lemma mcoeff_fnd (g : {fmap K -> G}) k :
 Proof. by apply/fsfun_ffun. Qed.
 
 Lemma mcoeffE (domf : {fset K}) (E : K -> G) k :
-    [malg k : domf => E (val k)]@_k
+    [malg k in domf => E k]@_k
   = if k \in domf then E k else 0.
 Proof. by apply/fsfun_fun. Qed.
 
@@ -437,10 +439,10 @@ Definition fgzero : {malg G[K]} :=
   [malg x => [fmap] x].
 
 Definition fgopp g :=
-  [malg k : msupp g => - g@_(val k)].
+  [malg k in msupp g => - g@_k].
 
 Definition fgadd g1 g2 :=
-  [malg k : (msupp g1 `|` msupp g2) => g1@_(val k) + g2@_(val k)].
+  [malg k in (msupp g1 `|` msupp g2) => g1@_k + g2@_k].
 
 Lemma fgzeroE k : fgzero@_k = 0.
 Proof. by rewrite mcoeff_fnd !(in_fsetE, not_fnd). Qed.
@@ -1046,7 +1048,7 @@ Proof. by rewrite mul_malgC mcoeffZ. Qed.
 (* I don't know here how to avoid going through finType due to the use  *)
 (* of boolean [exists ...]                                              *)
 (* -------------------------------------------------------------------- *)
-Lemma msuppM_le_fintype g1 g2 k :
+Lemma msuppM_le_finType g1 g2 k :
   k \in msupp (g1 * g2) ->
         exists k1 : msupp g1, exists k2 : msupp g2, k = (val k1 * val k2)%M.
 Proof.
@@ -1063,7 +1065,7 @@ Lemma msuppM_le g1 g2 k :
   k \in msupp (g1 * g2) ->
     exists k1 k2, [/\ k1 \in msupp g1, k2 \in msupp g2 & k = (k1 * k2)%M].
 Proof.
-move/msuppM_le_fintype => [] [k1 Hk1] [] [k2 Hk2] /= Hk.
+move/msuppM_le_finType => [] [k1 Hk1] [] [k2 Hk2] /= Hk.
 by exists k1; exists k2.
 Qed.
 
