@@ -1070,7 +1070,7 @@ Lemma msuppM_incl g1 g2 :
 Proof.
 have sum_neq0 f (s : seq K) (H : \sum_(i <- s) f i != 0) :
      exists2 i, i \in s & f i != 0 :> R.
-  suff : ~~ all (fun i => f i == 0) s by move/allPn => [] i Hi Hf; exists i.
+  suff: ~~ all (fun i => f i == 0) s by move/allPn => [] i Hi Hf; exists i.
   apply/contra: H => /allP H.
   by rewrite big_seq; apply/eqP/big1 => i /H/eqP.
 apply/fsubsetP => k.
@@ -1284,8 +1284,7 @@ Section Def.
 Context {K : choiceType} {G : zmodType}.
 
 Definition monalgOver (S : pred_class) :=
-  [qualify a g : {malg G[K]} |
-   all (fun m => g@_m \in S) (enum_fset (msupp g))].
+  [qualify a g : {malg G[K]} | all (fun m => g@_m \in S) (msupp g)].
 
 Fact monalgOver_key S : pred_key (monalgOver S). Proof. by []. Qed.
 Canonical monalgOver_keyed S := KeyedQualifier (monalgOver_key S).
