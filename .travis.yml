@@ -13,7 +13,6 @@ env:
   - COMPILER="system"
   # Main test targets
   matrix:
-  - COQ="8.6.1" MATHCOMP="1.6.1"
   - COQ="8.6.1" MATHCOMP="1.7.0"
   - COQ="8.7.2" MATHCOMP="1.7.0"
   - COQ="8.8.1" MATHCOMP="1.7.0"
@@ -21,8 +20,6 @@ env:
   - COQ="dev" MATHCOMP="1.7.0"
   - COQ="dev" MATHCOMP="dev"
 matrix:
-  allow_failures:
-  - env: COQ="8.6.1" MATHCOMP="1.6.1"
   fast_finish: true
 install:
 - sudo add-apt-repository --yes ppa:avsm/ppa
