@@ -7,39 +7,18 @@ branches:
   only:
   - master
 env:
-  global:
-  - NJOBS=2
-  # system is == 4.02.3
-  - COMPILER="system"
-  # Main test targets
   matrix:
   - COQ="8.6.1" MATHCOMP="1.7.0"
   - COQ="8.7.2" MATHCOMP="1.7.0"
   - COQ="8.8.1" MATHCOMP="1.7.0"
   - COQ="8.8.1" MATHCOMP="dev"
-  - COQ="dev" MATHCOMP="1.7.0"
-  - COQ="dev" MATHCOMP="dev"
-matrix:
-  fast_finish: true
+  - COQ="dev"   MATHCOMP="1.7.0"
+  - COQ="dev"   MATHCOMP="dev"
 install:
-- sudo add-apt-repository --yes ppa:avsm/ppa
-- sudo apt-get update -qq
-- sudo apt-get install -qq -y opam
-- opam init -y
-- eval $(opam config env)
-- opam config var root
-- opam remote add coq-extra-dev https://coq.inria.fr/opam/extra-dev
-- opam remote add coq-core-dev  https://coq.inria.fr/opam/core-dev
-- opam remote add coq-released  https://coq.inria.fr/opam/released
-- opam pin add -nvy coq --kind version ${COQ}
-- opam pin add -nvy coq-mathcomp-ssreflect --kind version ${MATHCOMP}
-- opam pin add -nvy .
-- |
-  # Building coq
-  travis_wait opam install -j ${NJOBS} -y ocamlfind camlp5 coq
-- |
-  # Building other deps
-  travis_wait opam install -j ${NJOBS} -y --deps-only coq-mathcomp-multinomials
-- opam list
+- docker pull strubpy/coq:${COQ}-mathcomp-${MATHCOMP}
+- docker tag  strubpy/coq:${COQ}-mathcomp-${MATHCOMP} ci:current
+- docker run  -itd --name CI -v $PWD:/home/ci/multinomials ci:current
+- docker exec CI sh -c 'opam pin add -n multinomials'
+- docker exec CI sh -c 'opam install -vvv --deps-only coq-mathcomp-multinomials'
 script:
-- opam install -j ${NJOBS} -y -vvv coq-mathcomp-multinomials
+- docker exec CI sh -c 'opam install -vvv coq-mathcomp-multinomials'
