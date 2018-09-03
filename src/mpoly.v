@@ -3261,14 +3261,24 @@ Proof. by rewrite /meval mmapC. Qed.
 Lemma meval1 v : meval v 1 = 1.
 Proof. by apply/mevalC. Qed.
 
-Lemma mevalX v i : meval v 'X_i = v i.
+Lemma mevalXU v i : meval v 'X_i = v i.
 Proof. by rewrite /meval mmapX mmap1U. Qed.
+
+Lemma mevalX v m : meval v 'X_[m] = \prod_(i < n) (v i) ^+ (m i).
+Proof. by rewrite /meval mmapX. Qed.
 
 Lemma meval_is_scalable v : scalable_for *%R (meval v).
 Proof. by move=> /= c p; rewrite /meval mmapZ. Qed.
 
 Lemma mevalZ v c p : meval v (c *: p) = c * (meval v p).
 Proof. exact: meval_is_scalable. Qed.
+
+Lemma meval_eq v1 v2 p :
+  v1 =1 v2 -> meval v1 p = meval v2 p.
+Proof.
+move=> eq_v; rewrite !mevalE; apply/eq_bigr=> i _.
+by congr *%R; apply/eq_bigr=> j _; rewrite eq_v.
+Qed.
 End MEval.
 
 Notation "p .@[ v ]" := (@meval _ _ v p).
@@ -3276,7 +3286,7 @@ Notation "p .@[< v >]" := (@meval _ _ (nth v) p).
 
 (* -------------------------------------------------------------------- *)
 Section MEvalCom.
-Variable n : nat.
+Variable n k : nat.
 Variable R : comRingType.
 
 Implicit Types p q r : {mpoly R[n]}.
@@ -3297,6 +3307,21 @@ Canonical meval_lrmorphism v := [lrmorphism of meval v].
 Lemma mevalM v : {morph meval v: x y / x * y}.
 Proof. exact: rmorphM. Qed.
 End MEvalCom.
+
+(* -------------------------------------------------------------------- *)
+Section MEvalComp.
+Variables (n k : nat) (R : comRingType).
+Variables (v : 'I_n -> R) (p : {mpoly R[k]}).
+Variables (lq : k.-tuple {mpoly R[n]}).
+
+Lemma comp_mpoly_meval : (p \mPo lq).@[v] = p.@[fun i => (tnth lq i).@[v]].
+Proof.
+rewrite comp_mpolyEX [X in _ = X.@[_]](mpolyE p) !raddf_sum /=.
+apply/eq_bigr => m _; rewrite !mevalZ; congr *%R.
+rewrite comp_mpolyX rmorph_prod /= mevalX.
+by apply/eq_bigr=> i _; rewrite rmorphX.
+Qed.
+End MEvalComp.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyMap.
@@ -3321,6 +3346,10 @@ Lemma map_mpoly_is_additive : additive (map_mpoly f).
 Proof. by apply/mmap_is_additive. Qed.
 
 Canonical map_mpoly_additive := Additive map_mpoly_is_additive.
+
+Lemma map_mpolyC c :
+  map_mpoly f c%:MP_[n] = (f c)%:MP_[n].
+Proof. by rewrite /map_mpoly mmapC. Qed.
 
 Lemma map_mpolyE p k : msize p <= k ->
   p^f = \sum_(m : 'X_{1..n < k}) (f p@_m) *: 'X_[m].
@@ -3352,8 +3381,45 @@ Qed.
 
 Canonical map_mpoly_multiplicative :=
   AddRMorphism map_mpoly_is_multiplicative.
+
+Lemma map_mpolyX (m : 'X_{1..n}) :
+  map_mpoly f 'X_[m] = 'X_[m].
+Proof. by rewrite /map_mpoly mmapX mmap1_id. Qed.
+
+Lemma map_mpolyZ (c : R) (p : {mpoly R[n]}) :
+  map_mpoly f (c *: p) = (f c) *: (map_mpoly f p).
+Proof. by rewrite /map_mpoly mmapZ /= mul_mpolyC. Qed.
+
+Lemma msupp_map_mpoly p :
+  injective f -> perm_eq (msupp (map_mpoly f p)) (msupp p).
+Proof.
+move=> inj_f; apply/uniq_perm_eq; rewrite ?msupp_uniq //=.
+by move=> m; rewrite !mcoeff_msupp mcoeff_map_mpoly raddf_eq0.
+Qed.
 End Multiplicative.
 End MPolyMap.
+
+(* -------------------------------------------------------------------- *)
+Section MPolyMapComp.
+Variable n k : nat.
+Variable R S : ringType.
+Variable f   : {rmorphism R -> S}.
+Variable lq  : n.-tuple {mpoly R[k]}.
+Variable p   : {mpoly R[n]}.
+
+Local Notation "p ^f" := (map_mpoly f p).
+
+Lemma map_mpoly_comp : injective f -> 
+  (p \mPo lq)^f =
+    (p^f) \mPo [tuple of [seq map_mpoly f q | q <- lq]].
+Proof.
+move=> inj_f; apply/mpolyP=> m; rewrite mcoeff_map_mpoly.
+rewrite !raddf_sum (eq_big_perm _ (msupp_map_mpoly _ inj_f)) /=.
+apply/eq_bigr=> m' _; rewrite mcoeff_map_mpoly !mcoeffCM rmorphM /=.
+congr *%R; rewrite /mmap1 -mcoeff_map_mpoly rmorph_prod /=.
+by congr _@__; apply/eq_bigr=> i /=; rewrite tnth_map rmorphX.
+Qed.
+End MPolyMapComp.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyOver.
@@ -4621,7 +4687,7 @@ rewrite !map_polyZ !rmorphX raddfN /= mmapC !coefZ /=.
 congr (_ * _); rewrite map_polyX coefXn eqxx mulr1.
 rewrite /mesym; rewrite !raddf_sum /=; apply/eq_bigr.
 move=> i _; rewrite !rmorph_prod /=; apply/eq_bigr.
-by move=> j _; rewrite mmapX mmap1U mevalX.
+by move=> j _; rewrite mmapX mmap1U mevalXU.
 Qed.
 
 Lemma mroots_sum (R : idomainType) (n : nat) (cs : n.+1.-tuple R) :
@@ -4629,7 +4695,7 @@ Lemma mroots_sum (R : idomainType) (n : nat) (cs : n.+1.-tuple R) :
 Proof.
 move: (mroots_coeff cs) => /(_ 1); rewrite subSS subn0=> ->.
 rewrite expr1 mulN1r opprK mesym1E raddf_sum /=.
-by rewrite big_tuple; apply/eq_bigr=> /= i _; rewrite mevalX.
+by rewrite big_tuple; apply/eq_bigr=> /= i _; rewrite mevalXU.
 Qed.
 End MESymViete.
 
