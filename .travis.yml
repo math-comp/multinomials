@@ -41,7 +41,7 @@ install: |
     opam list
     sudo chown -R coq:coq /home/coq/${CONTRIB_NAME}
     opam pin add -y -n coq-mathcomp-multinomials .
-    opam install -y -vvv --deps-only coq-mathcomp-multinomials
+    opam install -y -vvv --ignore-constraints-on=coq-mathcomp-ssreflect --ignore-constraints-on=coq-mathcomp-algebra --ignore-constraints-on=coq-mathcomp-finmap --deps-only coq-mathcomp-multinomials
     "
 script:
 - echo -e "${ANSI_YELLOW}Building ${CONTRIB_NAME}...${ANSI_RESET}" && echo -en 'travis_fold:start:script\\r'
@@ -49,7 +49,7 @@ script:
   docker exec COQ /bin/bash --login -c "
     export PS4='+ \e[33;1m(\$0 @ line \$LINENO) \$\e[0m '
     set -ex
-    opam install -y -vvv coq-mathcomp-multinomials
+    opam install -y -vvv --ignore-constraints-on=coq-mathcomp-ssreflect --ignore-constraints-on=coq-mathcomp-algebra --ignore-constraints-on=coq-mathcomp-finmap coq-mathcomp-multinomials
     "
 - docker stop COQ  # optional
 - echo -en 'travis_fold:end:script\\r'
