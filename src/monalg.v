@@ -80,24 +80,24 @@ Section ClassDef.
 Record class_of T := Class
  { base : Choice.class_of T; mixin : mixin_of T }.
 
-Structure type := Pack {sort; _ : class_of sort; _ : Type}.
+Structure type := Pack {sort; _ : class_of sort}.
 
 Local Coercion base : class_of >-> Choice.class_of.
 Local Coercion sort : type >-> Sortclass.
 
 Variables (T : Type) (cT : type).
 
-Definition class := let: Pack _ c _ as cT' := cT return class_of cT' in c.
-Definition clone c of phant_id class c := @Pack T c T.
+Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
+Definition clone c of phant_id class c := @Pack T c.
 
-Let xT := let: Pack T _ _ := cT in T.
+Let xT := let: Pack T _ := cT in T.
 Notation xclass := (class : class_of xT).
 
 Definition pack m :=
-  fun bT b & phant_id (Choice.class bT) b => Pack (@Class T b m) T.
+  fun bT b & phant_id (Choice.class bT) b => Pack (@Class T b m).
 
-Definition eqType := @Equality.Pack cT xclass xT.
-Definition choiceType := @Choice.Pack cT xclass xT.
+Definition eqType := @Equality.Pack cT xclass.
+Definition choiceType := @Choice.Pack cT xclass.
 
 End ClassDef.
 
@@ -140,26 +140,26 @@ Record class_of (M : Type) : Type := Class {
   mixin : commutative (MonomialDef.mul base)
 }.
 
-Structure type := Pack {sort; _ : class_of sort; _ : Type}.
+Structure type := Pack {sort; _ : class_of sort}.
 
 Local Coercion base : class_of >-> MonomialDef.class_of.
 Local Coercion sort : type >-> Sortclass.
 
 Variables (T : Type) (cT : type).
 
-Definition class := let: Pack _ c _ as cT' := cT return class_of cT' in c.
-Definition clone c of phant_id class c := @Pack T c T.
+Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
+Definition clone c of phant_id class c := @Pack T c.
 
-Let xT := let: Pack T _ _ := cT in T.
+Let xT := let: Pack T _ := cT in T.
 Notation xclass := (class : class_of xT).
 
 Definition pack mul0 (m0 : @commutative T T mul0) :=
   fun bT b & phant_id (MonomialDef.class bT) b =>
-  fun    m & phant_id m0 m => Pack (@Class T b m) T.
+  fun    m & phant_id m0 m => Pack (@Class T b m).
 
-Definition eqType     := @Equality.Pack cT xclass xT.
-Definition choiceType := @Choice.Pack cT xclass xT.
-Definition monomType  := @MonomialDef.Pack cT xclass xT.
+Definition eqType     := @Equality.Pack cT xclass.
+Definition choiceType := @Choice.Pack cT xclass.
+Definition monomType  := @MonomialDef.Pack cT xclass.
 
 End ClassDef.
 
