@@ -2120,7 +2120,7 @@ apply/uniq_perm_eq=> //; first rewrite map_inj_uniq //.
 move=> m'; apply/idP/idP; last first.
   case/mapP=> mp mp_in_p ->; rewrite mcoeff_msupp.
   by rewrite mcoeffMX -mcoeff_msupp.
-move/msuppM_le; rewrite msuppX /= => /allpairsP.
+move/msuppM_le; rewrite msuppX => /allpairsP.
 case=> [[p1 p2]] /=; rewrite mem_seq1; case=> p1_in_p.
 move/eqP=> <- ->; apply/mapP; exists p1=> //.
 by rewrite Monoid.mulmC.
