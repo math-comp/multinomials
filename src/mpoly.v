@@ -674,7 +674,7 @@ Lemma mdegMn (m : 'X_{1..n}) k :
   mdeg (m *+ k) = (mdeg m * k)%N.
 Proof. elim: k => [|k ih].
 by rewrite mulm0n muln0 mdeg0.
-by rewrite mulmSr mdegD ih.
+by rewrite mulmSr mdegD ih mulnS addnC.
 Qed.
 
 Lemma mdeg_sum (I : Type) (r : seq I) P F :
@@ -2779,7 +2779,7 @@ Proof.
 rewrite mderivm_foldr (@mderiv_perm _ [:: i]) //.
 apply/perm_eqP=> /= a; rewrite addn0 count_flatten.
 rewrite enumT -/(index_enum _) (bigD1 i) //=.
-rewrite mnm1E eqxx /= addn0 big1 // => j ne_ji.
+rewrite mnm1E eqxx /= addn0 big1 ?addn0 // => j ne_ji.
 by rewrite mnm1E eq_sym (negbTE ne_ji).
 Qed.
 
@@ -3426,13 +3426,13 @@ Section MPolyOver.
 Variable n : nat.
 Variable R : ringType.
 
-Definition mpolyOver (S : pred_class) :=
+Definition mpolyOver (S : {pred R}) :=
   [qualify a p : {mpoly R[n]} | all (mem S) [seq p@_m | m <- msupp p]].
 
 Fact mpolyOver_key S : pred_key (mpolyOver S). Proof. by []. Qed.
 Canonical mpolyOver_keyed S := KeyedQualifier (mpolyOver_key S).
 
-Lemma mpolyOverS (S1 S2 : pred_class) :
+Lemma mpolyOverS (S1 S2 : {pred R}) :
   {subset S1 <= S2} -> {subset mpolyOver S1 <= mpolyOver S2}.
 Proof.
 move=> sS12 p /(all_nthP 0)S1p.
@@ -3442,7 +3442,7 @@ Qed.
 Lemma mpolyOver0 S: 0 \is a mpolyOver S.
 Proof. by rewrite qualifE msupp0. Qed.
 
-Lemma mpolyOver_mpoly (S : pred_class) E :
+Lemma mpolyOver_mpoly (S : {pred R}) E :
      (forall m : 'X_{1..n}, m \in dom E -> coeff m E \in S)
   -> [mpoly E] \is a mpolyOver S.
 Proof.
