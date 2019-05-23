@@ -17,6 +17,10 @@ Unset Printing Implicit Defensive.
 
 Import Monoid GRing.Theory Num.Theory BigEnoughFSet.
 
+(* temporary fix for mathcomp 1.8.0 *)
+Notation "{ 'pred' T }" := (pred_sort (predPredType T)) (at level 0,
+  format "{ 'pred'  T }") : type_scope.
+
 Local Open Scope fset.
 Local Open Scope fmap.
 Local Open Scope ring_scope.
@@ -1283,7 +1287,7 @@ Section MonalgOver.
 Section Def.
 Context {K : choiceType} {G : zmodType}.
 
-Definition monalgOver (S : pred_class) :=
+Definition monalgOver (S : {pred G}) :=
   [qualify a g : {malg G[K]} | all (fun m => g@_m \in S) (msupp g)].
 
 Fact monalgOver_key S : pred_key (monalgOver S). Proof. by []. Qed.
@@ -1296,7 +1300,7 @@ Variables (K : choiceType) (G : zmodType).
 
 Local Notation monalgOver := (@monalgOver K G).
 
-Lemma monalgOverS (S1 S2 : pred_class) :
+Lemma monalgOverS (S1 S2 : {pred G}) :
   {subset S1 <= S2} -> {subset monalgOver S1 <= monalgOver S2}.
 Proof.
 move=> le_S1S2 g /allP /= S1g; apply/allP => /= x Hx.
