@@ -672,9 +672,10 @@ Proof. by rewrite !mdegE; apply/leq_sum => i _; rewrite mnmE leq_subr.  Qed.
 
 Lemma mdegMn (m : 'X_{1..n}) k :
   mdeg (m *+ k) = (mdeg m * k)%N.
-Proof. elim: k => [|k ih].
-by rewrite mulm0n muln0 mdeg0.
-by rewrite mulmSr mdegD ih.
+Proof.
+elim: k => [|k ih].
+  by rewrite mulm0n muln0 mdeg0.
+by rewrite mulmSr mdegD ih mulnSr.
 Qed.
 
 Lemma mdeg_sum (I : Type) (r : seq I) P F :
@@ -2779,7 +2780,7 @@ Proof.
 rewrite mderivm_foldr (@mderiv_perm _ [:: i]) //.
 apply/perm_eqP=> /= a; rewrite addn0 count_flatten.
 rewrite enumT -/(index_enum _) (bigD1 i) //=.
-rewrite mnm1E eqxx /= addn0 big1 // => j ne_ji.
+rewrite mnm1E eqxx /= big1 ?addn0 // => j ne_ji.
 by rewrite mnm1E eq_sym (negbTE ne_ji).
 Qed.
 
@@ -3426,13 +3427,13 @@ Section MPolyOver.
 Variable n : nat.
 Variable R : ringType.
 
-Definition mpolyOver (S : pred_class) :=
+Definition mpolyOver (S : {pred R}) :=
   [qualify a p : {mpoly R[n]} | all (mem S) [seq p@_m | m <- msupp p]].
 
 Fact mpolyOver_key S : pred_key (mpolyOver S). Proof. by []. Qed.
 Canonical mpolyOver_keyed S := KeyedQualifier (mpolyOver_key S).
 
-Lemma mpolyOverS (S1 S2 : pred_class) :
+Lemma mpolyOverS (S1 S2 : {pred R}) :
   {subset S1 <= S2} -> {subset mpolyOver S1 <= mpolyOver S2}.
 Proof.
 move=> sS12 p /(all_nthP 0)S1p.
@@ -3442,7 +3443,7 @@ Qed.
 Lemma mpolyOver0 S: 0 \is a mpolyOver S.
 Proof. by rewrite qualifE msupp0. Qed.
 
-Lemma mpolyOver_mpoly (S : pred_class) E :
+Lemma mpolyOver_mpoly (S : {pred R}) E :
      (forall m : 'X_{1..n}, m \in dom E -> coeff m E \in S)
   -> [mpoly E] \is a mpolyOver S.
 Proof.
@@ -5397,16 +5398,11 @@ apply/eqP/idP=> [eq_szm_d|].
 case/mapP=> /= t _ ->; pose F i := count_mem i t.
   rewrite mdegE (eq_bigr F) {}/F; last first.
   by move=> /= i _; rewrite mnmE.
-have {2}->: d = (\sum_(i <- t) 1)%N.
-  by rewrite sum1_size size_tuple.
-rewrite -(eq_big_perm _ (perm_undup_count t)) /=.
-rewrite big_flatten /= big_map; apply/esym.
-transitivity (\sum_(i <- undup t) (count_mem i) t)%N.
-  by apply/eq_bigr=> i _; rewrite big_nseq iter_succn add0n.
-apply/esym; rewrite (bigID (mem (undup t))) /= addnC.
-rewrite big1 ?add0n => [|i]; last first.
-  by rewrite mem_undup => /count_memPn.
-by rewrite big_uniq ?undup_uniq.
+transitivity (\sum_i \sum_(j <- t | j == i) 1)%N.
+  by apply: eq_bigr => i _; rewrite -big_filter sum1_size size_filter.
+rewrite (exchange_big_dep predT)//=.
+transitivity (\sum_(j <- t) 1)%N; last by rewrite sum1_size size_tuple.
+by apply: eq_bigr => i _; rewrite (eq_bigl _ _ (eq_sym _)) big_pred1_eq.
 Qed.
 
 Lemma size_basis n d: size (sbasis n.+1 d) = 'C(d + n, d).

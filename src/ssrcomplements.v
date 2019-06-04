@@ -15,6 +15,10 @@ Unset Printing Implicit Defensive.
 
 Import Monoid GRing.Theory.
 
+(* temporary fix for mathcomp 1.8.0 *)
+Notation "{ 'pred' T }" := (pred_sort (predPredType T)) (at level 0,
+  format "{ 'pred'  T }") : type_scope.
+
 Local Open Scope ring_scope.
 
 Local Notation simpm := Monoid.simpm.

@@ -17,11 +17,11 @@ env:
   - DOCKERIMAGE="mathcomp/mathcomp:1.8.0-coq-8.7"
   - DOCKERIMAGE="mathcomp/mathcomp:1.8.0-coq-8.8"
   - DOCKERIMAGE="mathcomp/mathcomp:1.8.0-coq-8.9"
-  - DOCKERIMAGE="mathcomp/mathcomp:1.8.0-coq-dev"
-  - DOCKERIMAGE="mathcomp/mathcomp-dev:coq-8.7"
-  - DOCKERIMAGE="mathcomp/mathcomp-dev:coq-8.8"
-  - DOCKERIMAGE="mathcomp/mathcomp-dev:coq-8.9"
-  - DOCKERIMAGE="mathcomp/mathcomp-dev:coq-dev"
+  - DOCKERIMAGE="mathcomp/mathcomp:1.9.0-coq-8.7"
+  - DOCKERIMAGE="mathcomp/mathcomp:1.9.0-coq-8.8"
+  - DOCKERIMAGE="mathcomp/mathcomp:1.9.0-coq-8.9"
+  - DOCKERIMAGE="mathcomp/mathcomp:1.9.0-coq-8.10"
+  # - DOCKERIMAGE="mathcomp/mathcomp:1.8.0-coq-dev"
 
 install: |
   # Prepare the COQ container
@@ -35,6 +35,7 @@ install: |
     # Using flambda makes sense here as we usually get ~10% faster
     # builds in math-comp.
     opam switch \$COMPILER_EDGE
+    eval \$(opam env)
     opam update -y
     opam config list
     opam repo list
@@ -49,6 +50,7 @@ script:
   docker exec COQ /bin/bash --login -c "
     export PS4='+ \e[33;1m(\$0 @ line \$LINENO) \$\e[0m '
     set -ex
+    eval \$(opam env)
     opam install -y -vvv coq-mathcomp-multinomials
     "
 - docker stop COQ  # optional
