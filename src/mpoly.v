@@ -126,7 +126,7 @@ Proof.
 case: r => // x r _; elim: r => [|y r ih].
   by exists x; rewrite mem_seq1 big_seq1 !eqxx.
 pose v := (\join_(i <- x :: r) F i)%O.
-case: (Order.TotalLattice.leP letot v (F y)) => [le|lt].
+case: (Order.TotalLatticeMixin.leP letot v (F y)) => [le|lt].
   exists y; rewrite !(in_cons, eqxx) orbT /=.
   rewrite !big_cons joinCA; apply/eqP/join_idPr.
   by apply/(le_trans _ le); rewrite /v big_cons.
@@ -136,168 +136,39 @@ rewrite !big_cons joinCA; apply/join_idPl.
 by apply/ltW/(lt_le_trans lt); rewrite /v big_cons.
 Qed.
 
-Lemma join_sup_seq (x : T) (r : seq T) :
-  x \in r -> (F x <= \join_(i <- r) F i)%O.
-Proof.
-move=> xr; rewrite (eq_big_perm _ (perm_to_rem xr)) /=.
-by rewrite big_cons leUl.
-Qed.
-
-Lemma joinsP_seq (r : seq T) u :
-   reflect
-     (forall x, x \in r -> P x -> (F x <= u)%O)
-     (\join_(x <- r | P x) F x <= u)%O.
-Proof.
-have -> : (\join_(x <- r | P x) F x <= u)%O =
-            (\big[andb/true]_(x <- r | P x) (F x <= u)%O).
-+ by elim/big_rec2: _ => [|x y b Pi <-]; rewrite ?le0x ?leUx.
-by rewrite big_all_cond; apply: (iffP allP) => /= h i /h/implyP.
-Qed.
 End LatticeMisc.
 
+Import Order.DefaultProdLexiOrder.
+Import Order.DefaultSeqLexiOrder.
+Import Order.DefaultTupleLexiOrder.
 (* -------------------------------------------------------------------- *)
 Local Open Scope order_scope.
 
-Section Lexico.
-Context {disp : unit} {T : porderType disp} {n : nat}.
-
-Implicit Types (s : seq T) (t : n.-tuple T).
-
-Definition ltxi s1 s2 := (s1 != s2) && (lexi s1 s2).
-
-Definition seq_POrderMixin :=
-  @POrderMixin _ (@lexi _ T) ltxi (fun s1 s2 => erefl _)
-  (@lexi_refl _ T) (@lexi_anti _ T) (@lexi_trans _ T).
-
-Canonical seq_POrderType :=
-  Eval hnf in POrderType disp (seq T) seq_POrderMixin.
-
-Lemma lexi_total : total (<=%O : rel T) -> total (@lexi _ T).
-Proof.
-move=> ht; elim=> [|x s1 ih] // [|y s2] //=.
-by case: Order.TotalLattice.ltgtP => /=.
-Qed.
-
-Lemma ltxiP x (s1 s2 : seq T) : size s1 = size s2 ->
-  reflect
-    (exists2 i, (i < size s1)%N &
-         (forall j, (j < i)%N -> nth x s1 j = nth x s2 j)
-      /\ (nth x s1 i < nth x s2 i)%O)
-    (ltxi s1 s2).
-Proof.
-rewrite /ltxi; elim: s1 s2 => [|x1 s1 ih] [|x2 s2] //=.
-  by move=> _; constructor => -[].
-case=> /ih {ih}ih; rewrite eqseq_cons; case: eqP=> /= [|neq].
-  move=> ->; rewrite ltxx /=; apply: (iffP idP) => [/ih|].
-    by case=> i lt_is1 [eq lt]; exists i.+1=> //; split=> [[]|].
-  case=> -[|i]; first by rewrite ltxx => _ [].
-  rewrite ltnS => lt_is1 [eq lt]; apply/ih.
-  by exists i => //; split=> // j lt_ji; apply/(eq j.+1).
-rewrite orbF; apply: (iffP idP) => [ltx|]; first by exists 0%N.
-by case=> -[_ [//]|i _]; case=> /(_ 0%N (ltn0Sn _)).
-Qed.
-
-Lemma ltxiP_tuple (s1 s2 : n.-tuple T) :
-  reflect
-    (exists2 i : 'I_n,
-        (forall j : 'I_n, (j < i)%N -> tnth s1 j = tnth s2 j)
-      & (tnth s1 i < tnth s2 i)%O)
-    (ltxi s1 s2).
-Proof.
-case: n s1 s2 => [|k] s1 s2.
-  by rewrite [s1]tuple0 [s2]tuple0; constructor=> -[[]].
-have x := tnth_default s1 ord0; case/boolP: (ltxi _ _) => h.
-  constructor; move/ltxiP: h => /(_ x) [].
-    by rewrite !size_tuple.
-  move=> i; rewrite size_tuple => lt_is1 [eq lt].
- exists (Ordinal lt_is1) => [j /eq|].
-   by rewrite !(tnth_nth x). by rewrite !(tnth_nth x).
-constructor=> -[[i lt_iSk]] eq lt; move/ltxiP: h.
-move/(_ x); apply; first by rewrite !size_tuple.
-exists i; rewrite ?size_tuple //; split.
-  move=> j lt_ji; have lt_jSk := ltn_trans lt_ji lt_iSk.
-  by have := eq (Ordinal lt_jSk); rewrite !(tnth_nth x); apply.
-by move: lt; rewrite !(tnth_nth x).
-Qed.
-End Lexico.
-
-(* -------------------------------------------------------------------- *)
-Section WFTuple.
-Context {disp : unit} {T : porderType disp} {n : nat}.
-Context (P : n.-tuple T -> Type).
-
-Implicit Types t : n.-tuple T.
+Section WF.
+Context {disp : unit} {T : porderType disp}.
 
 Hypothesis wf: forall (P : T -> Type),
      (forall x, (forall y, y < x -> P y) -> P x)
   -> forall x, P x.
 
-Hypothesis ih: forall t1, (forall t2, ltxi t2 t1 -> P t2) -> P t1.
+Section WFTuple.
+Context {n : nat} (P : n.-tuple T -> Type).
 
-Lemma ltxwf t: P t.
+Implicit Types t : n.-tuple T.
+
+Hypothesis ih: forall t1, (forall t2, t2 < t1 -> P t2) -> P t1.
+
+Lemma ltxwf t : P t.
 Proof.
-elim: n P ih t => [|k wih] Pn kih t.
+elim: n P ih t => [|k wih] Pn kih t; last case: (tupleP t) => a {t}t.
   by rewrite tuple0; apply/kih=> t2; rewrite tuple0.
-rewrite [t]tuple_eta; move: (thead t) => a; elim/wf: a t.
-move=> a iha t; apply/kih=> t'; rewrite [t']tuple_eta /=.
-move: (thead t') => a'; rewrite /ltxi andbC => /andP[/=].
-case: (boolP (a' < a)) => /= [/iha/(_ t')//|_].
-pose Q (t : k.-tuple T) := Pn [tuple of a :: t].
-case/andP=> /eqP {a'}-> _ _; apply/(wih Q)=> {t t'}.
-rewrite {}/Q; move=> t iht; apply/kih=> t'.
-rewrite [t']tuple_eta; move: (thead t') => a'.
-rewrite /ltxi andbC => /andP[/=]; case: (boolP (a' < a)).
-  by move=> /iha/(_ t').
-move=> _ /= /andP[/eqP {a'}->]; rewrite eqseq_cons eqxx /=.
-move=> le ne; have {le ne} lt: ltxi (behead t') t.
-  by rewrite /ltxi le ne. by apply/iht.
+elim/wf: a t => a iha t; elim/wih: t => t iht.
+apply/kih => t'; case: (tupleP t') => a' {t'}t'; rewrite [_ < _]ltxi_cons.
+by case: (comparableP a a') => //= [/iha/(_ t')|<- /iht].
 Qed.
+
 End WFTuple.
-
-(* -------------------------------------------------------------------- *)
-Section SubOrder.
-Context {disp : unit} {T : porderType disp} (P : pred T) (sT : subType P).
-
-Definition les (x y : sT) := (val x <= val y :> T).
-Definition lts (x y : sT) := (val x < val y :> T).
-
-Local Lemma les_refl : reflexive les.
-Proof. by move=> x; apply/le_refl. Qed.
-
-Local Lemma les_anti : antisymmetric les.
-Proof. by move=> x y h; apply/val_inj/le_anti. Qed.
-
-Local Lemma les_trans : transitive les.
-Proof. by move=> y x z; apply/le_trans. Qed.
-
-Definition sub_POrderMixin :=
-  POrderMixin (fun x y => lt_neqAle (val x) (val y))
-  les_refl les_anti les_trans.
-
-Canonical sub_POrderType :=
-  Eval hnf in POrderType disp sT sub_POrderMixin.
-End SubOrder.
-
-(* -------------------------------------------------------------------- *)
-Section SubOrderTheory.
-Context {disp : unit} {T : porderType disp} (P : pred T) (sT : subType P).
-
-Lemma leEsub (x y : sT) : (x <= y) = (val x <= val y).
-Proof. by []. Qed.
-
-Lemma ltEsub (x y : sT) : (x < y) = (val x < val y).
-Proof. by []. Qed.
-End SubOrderTheory.
-
-Notation "[ 'porderMixin' 'of' T 'by' <: ]" :=
-  (sub_POrderMixin _ : porderMixin [eqType of T])
-  (at level 0, format "[ 'porderMixin'  'of'  T  'by'  <: ]") : form_scope.
-
-Definition tuple_porderMixin {disp} (T : porderType disp) n :=
-  [porderMixin of n.-tuple T by <:].
-
-Canonical tuple_porderType {disp} (T : porderType disp) n :=
-  Eval hnf in POrderType disp (n.-tuple T) (tuple_porderMixin T n).
+End WF.
 
 Close Scope order_scope.
 
@@ -724,34 +595,41 @@ Context {n : nat}.
 Implicit Types t : n.-tuple nat.
 Implicit Types m : 'X_{1..n}.
 
-Definition mnmc_le m1 m2 :=
-  lexi (mdeg m1 :: m1) (mdeg m2 :: m2).
+Definition mnmc_le m1 m2 := (mdeg m1 :: m1 <= mdeg m2 :: m2)%O.
 
-Definition mnmc_lt m1 m2 := (m1 != m2) && (mnmc_le m1 m2).
+Definition mnmc_lt m1 m2 := (mdeg m1 :: m1 < mdeg m2 :: m2)%O.
 
 Local Lemma lemc_refl : reflexive mnmc_le.
-Proof. by move=> m; apply/lexi_refl. Qed.
+Proof. by move=> m; apply/le_refl. Qed.
 
 Local Lemma lemc_anti : antisymmetric mnmc_le.
-Proof. by move=> m1 m2 /lexi_anti [_] /val_inj /val_inj. Qed.
+Proof. by move=> m1 m2 /le_anti [_] /val_inj/val_inj. Qed.
 
 Local Lemma lemc_trans : transitive mnmc_le.
-Proof. by move=> m2 m1 m3; apply/lexi_trans. Qed.
-
-Definition multinom_porderMixin :=
-  POrderMixin (fun m1 m2 => erefl _) lemc_refl lemc_anti lemc_trans.
-
-Canonical multinom_porderType :=
-  Eval hnf in POrderType nat_display 'X_{1..n} multinom_porderMixin.
-
-Lemma leEmnm m1 m2 :
-  (m1 <= m2)%O = lexi (mdeg m1 :: m1) (mdeg m2 :: m2).
-Proof. by []. Qed.
+Proof. by move=> m2 m1 m3; apply/le_trans. Qed.
 
 Lemma lemc_total : total mnmc_le.
-Proof. by move=> m1 m2; apply/lexi_total/leq_total. Qed.
+Proof. by move=> m1 m2; apply/le_total. Qed.
 
-Definition multinom_latticeMixin := Order.TotalLattice.Mixin lemc_total.
+Local Lemma ltmc_def m1 m2 : mnmc_lt m1 m2 = (m2 != m1) && (mnmc_le m1 m2).
+Proof.
+rewrite /mnmc_lt /mnmc_le ltxi_cons lexi_cons /= -!(val_eqE _)/=.
+by case: (comparableP (_ : seq _)) => //= /val_inj/val_inj->; rewrite lexx.
+Qed.
+
+Definition multinom_porderMixin :=
+  LePOrderMixin ltmc_def lemc_refl lemc_anti lemc_trans.
+
+Canonical multinom_porderType :=
+  Eval hnf in POrderType total_display 'X_{1..n} multinom_porderMixin.
+
+Lemma leEmnm m1 m2 : (m1 <= m2)%O = (mdeg m1 :: val m1 <= mdeg m2 :: val m2)%O.
+Proof. by []. Qed.
+
+Lemma ltEmnm (m m' : 'X_{1..n}) : (m < m')%O = (mdeg m :: m < mdeg m' :: m')%O.
+Proof. by []. Qed.
+
+Definition multinom_latticeMixin : totalLatticeMixin _ := lemc_total.
 Canonical multinom_latticeType :=
   Eval hnf in LatticeType 'X_{1..n} multinom_latticeMixin.
 
@@ -759,55 +637,36 @@ Canonical multinom_orderType := OrderType 'X_{1..n} lemc_total.
 
 Lemma le0m (m : 'X_{1..n}) : (0%MM <= m)%O.
 Proof.
-rewrite leEmnm /=; case: (mdeg m =P 0%N) => [/eqP|].
-  by rewrite mdeg_eq0=> /eqP->; rewrite lexi_refl eqxx orbT.
-by move/eqP; rewrite -lt0n mdeg0 ltEnat => ->.
+rewrite leEmnm /=; have [/eqP|] := altP (mdeg m =P 0%N).
+  by rewrite mdeg_eq0=> /eqP->; rewrite le_refl.
+by rewrite -lt0n mdeg0 lexi_cons/= leEnat; case: ltngtP.
 Qed.
 
 Definition multinom_blatticeMixin := BLatticeMixin le0m.
 Canonical multinom_blatticeType :=
   Eval hnf in BLatticeType 'X_{1..n} multinom_blatticeMixin.
 
-Lemma ltEmnm (m m' : 'X_{1..n}) :
-  (m < m')%O = ltxi (mdeg m :: m) (mdeg m' :: m').
+Lemma ltmcP m1 m2 : mdeg m1 = mdeg m2 -> reflect
+  (exists2 i : 'I_n, forall (j : 'I_n), (j < i)%N -> m1 j = m2 j & m1 i < m2 i)
+  (m1 < m2)%O.
 Proof.
-rewrite lt_neqAle leEmnm /ltxi eqseq_cons !(inj_eq val_inj).
-rewrite [_ && (m==m')]andbC; case: (m =P m') => //= <-.
-by rewrite eqxx /=.
-Qed.
-
-Lemma ltmcP m1 m2 : mdeg m1 = mdeg m2 ->
-  reflect
-    (exists2 i : 'I_n,
-          forall (j : 'I_n), (j < i)%N -> m1 j = m2 j
-        & m1 i < m2 i)
-    (m1 < m2)%O.
-Proof.
-move=> eq_mdeg; suff ->: (m1 < m2)%O = ltxi m1 m2.
-  by apply/(ltxiP_tuple m1 m2).
-by rewrite ltEmnm eq_mdeg /ltxi eqseq_cons /= eqxx ltxx.
+by move=> eq_mdeg; rewrite ltEmnm eq_mdeg eqhead_ltxiE; apply: ltxi_tuplePlt.
 Qed.
 
 Lemma lemc_mdeg (m1 m2 : 'X_{1..n}) :
   (m1 <= m2)%O -> mdeg m1 <= mdeg m2.
-Proof.
-rewrite leEmnm /= leq_eqVlt ltEnat.
-by case/orP=> [->|/andP [->//]]; rewrite orbT.
-Qed.
+Proof. by rewrite leEmnm lexi_cons/= leEnat; case: ltngtP. Qed.
 
 Lemma lt_mdeg_ltmc (m1 m2 : 'X_{1..n}) :
   (mdeg m1 < mdeg m2)%N -> (m1 < m2)%O.
-Proof.
-move=> lt; rewrite ltEmnm /ltxi eqseq_cons /=.
-by rewrite ltEnat lt ltn_eqF.
-Qed.
+Proof. by rewrite ltEmnm ltxi_cons leEnat; case: ltngtP. Qed.
 
 Lemma mdeg_max (m1 m2 : 'X_{1..n}) :
   mdeg (max m1 m2) = maxn (mdeg m1) (mdeg m2).
 Proof.
 case: (leP m1 m2) => [/dup[]|].
-  by move=> /join_idPl-> /lemc_mdeg/maxn_idPr->.
-by move/ltW=> /dup[] /join_idPr-> /lemc_mdeg/maxn_idPl.
+  by move=> /join_idPl<- /lemc_mdeg/maxn_idPr->.
+by move/ltW=> /dup[] /join_idPr<- /lemc_mdeg/maxn_idPl.
 Qed.
 
 Lemma mdeg_bigmax (r : seq 'X_{1..n}) :
@@ -898,7 +757,7 @@ move=> ih m; move: {2}(tof _) (erefl (tof m))=> t.
 elim/(@ltxwf _ [porderType of nat]): t m=> //=; last first.
   move=> t wih m Em; apply/ih=> m' lt_m'm.
   apply/(wih (tof m'))=> //; rewrite -Em.
-  by rewrite /tof -ltEmnm.
+  by rewrite /tof ltEsub/= -ltEmnm.
 move=> Q {ih} ih x; elim: x {-2}x (leqnn x).
   move=> x; rewrite leqn0=> /eqP->; apply/ih.
   by move=> y; rewrite ltEnat ltn0.
@@ -4205,7 +4064,7 @@ case: (boolP P)=> [/existsP[/= i /andP[lt_ih i_notin_h]]|hNP]; last first.
     by move/eq2/negbTE. by move/eq1.
 pose i0 : 'I_n := [arg min_(j < i | j \notin h) j].
 apply/ltW/ltmcP; first by rewrite !mdeg_mesym1 card_mesymlmnm.
-exists i0; rewrite {}/i0; case: arg_minP => //=.
+exists i0; rewrite {}/i0; case: fintype.arg_minP => //=.
 + move=> i0 i0_notin_h i0_min j lt_j_i0; rewrite !mnmE in_set.
   rewrite (@ltn_trans i) // 1?(@leq_trans i0) // ?i0_min //.
   by case: (boolP (j \in h))=> // /i0_min; rewrite leqNgt lt_j_i0.
