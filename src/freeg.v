@@ -222,17 +222,17 @@ Section FreegTheory.
     move=> s z x y neq_xy; elim: s => [|[z' x'] s IH] /=.
     + by move=> _; rewrite mem_seq1 eq_sym.
     + rewrite in_cons negb_or => /andP [neq_yx' Hys].
-      have [->|neq_xx'] := eqVneq x x'; rewrite ?eqxx /=.
+      have [->|neq_xx'] := altP (x =P x'); rewrite ?eqxx /=.
       * by rewrite in_cons negb_or neq_yx' Hys.
-      * by rewrite (negbTE neq_xx') /= in_cons (negbTE neq_yx') IH.
+      * by rewrite /= in_cons (negbTE neq_yx') IH.
   Qed.
 
   Lemma uniq_predom_augment s z x:
     uniq (predom s) -> uniq (predom (augment s z x)).
   Proof.
     elim: s => [|[z' x'] s ih] //=.
-    have [->|neq_xx'] := eqVneq x x'; rewrite ?eqxx //.
-    rewrite (negbTE neq_xx') /=; case/andP=> Hx's /ih ->.
+    have [->|neq_xx'] := altP (x =P x'); rewrite ?eqxx //=.
+    case/andP=> Hx's /ih ->.
     by rewrite andbT; apply mem_augment.
   Qed.
 
@@ -346,18 +346,18 @@ Section FreegTheory.
   Proof.
     elim: s => [|[k' x'] s ih] //=.
       by rewrite prelift_seq1 prelift_nil !simpm.
-    have [->|ne_xx'] := eqVneq x x'.
-      by rewrite eqxx !prelift_cons scalerDl addrA.
-      by rewrite (negbTE ne_xx') !prelift_cons ih addrCA.
+    have [->|ne_xx'] := altP (x =P x').
+      by rewrite !prelift_cons scalerDl addrA.
+      by rewrite !prelift_cons ih addrCA.
   Qed.
 
   Lemma prelift_reduce s: prelift (reduce s) = prelift s.
   Proof.
     rewrite /reduce; set S := foldr _ _ _; set rD := filter _ _.
     have ->: prelift rD = prelift S; rewrite ?/rD => {rD}.
-      elim: S => [//|[k x] S IH] /=; have [->|nz_k] := eqVneq k 0.
-        by rewrite eqxx /= prelift_cons scale0r !simpm.
-      by rewrite nz_k !prelift_cons IH.
+      elim: S => [//|[k x] S IH] /=; have [->|nz_k] := altP (k =P 0).
+        by rewrite /= prelift_cons scale0r !simpm.
+      by rewrite !prelift_cons IH.
     rewrite /S; elim: {S} s => [//|[k x] s ih].
     by rewrite prelift_cons /= prelift_augment ih.
   Qed.
@@ -444,9 +444,9 @@ Section FreegTheory.
   Lemma precoeff_outdom x s: x \notin predom s -> precoeff x s = 0.
   Proof.
     move=> x_notin_s; rewrite /precoeff big_seq_cond big_pred0 //.
-    case=> k z /=; have [->|/negbTE ->] := eqVneq z x; last first.
+    case=> k z /=; have [->|] := altP (z =P x); last first.
       by rewrite andbF.
-    rewrite eqxx andbT; apply/negP=> /(map_f (@snd _ _)).
+    rewrite andbT; apply/negP=> /(map_f (@snd _ _)).
     by rewrite (negbTE x_notin_s).
   Qed.
 
@@ -783,7 +783,7 @@ Section FreegZmodTypeTheory.
   Proof.
     move=> z; rewrite mem_cat !mem_dom !inE coeffD.
     have nz_sum (x1 x2 : R): x1 + x2 != 0 -> (x1 != 0) || (x2 != 0).
-      by have [->|->] := eqVneq x1 0; first by rewrite add0r eqxx.
+      by have [->|] := altP (x1 =P 0); first by rewrite add0r.
     by move/nz_sum; case/orP=> ->; rewrite ?orbT.
   Qed.
 

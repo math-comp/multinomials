@@ -5209,7 +5209,8 @@ have h (T : eqType) (leT : rel T) (s : seq T) (F : T -> nat) x:
   -> path leT x (flatten [seq nseq (F x) x | x <- s]).
 * move=> leTxx leT_tr; elim: s x => //= y s ih x /andP[le_xy pt_ys].
   case: (F y)=> /= [|k]; first apply/ih.
-    rewrite path_min_sorted; first by apply/(path_sorted (x := y)).
+    rewrite path_min_sorted; do ?apply: (introT allP).
+      by apply/(path_sorted (x := y)).
     move=> z z_in_s /=; apply/(leT_tr y)=> //.
     by move/order_path_min: pt_ys => /(_ leT_tr) /allP /(_ _ z_in_s).
   rewrite le_xy /= cat_path; apply/andP; split.
@@ -5224,7 +5225,8 @@ rewrite (map_path (e' := P) (b := xpred0)) //=; last first.
   by apply/hasP; case.
 apply/h; try solve [exact/leqnn | exact/leq_trans].
 rewrite -(map_path (h := val) (e := leq) (b := xpred0)) //.
-  by rewrite val_enum_ord /= path_min_sorted // iota_sorted.
+  rewrite val_enum_ord /= path_min_sorted ?iota_sorted//;
+  do ?exact: (introT allP).
 by apply/hasP; case.
 Qed.
 
