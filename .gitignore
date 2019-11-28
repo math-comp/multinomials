@@ -11,6 +11,7 @@
 *.aux
 
 Makefile.coq
+Makefile.coq.conf
 
 /ssreflect/*.v
 /ssreflect/*.ml*
