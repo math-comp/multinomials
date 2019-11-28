@@ -1,16 +1,15 @@
-dist: buster
-sudo: required
 language: generic
+os: linux
 
 services:
-  - docker
+- docker
 
 env:
   global:
   - NJOBS="2"
   - CONTRIB="multinomials"
   - OPAMYES=yes
-  matrix:
+  jobs:
   - DOCKERIMAGE="mathcomp/mathcomp:1.8.0-coq-8.7"
   - DOCKERIMAGE="mathcomp/mathcomp:1.8.0-coq-8.8"
   - DOCKERIMAGE="mathcomp/mathcomp:1.8.0-coq-8.9"
@@ -26,9 +25,9 @@ env:
 install:
 - docker pull ${DOCKERIMAGE}
 - docker tag  ${DOCKERIMAGE} ci:current
-- docker run  --env OPAMYES -itd --name CI -v ${PWD}:/home/ci/${CONTRIB} ci:current
-- docker exec CI sh -c "opam pin add -n coq-mathcomp-${CONTRIB} ."
-- docker exec CI sh -c "opam install --deps-only coq-mathcomp-${CONTRIB}"
+- docker run  --env=OPAMYES --init -id --name=CI -v ${TRAVIS_BUILD_DIR}:/home/coq/${CONTRIB} -w /home/coq/${CONTRIB} ci:current
+- docker exec CI /bin/bash --login -c "opam pin add -n coq-mathcomp-${CONTRIB} ."
+- docker exec CI /bin/bash --login -c "opam install --deps-only --ignore-constraints-on coq-mathcomp-ssreflect coq-mathcomp-${CONTRIB}"
 
-script: |
-- docker exec CI sh -c "opam install coq-mathcomp-${CONTRIB}"
+script:
+- docker exec CI /bin/bash --login -c "opam install --ignore-constraints-on coq-mathcomp-ssreflect coq-mathcomp-${CONTRIB}"
