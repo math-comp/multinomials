@@ -89,8 +89,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import Monoid GRing.Theory BigEnough.
-Import Order.Def Order.Syntax Order.Theory.
+Import Monoid GRing.Theory BigEnough Order.Theory.
 
 Local Open Scope ring_scope.
 
@@ -115,7 +114,7 @@ Definition dup (P : Prop) (h : P) := DupC h h.
 
 (* -------------------------------------------------------------------- *)
 Section LatticeMisc.
-Context {T : eqType} {disp : unit} {U : blatticeType disp}.
+Context {T : eqType} {disp : unit} {U : bDistrLatticeType disp}.
 Context (P : pred T) (F : T -> U).
 
 Hypothesis letot : @total U (<=%O)%O.
@@ -126,7 +125,7 @@ Proof.
 case: r => // x r _; elim: r => [|y r ih].
   by exists x; rewrite mem_seq1 big_seq1 !eqxx.
 pose v := (\join_(i <- x :: r) F i)%O.
-case: (Order.TotalLatticeMixin.leP letot v (F y)) => [le|lt].
+case: (Order.TotalPOrderMixin.leP letot v (F y)) => [le|lt].
   exists y; rewrite !(in_cons, eqxx) orbT /=.
   rewrite !big_cons joinCA; apply/eqP/join_idPr.
   by apply/(le_trans _ le); rewrite /v big_cons.
@@ -629,9 +628,9 @@ Proof. by []. Qed.
 Lemma ltEmnm (m m' : 'X_{1..n}) : (m < m')%O = (mdeg m :: m < mdeg m' :: m')%O.
 Proof. by []. Qed.
 
-Definition multinom_latticeMixin : totalLatticeMixin _ := lemc_total.
+Definition multinom_latticeMixin : totalPOrderMixin _ := lemc_total.
 Canonical multinom_latticeType :=
-  Eval hnf in LatticeType 'X_{1..n} multinom_latticeMixin.
+  Eval hnf in DistrLatticeType 'X_{1..n} multinom_latticeMixin.
 
 Canonical multinom_orderType := OrderType 'X_{1..n} lemc_total.
 
@@ -642,9 +641,9 @@ rewrite leEmnm /=; have [/eqP|] := altP (mdeg m =P 0%N).
 by rewrite -lt0n mdeg0 lexi_cons/= leEnat; case: ltngtP.
 Qed.
 
-Definition multinom_blatticeMixin := BLatticeMixin le0m.
+Definition multinom_blatticeMixin := BDistrLatticeMixin le0m.
 Canonical multinom_blatticeType :=
-  Eval hnf in BLatticeType 'X_{1..n} multinom_blatticeMixin.
+  Eval hnf in BDistrLatticeType 'X_{1..n} multinom_blatticeMixin.
 
 Lemma ltmcP m1 m2 : mdeg m1 = mdeg m2 -> reflect
   (exists2 i : 'I_n, forall (j : 'I_n), (j < i)%N -> m1 j = m2 j & m1 i < m2 i)
@@ -797,7 +796,7 @@ Proof. by rewrite mdeg0. Qed.
 End DegBoundMultinom.
 
 Definition bm0 n b := BMultinom (bm0_proof n b).
-Arguments bm0 [n b].
+Arguments bm0 {n b}.
 
 Notation "''X_{1..' n  <  b '}'"       := (bmultinom n b).
 Notation "''X_{1..' n  <  b1 , b2 '}'" := ('X_{1..n < b1} * 'X_{1..n < b2})%type.
@@ -975,7 +974,7 @@ Notation "c %:MP_[ n ]" := (mpolyC n c) : ring_scope.
 
 Notation "p @_ i" := (mcoeff i p) : ring_scope.
 
-Hint Resolve msupp_uniq.
+Hint Resolve msupp_uniq : core.
 
 (* -------------------------------------------------------------------- *)
 Section NVar0.
@@ -2140,7 +2139,7 @@ Lemma mleadDl (p1 p2 : {mpoly R[n]}) :
 Proof. by move/mleadDr; rewrite addrC => ->. Qed.
 
 Lemma mleadD (p1 p2 : {mpoly R[n]}) : mlead p1 != mlead p2 ->
-  mlead (p1 + p2) = mlead p1 `|` mlead p2.
+  mlead (p1 + p2) = (mlead p1 `|` mlead p2)%O.
 Proof.
 case: (ltgtP (mlead p1) (mlead p2)) => // le _.
 + by rewrite mleadDr //; apply/esym/join_idPl/ltW.
@@ -3768,8 +3767,8 @@ by move/msupp_le_mlead; rewrite leNgt => /negbTE=> ->.
 Qed.
 End MPolySym.
 
-Arguments inj_msym [n R].
-Arguments symmetric [n R].
+Arguments inj_msym  {n R}.
+Arguments symmetric {n R}.
 
 (* -------------------------------------------------------------------- *)
 Section MPolySymComp.
@@ -3912,7 +3911,7 @@ move=> h1 h2 /mnmP eqh; apply/setP=> /= i.
 by have := eqh i; rewrite !mnmE; do! case: (_ \in _).
 Qed.
 
-Local Hint Resolve inj_mesym1.
+Local Hint Resolve inj_mesym1 : core.
 
 Lemma msupp_mesym k :
   perm_eq
@@ -4409,7 +4408,7 @@ Local Notation S2 n k :=
 Let inj_widen n : injective (widen : 'I_n -> _).
 Proof. by move=> x y /eqP; rewrite eqE /= val_eqE => /eqP. Qed.
 
-Local Hint Resolve inj_widen.
+Local Hint Resolve inj_widen : core.
 
 Let inj_swiden n : injective (fun h : {set 'I_n} => swiden h).
 Proof.
@@ -4420,7 +4419,7 @@ move=> m1 m2 /= /setP eq; apply/setP=> /= x.
 by have := eq (widen x); rewrite !h.
 Qed.
 
-Local Hint Resolve inj_swiden.
+Local Hint Resolve inj_swiden : core.
 
 Let inj_mDswiden n : injective (fun h : {set 'I_n} => ord_max |: swiden h).
 Proof.
@@ -5171,7 +5170,7 @@ Lemma dhomog_is_dhomog n (R : ringType) d (p : dhomog n R d) :
   (val p) \is [in R[n], d.-homog for [measure of mdeg]].
 Proof. by case: p. Qed.
 
-Hint Extern 0 (is_true (_ \is _.-homog mf)) => by apply/dhomog_is_dhomog.
+Hint Extern 0 (is_true (_ \is _.-homog mf)) => (by apply/dhomog_is_dhomog) : core.
 
 Definition indhomog n (R : ringType) d : {mpoly R[n]} -> dhomog n R d :=
   fun p => insubd (0 : dhomog n R d) p.

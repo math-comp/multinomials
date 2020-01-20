@@ -35,7 +35,7 @@ Local Open Scope quotient_scope.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
-Unset Printing Defensive Implicit.
+Unset Printing Implicit Defensive.
 
 (* -------------------------------------------------------------------- *)
 Local Notation simpm := Monoid.simpm.
