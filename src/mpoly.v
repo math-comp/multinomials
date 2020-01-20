@@ -202,11 +202,11 @@ Reserved Notation "''X_[' i ]"
 Reserved Notation "''X_[' R , i ]"
   (at level 8, R, i at level 2, format "''X_[' R ,  i ]").
 Reserved Notation "c %:MP"
-  (at level 2, format "c %:MP").
+  (at level 2, left associativity, format "c %:MP").
 Reserved Notation "c %:MP_[ n ]"
-  (at level 2, n at level 50, format "c %:MP_[ n ]").
+  (at level 2, left associativity, n at level 50, format "c %:MP_[ n ]").
 Reserved Notation "c %:IP"
-  (at level 2, format "c %:IP").
+  (at level 2, left associativity, format "c %:IP").
 Reserved Notation "s @_ i"
    (at level 3, i at level 2, left associativity, format "s @_ i").
 Reserved Notation "e .@[ x ]"
