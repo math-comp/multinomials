@@ -25,10 +25,10 @@
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
 From mathcomp Require Import seq choice fintype bigop ssralg ssrnum ssrint.
-From mathcomp Require Import generic_quotient.
+From mathcomp Require Import order generic_quotient.
 
 Import GRing.Theory.
-Import Num.Theory.
+Import Order.Theory Num.Theory.
 
 Local Open Scope ring_scope.
 Local Open Scope quotient_scope.
@@ -48,12 +48,12 @@ Reserved Notation "[ 'freeg' S ]" (at level 0, S at level 2, format "[ 'freeg'  
 (* -------------------------------------------------------------------- *)
 Let perm_eq_map (T U : eqType) (f : T -> U) (xs ys : seq T):
   perm_eq xs ys -> (perm_eq (map f xs) (map f ys)).
-Proof. by move/perm_eqP=> h; apply/perm_eqP=> p; rewrite !count_map. Qed.
+Proof. by move/permP=> h; apply/permP=> p; rewrite !count_map. Qed.
 
 Lemma perm_eq_filter (T : eqType) (p : pred T) (xs ys : seq T):
   perm_eq xs ys -> perm_eq (filter p xs) (filter p ys).
 Proof.
-  move=> /perm_eqP peq; apply/perm_eqP=> pc.
+  move=> /permP peq; apply/permP=> pc.
   by rewrite !count_filter; apply/peq.
 Qed.
 
@@ -104,13 +104,13 @@ Module FreegDefs.
     Definition equiv (D1 D2 : prefreeg G K) := perm_eq D1 D2.
 
     Lemma equiv_refl: reflexive equiv.
-    Proof. by move=> D; apply: perm_eq_refl. Qed.
+    Proof. by move=> D; apply: perm_refl. Qed.
 
     Lemma equiv_sym: symmetric equiv.
-    Proof. by move=> D1 D2; apply: perm_eq_sym. Qed.
+    Proof. by move=> D1 D2; apply: perm_sym. Qed.
 
     Lemma equiv_trans: transitive equiv.
-    Proof. by move=> D1 D2 D3 H12 H23; apply (perm_eq_trans H12 H23). Qed.
+    Proof. by move=> D1 D2 D3 H12 H23; apply (perm_trans H12 H23). Qed.
 
     Canonical prefreeg_equiv := EquivRel equiv equiv_refl equiv_sym equiv_trans.
     Canonical prefreeg_equiv_direct := defaultEncModRel equiv.
@@ -273,7 +273,7 @@ Section FreegTheory.
 
   Lemma reduceK s: reduced s -> perm_eq (reduce s) s.
   Proof.
-    move/reduce_reduced=> ->; apply/perm_eqP=> p.
+    move/reduce_reduced=> ->; apply/permP=> p.
     rewrite /rev -[X in _ = X]addn0; have ->: (0 = count p [::])%N by [].
     elim: s [::] => [|xk s ih] S.
       by rewrite catrevE /= add0n.
@@ -339,7 +339,7 @@ Section FreegTheory.
   Proof. by rewrite /prelift big_seq1. Qed.
 
   Lemma prelift_perm_eq s1 s2: perm_eq s1 s2 -> prelift s1 = prelift s2.
-  Proof. by move=> peq; apply: eq_big_perm. Qed.
+  Proof. by move=> peq; apply: perm_big. Qed.
 
   Lemma prelift_augment s k x:
     prelift (augment s k x) = k *: (f x) + (prelift s).
@@ -475,7 +475,7 @@ Section FreegTheory.
   Proof.
     apply: (iffP idP); rewrite /fgequiv /=.
     + by move=> H k; apply: precoeff_perm_eq.
-    move=> H; apply uniq_perm_eq.
+    move=> H; apply uniq_perm.
     + by move/reduced_uniq: hs1=> /map_uniq.
     + by move/reduced_uniq: hs2=> /map_uniq.
     move=> [z k]; have [->|nz_z] := eqVneq z 0.
@@ -558,7 +558,7 @@ Section FreegTheory.
   Lemma mem_dom D : dom D =i [pred x | coeff x D != 0].
   Proof.
     elim/quotW: D; case=> D rD; rewrite /dom => z; rewrite !inE.
-    rewrite (perm_eq_mem (perm_eq_map _ (perm_eq_fgrepr _))) /=.
+    rewrite (perm_mem (perm_eq_map _ (perm_eq_fgrepr _))) /=.
     unlock coeff; rewrite !piE /lift /= -precoeffE.
     rewrite precoeff_uniqE -/(predom _); last by case/andP: rD.
     case/andP: rD=> _ /allP rD; apply/esym.
@@ -598,7 +598,7 @@ Module FreegZmodType.
     Lemma reprfg0: repr zero = Prefreeg [::] :> (prefreeg R K).
     Proof.
       rewrite !piE; apply/eqP; rewrite eqE /=; apply/eqP.
-      by apply: perm_eq_small => //=; apply: perm_eq_fgrepr.
+      by apply: perm_small_eq => //=; apply: perm_eq_fgrepr.
     Qed.
 
     Definition fgadd_r rD1 rD2 := Prefreeg (rD1 ++ rD2).
@@ -716,7 +716,7 @@ Section FreegZmodTypeTheory.
   (* ------------------------------------------------------------------ *)
   Lemma dom0: dom (0 : {freeg K / R}) = [::] :> seq K.
   Proof.
-    apply: perm_eq_small=> //; apply: uniq_perm_eq=> //.
+    apply: perm_small_eq=> //; apply: uniq_perm=> //.
       by apply: uniq_dom.
     by move=> z; rewrite mem_dom !(inE, in_nil) coeff0 eqxx.
   Qed.
@@ -732,7 +732,7 @@ Section FreegZmodTypeTheory.
   (* ------------------------------------------------------------------ *)
   Lemma domU (c : R) (x : K): c != 0 -> dom << c *g x >> = [:: x].
   Proof.
-    move=> nz_c; apply: perm_eq_small=> //; apply: uniq_perm_eq=> //.
+    move=> nz_c; apply: perm_small_eq=> //; apply: uniq_perm=> //.
       by apply: uniq_dom.
     move=> y; rewrite mem_dom !(inE, in_nil) coeffU [x == _]eq_sym.
     by case: (y =P x) => _ /=; rewrite ?(mulr0, mulr1, eqxx).
@@ -747,7 +747,7 @@ Section FreegZmodTypeTheory.
   Proof. by move=> z; rewrite !mem_dom !inE coeffN oppr_eq0. Qed.
 
   Lemma domN_perm_eq D: perm_eq (dom (-D)) (dom D).
-  Proof. by apply: uniq_perm_eq; rewrite ?uniq_dom //; apply: domN. Qed.
+  Proof. by apply: uniq_perm; rewrite ?uniq_dom //; apply: domN. Qed.
 
   (* ------------------------------------------------------------------ *)
   Lemma domD_perm_eq D1 D2:
@@ -760,7 +760,7 @@ Section FreegZmodTypeTheory.
     have inD2E p: p \in dom D2 -> p \notin dom D1.
       move=> p_in_D2; move/(_ p): D12_nI; rewrite !inE p_in_D2.
       by rewrite andbT => /= ->.
-    apply: uniq_perm_eq; rewrite ?uniq_dom //.
+    apply: uniq_perm; rewrite ?uniq_dom //.
       rewrite cat_uniq ?uniq_dom //= andbT; apply/hasP.
       case=> p p_in_D2; move/(_ p): D12_nI => /=.
       by rewrite p_in_D2 andbT=> ->.
@@ -775,7 +775,7 @@ Section FreegZmodTypeTheory.
   Lemma domD D1 D2 x:
        [predI (dom D1) & (dom D2)] =1 pred0
     -> (x \in dom (D1 + D2)) = (x \in dom D1) || (x \in dom D2).
-  Proof. by move/domD_perm_eq/perm_eq_mem/(_ x); rewrite mem_cat. Qed.
+  Proof. by move/domD_perm_eq/perm_mem/(_ x); rewrite mem_cat. Qed.
 
   (* ------------------------------------------------------------------ *)
   Lemma domD_subset D1 D2:
@@ -869,7 +869,7 @@ Section FreegZmodTypeTheory.
   Proof.
     elim/quotW: D; case=> D rD /=; unlock Freeg; rewrite /Prefreeg.
     apply/eqmodP=> /=; rewrite /fgequiv /fgenum /=.
-    apply: (perm_eq_trans (reduceK _)); last by apply: perm_eq_fgrepr.
+    apply: (perm_trans (reduceK _)); last by apply: perm_eq_fgrepr.
     by apply: prefreeg_reduced.
   Qed.
 
@@ -1058,7 +1058,7 @@ Section FreegCmp.
     move=> lec z; case z_in_dom: (z \in (dom D1 ++ dom D2)).
       by apply: lec.
     move: z_in_dom; rewrite mem_cat; case/norP=> zD1 zD2.
-    by rewrite !coeff_outdom // lerr.
+    by rewrite !coeff_outdom // lexx.
   Qed.
 
   Lemma fgposP D:
@@ -1070,12 +1070,12 @@ Section FreegCmp.
   Qed.
 
   Lemma fgledd D: D <=g D.
-  Proof. by apply/fgleP=> z; rewrite lerr. Qed.
+  Proof. by apply/fgleP=> z; rewrite lexx. Qed.
 
   Lemma fgle_trans: transitive fgle.
   Proof.
     move=> D2 D1 D3 le12 le23; apply/fgleP=> z.
-    by rewrite (ler_trans (y := coeff z D2)) //; apply/fgleP.
+    by rewrite (@le_trans _ _ (coeff z D2)) //; apply/fgleP.
   Qed.
 End FreegCmp.
 
@@ -1198,11 +1198,7 @@ Section FreegPosDecomp.
 
   Lemma coeff_fgposE D k: coeff k (fgpos D) = Num.max 0 (coeff k D).
   Proof.
-    rewrite fgmap_f0_coeffE ?normr0 //inE; rewrite /Num.max.
-    rewrite lerNgt ler_eqVlt; case: eqP=> [->//|_] /=.
-      by rewrite normr0 mul0rn.
-    case: ltrP; rewrite ?(mulr0, mulr1) // => pos_zD.
-    by rewrite ger0_norm.
+    by rewrite fgmap_f0_coeffE ?normr0 //inE; case: leP => // /ger0_norm->.
   Qed.
 
   Lemma coeff_fgnegE D k: coeff k (fgneg D) = - (Num.min 0 (coeff k D)).
@@ -1229,12 +1225,8 @@ Section FreegPosDecomp.
   Lemma fgnorm_decomp D: fgnorm D = (fgpos D) + (fgneg D).
   Proof.
     apply/eqP/freeg_eqP=> k; rewrite coeffD coeff_fgnormE.
-    rewrite coeff_fgposE coeff_fgnegE /Num.max /Num.min.
-    rewrite lerNgt ler_eqVlt; case: (0 =P _)=> [<-//|_] /=.
-      by rewrite ltrr subr0 normr0.
-    case: ltrP=> /=; rewrite ?(subr0, sub0r) => lt.
-    + by rewrite gtr0_norm.
-    + by rewrite ler0_norm.
+    rewrite coeff_fgposE coeff_fgnegE.
+    by case: leP => [/ger0_norm|/ltr0_norm] ->; rewrite (sub0r, subr0).
   Qed.
 End FreegPosDecomp.
 
@@ -1271,7 +1263,7 @@ Section PosFreegDeg.
     rewrite -[D]addr0 -(subrr <<p>>) addrA addrAC.
     have: coeff p D != 0.
       by move: (mem_dom D p); rewrite DE in_cons eqxx inE /=.
-    rewrite neqr_lt ltrNge; have/fgposP/(_ p) := D_ge0 => ->/=.
+    rewrite neq_lt ltNge; have/fgposP/(_ p) := D_ge0 => ->/=.
     move=> coeffpD_gt0; have: 0 <=g (D - <<p>>).
       apply/fgposP=> q; rewrite coeffB coeffU mul1r.
       case: (p =P q) =>[<-/=|]; last first.
@@ -1320,12 +1312,12 @@ Section FreegIndDom.
         by move: (mem_dom D q); rewrite inE => <-.
       by move/eqP=> ->; move: Rq; rewrite /in_mem /= => ->.
     move: DR => DR domDR; rewrite addrC -big_filter.
-    set ps := [seq _ <- _ | _]; move: (perm_eq_refl ps).
+    set ps := [seq _ <- _ | _]; move: (perm_refl ps).
     rewrite {1}/ps; move: ps (D) => {D}; elim => [|p ps IH] D.
     + by move=> _; rewrite big_nil add0r; apply: H0.
-    + move=> DE; move/(_ p): (perm_eq_mem DE); rewrite !inE eqxx /=.
+    + move=> DE; move/(_ p): (perm_mem DE); rewrite !inE eqxx /=.
       have /=: uniq (p :: ps).
-        by move/perm_eq_uniq: DE; rewrite filter_uniq // uniq_dom.
+        by move/perm_uniq: DE; rewrite filter_uniq // uniq_dom.
       case/andP=> p_notin_ps uniq_ps; rewrite mem_filter=> /andP [NRp p_in_D].
       rewrite big_cons -addrA; apply HS => //; first 1 last.
       * by move: p_in_D; rewrite mem_dom.
@@ -1335,13 +1327,13 @@ Section FreegIndDom.
           - by move=> ->; rewrite !(mulr1, mulr0) subrr.
           - by move/eqP=> ne_pq; rewrite !(mulr1, mulr0) subr0.
         have: perm_eq (dom D) (p :: dom D').
-          apply: uniq_perm_eq; rewrite /= ?uniq_dom ?andbT //.
+          apply: uniq_perm; rewrite /= ?uniq_dom ?andbT //.
           - by rewrite mem_dom inE coeffD' eqxx mulr0 eqxx.
           move=> q; rewrite in_cons !mem_dom !inE coeffD' [q == _]eq_sym.
           case: (p =P q); rewrite !(mulr0, mulr1) //=.
           by move=> <-; move: p_in_D; rewrite mem_dom.
         move/perm_eq_filter=> /(_ [pred q | ~~ (F q)]) /=.
-        rewrite NRp; rewrite perm_eq_sym; move/(perm_eq_trans)=> /(_ _ DE).
+        rewrite NRp; rewrite perm_sym; move/(perm_trans)=> /(_ _ DE).
         rewrite perm_cons => domD'; rewrite big_seq.
         rewrite (eq_bigr (fun q => << coeff q D' *g q >>)); last first.
           move=> q q_in_ps; rewrite /D' coeffB coeffU; case: (p =P q).
@@ -1352,7 +1344,7 @@ Section FreegIndDom.
           by move=> p_in_DR; move/(_ p): domDR; rewrite !inE NRp p_in_DR.
         move/dom_sum_subset; rewrite filter_predT => /flattenP [qs].
         move/mapP => [q q_in_ps ->]; rewrite domU; last first.
-          move/perm_eq_mem/(_ q): DE; rewrite !inE q_in_ps orbT.
+          move/perm_mem/(_ q): DE; rewrite !inE q_in_ps orbT.
           by rewrite mem_filter => /andP [_]; rewrite mem_dom.
         rewrite mem_seq1 => /eqP pq_eq; move: p_notin_ps.
         by rewrite pq_eq q_in_ps.
