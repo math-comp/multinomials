@@ -620,7 +620,7 @@ Definition multinom_porderMixin :=
   LePOrderMixin ltmc_def lemc_refl lemc_anti lemc_trans.
 
 Canonical multinom_porderType :=
-  Eval hnf in POrderType total_display 'X_{1..n} multinom_porderMixin.
+  Eval hnf in POrderType tt 'X_{1..n} multinom_porderMixin.
 
 Lemma leEmnm m1 m2 : (m1 <= m2)%O = (mdeg m1 :: val m1 <= mdeg m2 :: val m2)%O.
 Proof. by []. Qed.
@@ -665,7 +665,7 @@ Lemma lt_mdeg_ltmc (m1 m2 : 'X_{1..n}) :
 Proof. by rewrite ltEmnm ltxi_cons leEnat; case: ltngtP. Qed.
 
 Lemma mdeg_max (m1 m2 : 'X_{1..n}) :
-  mdeg (max m1 m2) = maxn (mdeg m1) (mdeg m2).
+  mdeg (m1 `|` m2)%O = maxn (mdeg m1) (mdeg m2).
 Proof.
 case: (leP m1 m2) => [/dup[]|].
   by move=> /join_idPl<- /lemc_mdeg/maxn_idPr->.
@@ -673,7 +673,7 @@ by move/ltW=> /dup[] /join_idPr<- /lemc_mdeg/maxn_idPl.
 Qed.
 
 Lemma mdeg_bigmax (r : seq 'X_{1..n}) :
-  mdeg (\max_(m <- r) m)%O = \max_(m <- r) mdeg m.
+  mdeg (\join_(m <- r) m)%O = \max_(m <- r) mdeg m.
 Proof.
 elim: r => [|m r ih]; first by rewrite !big_nil mdeg0.
 by rewrite !big_cons mdeg_max ih.
@@ -763,7 +763,7 @@ elim/(@ltxwf _ [porderType of nat]): t m=> //=; last first.
   by rewrite /tof ltEsub/= -ltEmnm.
 move=> Q {ih} ih x; elim: x {-2}x (leqnn x).
   move=> x; rewrite leqn0=> /eqP->; apply/ih.
-  by move=> y; rewrite ltEnat ltn0.
+  by move=> y; rewrite ltEnat/= ltn0.
 move=> k wih l le_l_Sk; apply/ih=> y; rewrite ltEnat => lt_yl.
 by apply/wih; have := leq_trans lt_yl le_l_Sk; rewrite ltnS.
 Qed.
@@ -2058,7 +2058,7 @@ Variable R : ringType.
 
 Implicit Types p q r : {mpoly R[n]}.
 
-Definition mlead p : 'X_{1..n} := (\max_(m <- msupp p) m)%O.
+Definition mlead p : 'X_{1..n} := (\join_(m <- msupp p) m)%O.
 
 Lemma mleadC (c : R) : mlead c%:MP = 0%MM.
 Proof.
@@ -2147,7 +2147,7 @@ Qed.
 
 Lemma mlead_sum_le {T} (r : seq T) P F :
   (mlead (\sum_(p <- r | P p) F p)
-    <= \max_(p <- r | P p) (mlead (F p)))%O.
+    <= \join_(p <- r | P p) (mlead (F p)))%O.
 Proof.
 elim/big_rec2: _ => /= [|x m p Px le]; first by rewrite mlead0.
 by apply/(le_trans (mleadD_le _ _))/leU2.
@@ -2157,7 +2157,7 @@ Lemma mlead_sum {T} (r : seq T) P F :
   uniq [seq mlead (F p) | p <- r & P p] ->
 
      mlead (\sum_(p <- r | P p) F p)
-  = (\max_(p <- r | P p) (mlead (F p)))%O.
+  = (\join_(p <- r | P p) (mlead (F p)))%O.
 Proof.
 elim: r=> [|p r ih]; first by rewrite !big_nil mlead0.
 rewrite !big_cons /=; case: (P p)=> //= /andP[Fp_ml uq_ml].
@@ -4062,7 +4062,7 @@ case: (boolP P)=> [/existsP[/= i /andP[lt_ih i_notin_h]]|hNP]; last first.
     by move/eq2/negbTE. by move/eq1.
 pose i0 : 'I_n := [arg min_(j < i | j \notin h) j].
 apply/ltW/ltmcP; first by rewrite !mdeg_mesym1 card_mesymlmnm.
-exists i0; rewrite {}/i0; case: fintype.arg_minP => //=.
+exists i0; rewrite {}/i0; case: arg_minnP => //=.
 + move=> i0 i0_notin_h i0_min j lt_j_i0; rewrite !mnmE in_set.
   rewrite (@ltn_trans i) // 1?(@leq_trans i0) // ?i0_min //.
   by case: (boolP (j \in h))=> // /i0_min; rewrite leqNgt lt_j_i0.
