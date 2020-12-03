@@ -1,0 +1,4 @@
+(coq.theory
+ (name SsrMultinomials)
+ (package coq-mathcomp-multinomials)
+ (synopsis "A Multivariate polynomial Library for the Mathematical Components Library"))

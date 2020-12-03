@@ -1,0 +1,35 @@
+opam-version: "2.0"
+maintainer: "Cyril Cohen <cyril.cohen@inria.fr>"
+version: "dev"
+
+homepage: "https://github.com/math-comp/multinomials"
+dev-repo: "git+https://github.com/math-comp/multinomials.git"
+bug-reports: "https://github.com/math-comp/multinomials/issues"
+license: "CECILL-B"
+
+synopsis: "A Multivariate polynomial Library for the Mathematical Components Library"
+description: """
+This library provides a library for monomial algebra,for
+multivariate polynomials over ring structures and an extended theory
+for polynomials whose coefficients range over commutative rings and
+integral domains."""
+
+build: [make "-j%{jobs}%" ]
+install: [make "install"]
+depends: [
+  "coq" { (>= "8.10" & < "8.13~") | (= "dev") }
+  "coq-mathcomp-ssreflect" { (>= "1.11.0" & < "1.12~") | (= "dev")  }
+  "coq-mathcomp-algebra" { (>= "1.11.0" & < "1.12~") | (= "dev")  }
+  "coq-mathcomp-field" { (>= "1.11.0" & < "1.12~") | (= "dev")  }
+  "coq-mathcomp-finmap" { (>= "1.5" & < "1.6~") | (= "dev")  }
+  "coq-mathcomp-bigenough" {>= "1.0.0"}
+]
+
+tags: [
+  "keyword:multivariate polynomials"
+  "keyword:monoid algebra"
+  "logpath:SsrMultinomials"
+]
+authors: [
+  "Pierre-Yves Strub"
+]
