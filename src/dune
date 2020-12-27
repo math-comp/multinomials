@@ -1,0 +1,9 @@
+(coq.theory
+ (name SsrMultinomials)
+ (package coq-mathcomp-multinomials)
+ (flags -w -ambiguous-paths
+        -w -notation-overridden
+        -w -redundant-canonical-projection
+        -w -projection-no-head-constant
+        -w -duplicate-clear
+        -w -undeclared-scope))

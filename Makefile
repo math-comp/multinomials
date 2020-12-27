@@ -1,25 +1,16 @@
 # -*- Makefile -*-
 
 # --------------------------------------------------------------------
-include Makefile.common
+DUNEOPTS ?=
+DUNE     := dune $(DUNEOPTS)
 
 # --------------------------------------------------------------------
-this-clean::
-	rm -f *.glob *.d *.vo
+.PHONY: default build clean
 
-this-distclean::
-	rm -f $(shell find . -name '*~')
+default: build
 
-# --------------------------------------------------------------------
-.PHONY: count dist
+build:
+	$(DUNE) build
 
-# --------------------------------------------------------------------
-DISTDIR = multinomials-ssr
-TAROPT  = --posix --owner=0 --group=0
-
-dist:
-	if [ -e $(DISTDIR) ]; then rm -rf $(DISTDIR); fi
-	./scripts/distribution.py $(DISTDIR) MANIFEST
-	BZIP2=-9 tar $(TAROPT) -cjf $(DISTDIR).tar.bz2 $(DISTDIR)
-	rm -rf $(DISTDIR)
-
+clean:
+	$(DUNE) clean

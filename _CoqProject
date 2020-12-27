@@ -1,14 +1,1 @@
--arg -w -arg -ambiguous-paths
--arg -w -arg -notation-overridden
--arg -w -arg -redundant-canonical-projection
--arg -w -arg -projection-no-head-constant
--arg -w -arg -duplicate-clear
--arg -w -arg -undeclared-scope
-
-src/xfinmap.v
-src/ssrcomplements.v
-src/monalg.v
-src/freeg.v
-src/mpoly.v
-
--R src SsrMultinomials
+-R _build/default/src SsrMultinomials
