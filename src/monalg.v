@@ -25,6 +25,7 @@ Local Open Scope fset.
 Local Open Scope fmap.
 Local Open Scope ring_scope.
 
+Declare Scope malg_scope.
 Delimit Scope malg_scope with MP.
 
 Local Notation simpm := Monoid.simpm.
@@ -33,6 +34,7 @@ Local Notation ilift := fintype.lift.
 Local Notation efst := (@fst _ _) (only parsing).
 Local Notation esnd := (@snd _ _) (only parsing).
 
+Declare Scope m_scope.
 Delimit Scope m_scope with M.
 
 (* -------------------------------------------------------------------- *)
@@ -53,9 +55,9 @@ Reserved Notation "[ 'malg' x => E ]"
 Reserved Notation "{ 'mpoly' T [ n ] }"
   (at level 0, T, n at level 2, format "{ 'mpoly'  T [ n ] }").
 Reserved Notation "<< z *p k >>"
-  (at level 0).
+  (at level 0, format "<< z *p k >>").
 Reserved Notation "<< k >>"
-  (at level 0).
+  (at level 0, format "<< k >>").
 Reserved Notation "g @_ k"
   (at level 3, k at level 2, left associativity, format "g @_ k").
 Reserved Notation "c %:MP"

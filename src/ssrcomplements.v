@@ -139,7 +139,7 @@ Section BigMkSub.
       try rewrite filter_uniq // (map_inj_uniq val_inj).
       by rewrite /index_enum -enumT enum_uniq.
     move=> x; rewrite !mem_filter {}/Q; apply/andb_idr.
-    rewrite andbC; case/andP=> /h {h}h /h sT_x.
+    rewrite andbC; case/andP=> /h {}h /h sT_x.
     apply/mapP; exists (Sub x sT_x).
       by rewrite /index_enum -enumT mem_enum.
     by rewrite SubK.

@@ -44,9 +44,11 @@ Local Notation simpm := Monoid.simpm.
 Reserved Notation "{ 'freeg' K / G }" (at level 0, K, G at level 2, format "{ 'freeg'  K  /  G }").
 Reserved Notation "{ 'freeg' K }" (at level 0, K at level 2, format "{ 'freeg'  K }").
 Reserved Notation "[ 'freeg' S ]" (at level 0, S at level 2, format "[ 'freeg'  S ]").
+Reserved Notation "<< z *p k >>"  (at level 0, format "<< z *p k >>").
+Reserved Notation "<< k >>"  (at level 0, format "<< k >>").
 
 (* -------------------------------------------------------------------- *)
-Let perm_eq_map (T U : eqType) (f : T -> U) (xs ys : seq T):
+Lemma perm_eq_map (T U : eqType) (f : T -> U) (xs ys : seq T):
   perm_eq xs ys -> (perm_eq (map f xs) (map f ys)).
 Proof. by move/permP=> h; apply/permP=> p; rewrite !count_map. Qed.
 
@@ -207,7 +209,7 @@ Section FreegTheory.
   Definition dom D := [seq zx.2 | zx <- (repr D)].
 
   Lemma uniq_dom D: uniq (dom D).
-  Proof. by rewrite /dom; case: (repr D)=> /= {D} D; case/andP. Qed.
+  Proof. by rewrite /dom; case: (repr D)=> /= {}D; case/andP. Qed.
 
   Lemma reduced_cons zx s:
     reduced (zx :: s) = [&& zx.1 != 0, zx.2 \notin predom s & reduced s].
@@ -516,7 +518,7 @@ Section FreegTheory.
   Proof.
     apply/esym/eqP/freeg_eqP=> k.
     rewrite -{1 2}[D]freeg_repr !coeff_Freeg /dom.
-    case: (repr D)=> {D} D rD /=; rewrite -map_comp map_id_in //.
+    case: (repr D)=> {}D rD /=; rewrite -map_comp map_id_in //.
     move=> [z x]; rewrite reduced_mem // => /andP [/eqP <- _].
     by rewrite /= coeff_Freeg.
   Qed.

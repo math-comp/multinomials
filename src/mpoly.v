@@ -93,6 +93,9 @@ Import Monoid GRing.Theory BigEnough Order.Theory.
 
 Local Open Scope ring_scope.
 
+Declare Scope mpoly_scope.
+Declare Scope multi_scope.
+
 Delimit Scope mpoly_scope with MP.
 Delimit Scope multi_scope with MM.
 
@@ -159,10 +162,10 @@ Hypothesis ih: forall t1, (forall t2, t2 < t1 -> P t2) -> P t1.
 
 Lemma ltxwf t : P t.
 Proof.
-elim: n P ih t => [|k wih] Pn kih t; last case: (tupleP t) => a {t}t.
+elim: n P ih t => [|k wih] Pn kih t; last case: (tupleP t) => a {}t.
   by rewrite tuple0; apply/kih=> t2; rewrite tuple0.
 elim/wf: a t => a iha t; elim/wih: t => t iht.
-apply/kih => t'; case: (tupleP t') => a' {t'}t'; rewrite [_ < _]ltxi_cons.
+apply/kih => t'; case: (tupleP t') => a' {}t'; rewrite [_ < _]ltxi_cons.
 by case: (comparableP a a') => //= [/iha/(_ t')|<- /iht].
 Qed.
 
@@ -761,7 +764,7 @@ elim/(@ltxwf _ [porderType of nat]): t m=> //=; last first.
   move=> t wih m Em; apply/ih=> m' lt_m'm.
   apply/(wih (tof m'))=> //; rewrite -Em.
   by rewrite /tof ltEsub/= -ltEmnm.
-move=> Q {ih} ih x; elim: x {-2}x (leqnn x).
+move=> Q {}ih x; elim: x {-2}x (leqnn x).
   move=> x; rewrite leqn0=> /eqP->; apply/ih.
   by move=> y; rewrite ltEnat/= ltn0.
 move=> k wih l le_l_Sk; apply/ih=> y; rewrite ltEnat => lt_yl.
@@ -2420,7 +2423,7 @@ have: sorted <=%O%O s by apply/sort_sorted/le_total.
 case: s => /= [_|m' s srt_s]; first rewrite perm_sym.
   by move/perm_small_eq=> -> //.
 move/perm_mem => <-; rewrite in_cons => /orP[/eqP->//|].
-elim: s m' srt_s => //= m'' s ih m' /andP[le_mm' /ih {ih}ih].
+elim: s m' srt_s => //= m'' s ih m' /andP[le_mm' /ih {}ih].
 by rewrite in_cons => /orP[/eqP->//|] /ih /(le_trans le_mm').
 Qed.
 
@@ -4112,7 +4115,7 @@ apply/(irr_sorted_eq (leT := ltn))=> //.
   by apply/ltn_trans.
   by move=> ?; rewrite /ltn /= ltnn.
 move=> m; apply/mapP/mapP; case=> /= x;
-  by rewrite (h, =^~ h)=> {h} h ->; exists x.
+  by rewrite (h, =^~ h)=> {}h ->; exists x.
 Qed.
 
 Lemma mesym_tupleE (k : nat) : 's_k =
@@ -4975,7 +4978,7 @@ Lemma homog_prod (s : seq {mpoly R[n]}) :
 Proof.
 move=> homs; apply/homogP; elim: s homs => [_ | p s ihs] /=.
   by exists 0%N; rewrite big_nil; apply/dhomog1.
-case/andP=> /homogP [dp p_hdp] {ihs}/ihs [d ih].
+case/andP=> /homogP [dp p_hdp] {}/ihs [d ih].
 by exists (dp + d)%N; rewrite big_cons; apply/dhomogM.
 Qed.
 
