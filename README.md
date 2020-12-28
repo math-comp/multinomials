@@ -1,13 +1,30 @@
-[![Build Status](https://travis-ci.org/math-comp/multinomials.svg?branch=master)](https://travis-ci.org/math-comp/multinomials)
-
-A Coq/SSReflect Library for Monoidal Rings && Multinomials
+A Multivariate polynomial Library for the Mathematical Components Library
 ========================================================================
 
-  This library is based on SSReflect/MathComp Library version >= 1.8.
+This library provides a library for monomial algebra,for multivariate
+polynomials over ring structures and an extended theory for
+polynomials whose coefficients range over commutative rings and
+integral domains.
 
-  It can be installed from the unstable Coq opam repository:
+Building and installation instructions
+------------------------------------------------------------------------
 
-  https://coq.inria.fr/howto-opam
+The easiest way to install the latest released version this library is
+via [OPAM](https://opam.ocaml.org/doc/Install.html):
+
+```shell
+opam repo add coq-released https://coq.inria.fr/opam/released
+opam install coq-mathcomp-multinomials
+```
+
+If you want to install it manually, do:
+
+``` shell
+git clone https://github.com/math-comp/multinomials.git
+cd multinomials
+make   # or make -j <number-of-cores-on-your-machine> 
+make install
+```
 
 Authors
 ========================================================================
