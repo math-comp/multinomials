@@ -127,11 +127,11 @@ case: r => // x r _; elim: r => [|y r ih].
 pose v := (\join_(i <- x :: r) F i)%O.
 case: (Order.TotalPOrderMixin.leP letot v (F y)) => [le|lt].
   exists y; rewrite !(in_cons, eqxx) orbT /=.
-  rewrite !big_cons joinCA; apply/eqP/join_idPr.
+  rewrite !big_cons joinCA; apply/eqP/join_l.
   by apply/(le_trans _ le); rewrite /v big_cons.
 case: ih=> z /andP[inz leFz]; exists z; rewrite !in_cons.
 rewrite orbCA -in_cons inz orbT /= -(eqP leFz) -(rwP eqP).
-rewrite !big_cons joinCA; apply/join_idPl.
+rewrite !big_cons joinCA; apply/join_r.
 by apply/ltW/(lt_le_trans lt); rewrite /v big_cons.
 Qed.
 
@@ -643,7 +643,7 @@ rewrite leEmnm /=; have [/eqP|] := altP (mdeg m =P 0%N).
 by rewrite -lt0n mdeg0 lexi_cons/= leEnat; case: ltngtP.
 Qed.
 
-Definition multinom_blatticeMixin := BLatticeMixin le0m.
+Definition multinom_blatticeMixin := Order.BottomMixin.Build le0m.
 Canonical multinom_blatticeType :=
   Eval hnf in BLatticeType 'X_{1..n} multinom_blatticeMixin.
 Canonical multinom_bDistrLatticeType :=
@@ -1494,13 +1494,13 @@ move=> lep leq; apply/mpoly_eqP/esym=> /=.
 rewrite big_allpairs/= big_pairA.
 rewrite (big_mksub Ip) ?msupp_uniq //=; first last.
   by move=> x /msize_mdeg_lt /leq_trans; apply.
-rewrite [X in _ = X]big_rmcond /=; last first.
-  move=> i _ /memN_msupp_eq0=> ->; rewrite big1=> //.
+rewrite [X in _ = X]big_uncond /=; last first.
+  move=> i /memN_msupp_eq0=> ->; rewrite big1=> //.
   by move=> j _; rewrite mul0r freegU0.
 apply/eq_bigr=> i _; rewrite (big_mksub Iq) /=; first last.
   by move=> x /msize_mdeg_lt /leq_trans; apply.
   by rewrite msupp_uniq.
-rewrite [X in _ = X]big_rmcond //= => j _ /memN_msupp_eq0.
+rewrite [X in _ = X]big_uncond //= => j /memN_msupp_eq0.
 by move=> ->; rewrite mulr0 freegU0.
 Qed.
 
@@ -1528,16 +1528,16 @@ pose_big_enough i; first rewrite (mpoly_mulwE i i) // => lt_mk.
   pose G i   := \sum_(j : 'X_{1..n < k}) (F i j).
   rewrite (big_sub_widen Ik Ii xpredT G) /=; last first.
     by move=> x /leq_trans; apply.
-  rewrite big_rmcond /=; last first.
-    case=> /= j _ _; rewrite -leqNgt => /(leq_trans lt_mk).
+  rewrite big_uncond /=; last first.
+    case=> /= j _; rewrite -leqNgt => /(leq_trans lt_mk).
     move=> h; rewrite {}/G {}/F big1 // => /= l _.
     case: eqP h => [{1}->|]; last by rewrite mulr0n.
     by rewrite mdegD ltnNge leq_addr.
   apply/eq_bigr=> j _; rewrite {}/G.
   rewrite (big_sub_widen Ik Ii xpredT (F _)) /=; last first.
     by move=> x /leq_trans; apply.
-  rewrite big_rmcond => //=; last first.
-    move=> l; rewrite -leqNgt => _ /(leq_trans lt_mk).
+  rewrite big_uncond => //=; last first.
+    move=> l; rewrite -leqNgt => /(leq_trans lt_mk).
     move=> h; rewrite {}/F; case: eqP h; rewrite ?mulr0n //.
     by move=> ->; rewrite mdegD ltnNge leq_addl.
   by apply/eq_bigr=> l _; rewrite {}/F coeffU eq_sym mulr_natr.
@@ -1929,8 +1929,7 @@ move=> lt_pk; pose I := [subFinType of 'X_{1..n < k}].
 rewrite {1}[p]mpolyE (big_mksub I) //=; first last.
   by move=> x /msize_mdeg_lt /leq_trans; apply.
   by rewrite msupp_uniq.
-rewrite big_rmcond //= => i _.
-by move/memN_msupp_eq0 ->; rewrite scale0r.
+by rewrite big_uncond //= => i; move/memN_msupp_eq0 ->; rewrite scale0r.
 Qed.
 
 Lemma mpolyME p q :
@@ -1947,12 +1946,12 @@ Proof.
 move=> ltpk ltqk; rewrite mpolyME; pose I := [subFinType of 'X_{1..n < k}].
 rewrite big_allpairs (big_mksub I) /=; last first.
   by move=> m /msize_mdeg_lt /leq_trans; apply. by rewrite msupp_uniq.
-rewrite big_rmcond /= => [|i _]; last first.
+rewrite big_uncond /= => [|i]; last first.
   by move/memN_msupp_eq0=> ->; rewrite big1 // => j _; rewrite mul0r scale0r.
 rewrite big_pairA /=; apply/eq_bigr=> i _; rewrite (big_mksub I)/=; last first.
 - by move=> m /msize_mdeg_lt /leq_trans; apply.
 - by rewrite msupp_uniq.
-rewrite big_rmcond /= => [//|j _].
+rewrite big_uncond /= => [//|j].
 by move/memN_msupp_eq0=> ->; rewrite mulr0 scale0r.
 Qed.
 
@@ -2126,7 +2125,7 @@ Lemma mleadDr (p1 p2 : {mpoly R[n]}) :
   (mlead p1 < mlead p2)%O -> mlead (p1 + p2) = mlead p2.
 Proof.
 move=> lt_p1p2; apply/eqP; rewrite eq_le.
-move/ltW/join_idPl: (lt_p1p2) (mleadD_le p1 p2) => -> -> /=.
+move/ltW/join_r: (lt_p1p2) (mleadD_le p1 p2) => -> -> /=.
 rewrite leNgt; apply/negP=> /mcoeff_gt_mlead.
 rewrite mcoeffD mcoeff_gt_mlead // add0r => /eqP.
 rewrite mleadc_eq0=> /eqP z_p2; move: lt_p1p2.
@@ -2474,7 +2473,7 @@ pose I := [subFinType of 'X_{1..n < k}].
 move=> le_pk; rewrite /mderiv (big_mksub I) /=; first last.
   by move=> x /msize_mdeg_lt/leq_trans/(_ le_pk).
   by rewrite msupp_uniq.
-rewrite big_rmcond //= => j _ /memN_msupp_eq0 ->.
+rewrite big_uncond //= => j /memN_msupp_eq0 ->.
 by rewrite mulr0 scale0r.
 Qed.
 Arguments mderivwE [i p].
@@ -2861,7 +2860,7 @@ Proof.
 move=> le_pi; set I := [subFinType of 'X_{1..n < i}].
 rewrite /mmap (big_mksub I) ?msupp_uniq //=; first last.
   by move=> x /msize_mdeg_lt /leq_trans; apply.
-rewrite big_rmcond //= => j _ /memN_msupp_eq0 ->.
+rewrite big_uncond //= => j /memN_msupp_eq0 ->.
 by rewrite raddf0 mul0r.
 Qed.
 Arguments mmapE [p].
@@ -4084,7 +4083,7 @@ rewrite -mesymlmE /mesymlm /mlead; set m := mesym1 _.
 rewrite (bigD1_seq (mesymlm k)) //=; last first.
   rewrite mem_msupp_mesym mecharP; apply/existsP.
   by exists (mesymlmnm k); rewrite card_mesymlmnm ?eqxx.
-apply/join_idPr/joinsP_seq=> {m} /= m.
+apply/join_l/joinsP_seq=> {m} /= m.
 rewrite msupp_mesymP => /existsP[/=].
 move=> h /andP[/eqP Chk /eqP->] _; rewrite -Chk.
 by apply/mesymlm_max; rewrite Chk.
@@ -4109,7 +4108,7 @@ Lemma eq_tmono (h1 h2 : seq 'I_n) :
   tmono h1 -> tmono h2 -> h1 =i h2 -> h1 = h2.
 Proof.
 move=> tm1 tm2 h; apply/(inj_map val_inj).
-apply/(eq_sorted_irr (leT := ltn))=> //.
+apply/(irr_sorted_eq (leT := ltn))=> //.
   by apply/ltn_trans.
   by move=> ?; rewrite /ltn /= ltnn.
 move=> m; apply/mapP/mapP; case=> /= x;
@@ -4339,7 +4338,7 @@ Lemma muniE p : muni p =
      p@_m *: 'X_[[multinom (m (widen i)) | i < n]] *: 'X^(m ord_max).
 Proof.
 apply/eq_bigr=> m _; rewrite XE /= -!mul_polyC.
-by rewrite mulrA -polyC_mul mul_mpolyC.
+by rewrite mulrA -polyCM mul_mpolyC.
 Qed.
 
 Definition mmulti (p : {poly {mpoly R[n]}}) : {mpoly R[n.+1]} :=
@@ -4519,7 +4518,7 @@ rewrite subSS mesymSS !mpwidenZ !rmorphX /= !mwidenN1 !mpwidenX.
 rewrite exprS mulN1r !scaleNr mulNr -opprD; congr (-_).
 rewrite -!scalerAl -scalerDr; congr (_ *: _).
 rewrite -exprSr -subSn // subSS scalerDl; congr (_ + _).
-by rewrite -!mul_polyC !mulrA mulrAC polyC_mul.
+by rewrite -!mul_polyC !mulrA mulrAC polyCM.
 Qed.
 
 Lemma mroots_coeff (R : idomainType) n (cs : n.-tuple R) (k : 'I_n.+1) :
@@ -5053,8 +5052,8 @@ move=> lt_pk; pose I := [subFinType of 'X_{1..n < k}].
 rewrite pihomogE (big_mksub_cond I) //=; first last.
 + by move=> x /msize_mdeg_lt /leq_trans /(_ lt_pk) ->.
 + by rewrite msupp_uniq.
-rewrite -big_filter_cond big_rmcond ?big_filter //=.
-by move=> m _ /memN_msupp_eq0 ->; rewrite scale0r.
+rewrite -big_filter_cond big_uncond ?big_filter //=.
+by move=> m /memN_msupp_eq0 ->; rewrite scale0r.
 Qed.
 
 Lemma pihomogX m : pihomog 'X_[m] = if mf m == d then 'X_[m] else 0.
@@ -5188,7 +5187,7 @@ Lemma inj_s2m n d: {in basis n d &, injective (@s2m n \o val)}.
 Proof.
 move=> t1 t2; rewrite !inE=> srt_t1 srt_t2 eq_tm.
 apply/val_inj/(inj_map val_inj).
-apply/(eq_sorted leq_trans anti_leq srt_t1 srt_t2).
+apply/(sorted_eq leq_trans anti_leq srt_t1 srt_t2).
 apply/perm_map/allP=> /= i _; move/mnmP/(_ i): eq_tm.
 by rewrite !mnmE => ->.
 Qed.
