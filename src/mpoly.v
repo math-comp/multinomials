@@ -5313,7 +5313,7 @@ case: (mdeg m =P d)=> /eqP; rewrite basis_cover -/b.
   rewrite mcoeffZ mcoeffX eqxx mulr1 big1 ?addr0 // => m' ne.
   by rewrite mcoeffZ mcoeffX (negbTE ne) mulr0.
 move=> m_notin_b; rewrite big_seq big1 /=.
-  apply/esym/(dhomog_nemf_coeff (mf0 := [measure of mdeg]) (d := d)).
+  apply/esym/(@dhomog_nemf_coeff _ _ [measure of mdeg] d).
     by apply/dhomog_is_dhomog. by rewrite basis_cover.
 move=> m'; apply/contraTeq; rewrite mcoeffZ mcoeffX.
 by case: (m' =P m)=> [->|_]; last rewrite mulr0 eqxx.
