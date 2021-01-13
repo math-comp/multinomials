@@ -117,10 +117,8 @@ Definition dup (P : Prop) (h : P) := DupC h h.
 
 (* -------------------------------------------------------------------- *)
 Section LatticeMisc.
-Context {T : eqType} {disp : unit} {U : bDistrLatticeType disp}.
+Context {T : eqType} {disp : Order.disp_t} {U : bOrderType disp}.
 Context (P : pred T) (F : T -> U).
-
-Hypothesis letot : @total U (<=%O)%O.
 
 Lemma eq_bigjoin (r : seq T) : r != [::] ->
   {x : T | (x \in r) && ((\join_(i <- r) F i)%O == F x)}.
@@ -128,7 +126,7 @@ Proof.
 case: r => // x r _; elim: r => [|y r ih].
   by exists x; rewrite mem_seq1 big_seq1 !eqxx.
 pose v := (\join_(i <- x :: r) F i)%O.
-case: (Order.TotalPOrderMixin.leP letot v (F y)) => [le|lt].
+have [le|lt] := leP v (F y).
   exists y; rewrite !(in_cons, eqxx) orbT /=.
   rewrite !big_cons joinCA; apply/eqP/join_l.
   by apply/(le_trans _ le); rewrite /v big_cons.
@@ -147,7 +145,7 @@ Import Order.DefaultTupleLexiOrder.
 Local Open Scope order_scope.
 
 Section WF.
-Context {disp : unit} {T : porderType disp}.
+Context {disp : Order.disp_t} {T : porderType disp}.
 
 Hypothesis wf: forall (P : T -> Type),
      (forall x, (forall y, y < x -> P y) -> P x)
@@ -630,21 +628,13 @@ Definition multinom_porderMixin :=
   LePOrderMixin ltmc_def lemc_refl lemc_anti lemc_trans.
 
 Canonical multinom_porderType :=
-  Eval hnf in POrderType tt 'X_{1..n} multinom_porderMixin.
+  Eval hnf in POrderType Order.disp_tt 'X_{1..n} multinom_porderMixin.
 
 Lemma leEmnm m1 m2 : (m1 <= m2)%O = (mdeg m1 :: val m1 <= mdeg m2 :: val m2)%O.
 Proof. by []. Qed.
 
 Lemma ltEmnm (m m' : 'X_{1..n}) : (m < m')%O = (mdeg m :: m < mdeg m' :: m')%O.
 Proof. by []. Qed.
-
-Definition multinom_latticeMixin : totalPOrderMixin _ := lemc_total.
-Canonical multinom_latticeType :=
-  Eval hnf in LatticeType 'X_{1..n} multinom_latticeMixin.
-Canonical multinom_distrLatticeType :=
-  Eval hnf in DistrLatticeType 'X_{1..n} multinom_latticeMixin.
-
-Canonical multinom_orderType := OrderType 'X_{1..n} lemc_total.
 
 Lemma le0m (m : 'X_{1..n}) : (0%MM <= m)%O.
 Proof.
@@ -653,11 +643,24 @@ rewrite leEmnm /=; have [/eqP|] := altP (mdeg m =P 0%N).
 by rewrite -lt0n mdeg0 lexi_cons/= leEnat; case: ltngtP.
 Qed.
 
-Definition multinom_blatticeMixin := Order.BottomMixin.Build le0m.
-Canonical multinom_blatticeType :=
-  Eval hnf in BLatticeType 'X_{1..n} multinom_blatticeMixin.
-Canonical multinom_bDistrLatticeType :=
-  [bDistrLatticeType of 'X_{1..n}].
+Definition multinom_bPOrderMixin := BottomMixin le0m.
+Canonical multinom_bPOrderType := BPOrderType 'X_{1..n} multinom_bPOrderMixin.
+
+Definition multinom_latticeMixin : totalPOrderMixin _ := lemc_total.
+Canonical multinom_meetSemilatticeType :=
+  Eval hnf in MeetSemilatticeType 'X_{1..n} multinom_latticeMixin.
+Canonical multinom_bMeetSemilatticeType := [bMeetSemilatticeType of 'X_{1..n}].
+Canonical multinom_joinSemilatticeType :=
+  Eval hnf in JoinSemilatticeType 'X_{1..n} multinom_latticeMixin.
+Canonical multinom_bJoinSemilatticeType := [bJoinSemilatticeType of 'X_{1..n}].
+Canonical multinom_latticeType := [latticeType of 'X_{1..n}].
+Canonical multinom_bLatticeType := [bLatticeType of 'X_{1..n}].
+Canonical multinom_distrLatticeType :=
+  Eval hnf in DistrLatticeType 'X_{1..n} multinom_latticeMixin.
+Canonical multinom_bDistrLatticeType := [bDistrLatticeType of 'X_{1..n}].
+
+Canonical multinom_orderType := OrderType 'X_{1..n} lemc_total.
+Canonical multinom_bOrderType := [bOrderType of 'X_{1..n}].
 
 Lemma ltmcP m1 m2 : mdeg m1 = mdeg m2 -> reflect
   (exists2 i : 'I_n, forall (j : 'I_n), (j < i)%N -> m1 j = m2 j & m1 i < m2 i)
@@ -2089,9 +2092,7 @@ Proof. by rewrite /mlead msuppX big_seq1. Qed.
 
 Lemma mlead_supp p : p != 0 -> mlead p \in msupp p.
 Proof.
-move=> nz_p; case: (eq_bigjoin id _ (r := msupp p)) => /=.
-  by apply/le_total. by rewrite msupp_eq0.
-by rewrite /mlead=> m /andP [m_in_p /eqP ->].
+by rewrite /mlead -msupp_eq0 => /(eq_bigjoin id) [/= m /andP [m_in_p /eqP ->]].
 Qed.
 
 Lemma mlead_deg p : p != 0 -> (mdeg (mlead p)).+1 = msize p.
@@ -2179,7 +2180,7 @@ set itg := [seq _ <- _ | _]; have [|nz_szr] := eqVneq (size itg) 0%N.
 move: {ih}(ih uq_ml); rewrite !(big_nth p) -!(big_filter _ Q) -/itg.
 move=> ih; rewrite mleadD ih //; pose G i := mlead (F (nth p r i)).
 case: (eq_bigjoin G _ (r := itg)).
-  by apply/le_total. by rewrite -size_eq0.
+  by rewrite -size_eq0.
 move=> /= x /andP[]; rewrite {1}/itg mem_filter=> /andP[Px].
 rewrite mem_iota add0n subn0 {}/G=> /andP[_ lt_x_szr] /eqP->.
 apply/contra: Fp_ml=> /eqP-> {Q itg uq_ml nz_szr ih}.
@@ -4824,7 +4825,7 @@ rewrite comp_mpolyEX mlead_sum ?filter_predT; last first.
   exact: (can_in_inj (nthK _ _)).
 rewrite big_seq (eq_bigr _ h) -big_seq.
 case: (eq_bigjoin (fun m => mlead (XS m)) _ (r := msupp t)).
-  by apply/le_total. by rewrite msupp_eq0.
+  by rewrite msupp_eq0.
 move=> /= m /andP[m_in_t /eqP/esym]; rewrite -/S=> lmm.
 rewrite -lmm raddf_sum /= (bigD1_seq m) //= mcoeffZ.
 rewrite mleadc_XS mulr1 big_seq_cond big1.
