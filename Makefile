@@ -1,16 +1,18 @@
 # -*- Makefile -*-
 
-# --------------------------------------------------------------------
-DUNEOPTS ?=
-DUNE     := dune $(DUNEOPTS)
+all: Makefile.coq
+	+make -f Makefile.coq all
 
-# --------------------------------------------------------------------
-.PHONY: default build clean
+clean: Makefile.coq
+	+make -f Makefile.coq clean
+	rm -f Makefile.coq Makefile.coq.conf
 
-default: build
+_CoqProject:;
 
-build:
-	$(DUNE) build
+Makefile.coq: _CoqProject
+	$(COQBIN)coq_makefile -f _CoqProject -o Makefile.coq
 
-clean:
-	$(DUNE) clean
+%: Makefile.coq
+	+make -f Makefile.coq $@
+
+.PHONY: all clean

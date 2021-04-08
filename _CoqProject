@@ -3,4 +3,11 @@
 -arg -w -arg -redundant-canonical-projection
 -arg -w -arg -projection-no-head-constant
 
--R _build/default/src SsrMultinomials
+# -R _build/default/src SsrMultinomials
+-R src SsrMultinomials
+
+src/ssrcomplements.v
+src/monalg.v
+src/xfinmap.v
+src/mpoly.v
+src/freeg.v
