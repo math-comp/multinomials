@@ -77,6 +77,7 @@
 (* -------------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
+From HB Require Import structures.
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path.
 From mathcomp Require Import choice fintype tuple finfun bigop finset binomial.
 From mathcomp Require Import order fingroup perm ssralg zmodp poly ssrint.
@@ -180,7 +181,7 @@ Context (n : nat).
 
 Record multinom : predArgType := Multinom { multinom_val :> n.-tuple nat }.
 
-Canonical multinom_subType := Eval hnf in [newType for multinom_val].
+HB.instance Definition _ := [isNew for multinom_val].
 
 Definition fun_of_multinom M (i : 'I_n) := tnth (multinom_val M) i.
 
@@ -201,20 +202,7 @@ Notation "[ 'multinom' E | i < n ]" :=
 (* -------------------------------------------------------------------- *)
 Notation "''X_{1..' n '}'" := (multinom n) : type_scope.
 
-Definition multinom_eqMixin n :=
-  Eval hnf in [eqMixin of 'X_{1..n} by <:].
-Canonical multinom_eqType n :=
-  Eval hnf in EqType 'X_{1..n} (multinom_eqMixin n).
-Definition multinom_choiceMixin n :=
-  [choiceMixin of 'X_{1..n} by <:].
-Canonical multinom_choiceType n :=
-  Eval hnf in ChoiceType 'X_{1..n} (multinom_choiceMixin n).
-Definition multinom_countMixin n :=
-  [countMixin of 'X_{1..n} by <:].
-Canonical multinom_countType n :=
-  Eval hnf in CountType 'X_{1..n} (multinom_countMixin n).
-Canonical multinom_subCountType n :=
-  Eval hnf in [subCountType of 'X_{1..n}].
+HB.instance Definition _ n := [Countable of 'X_{1..n} by <:].
 
 Bind Scope multi_scope with multinom.
 
@@ -307,8 +295,8 @@ Proof. by move=> m; apply/mnmP=> i; rewrite !mnmE add0n. Qed.
 Lemma addm0 : right_id 0%MM +%MM.
 Proof. by move=> m; rewrite addmC add0m. Qed.
 
-Canonical mnm_monoid := Monoid.Law addmA add0m addm0.
-Canonical mnm_comoid := Monoid.ComLaw addmC.
+HB.instance Definition _ := Monoid.isComLaw.Build 'X_{1..n} 0%MM +%MM
+  addmA addmC add0m.
 
 Lemma subm0 m : (m - 0)%MM = m.
 Proof. by apply/mnmP=> i; rewrite !mnmE subn0. Qed.
@@ -531,11 +519,8 @@ apply/esym; rewrite andbC /mnmc_lt /mnmc_le lt_def lexi_cons eqseq_cons.
 by case: ltgtP; rewrite //= 1?andbC //; apply/contra_ltN => /eqP ->.
 Qed.
 
-Definition multinom_porderMixin :=
-  LePOrderMixin ltmc_def lemc_refl lemc_anti lemc_trans.
-
-Canonical multinom_porderType :=
-  Eval hnf in POrderType tt 'X_{1..n} multinom_porderMixin.
+HB.instance Definition _ := Order.isPOrder.Build tt 'X_{1..n}
+  ltmc_def lemc_refl lemc_anti lemc_trans.
 
 Lemma leEmnm m1 m2 : (m1 <= m2)%O = (mdeg m1 :: val m1 <= mdeg m2 :: val m2)%O.
 Proof. by []. Qed.
@@ -543,13 +528,7 @@ Proof. by []. Qed.
 Lemma ltEmnm m m' : (m < m')%O = (mdeg m :: m < mdeg m' :: m')%O.
 Proof. by []. Qed.
 
-Definition multinom_latticeMixin : totalPOrderMixin _ := lemc_total.
-Canonical multinom_latticeType :=
-  Eval hnf in LatticeType 'X_{1..n} multinom_latticeMixin.
-Canonical multinom_distrLatticeType :=
-  Eval hnf in DistrLatticeType 'X_{1..n} multinom_latticeMixin.
-
-Canonical multinom_orderType := OrderType 'X_{1..n} lemc_total.
+HB.instance Definition _ := Order.POrder_isTotal.Build tt 'X_{1..n} lemc_total.
 
 Lemma le0m m : (0%MM <= m)%O.
 Proof.
@@ -558,11 +537,7 @@ rewrite leEmnm; have [/eqP|] := eqVneq (mdeg m) 0%N.
 by rewrite -lt0n mdeg0 lexi_cons leEnat; case: ltngtP.
 Qed.
 
-Definition multinom_blatticeMixin := Order.BottomMixin.Build le0m.
-Canonical multinom_blatticeType :=
-  Eval hnf in BLatticeType 'X_{1..n} multinom_blatticeMixin.
-Canonical multinom_bDistrLatticeType :=
-  [bDistrLatticeType of 'X_{1..n}].
+HB.instance Definition _ := Order.hasBottom.Build tt 'X_{1..n} le0m.
 
 Lemma ltmcP m1 m2 : mdeg m1 = mdeg m2 -> reflect
   (exists2 i : 'I_n, forall (j : 'I_n), j < i -> m1 j = m2 j & m1 i < m2 i)
@@ -658,7 +633,7 @@ Lemma ltmwf :
 Proof.
 pose tof m := [tuple of mdeg m :: m].
 move=> ih m; move: {2}(tof _) (erefl (tof m))=> t.
-elim/(@ltxwf _ [porderType of nat]): t m=> //=; last first.
+elim/(@ltxwf _ nat): t m=> //=; last first.
   move=> t wih m Em; apply/ih=> m' lt_m'm.
   by apply/(wih (tof m')); rewrite // -Em.
 move=> Q {}ih x; elim: x {-2}x (leqnn x).
@@ -681,15 +656,8 @@ Context (n bound : nat).
 
 Record bmultinom := BMultinom { bmnm :> 'X_{1..n}; _ : mdeg bmnm < bound }.
 
-Canonical bmultinom_subType := Eval hnf in [subType for bmnm].
-
-Definition bmultinom_eqMixin      := Eval hnf in [eqMixin of bmultinom by <:].
-Canonical  bmultinom_eqType       := Eval hnf in EqType bmultinom bmultinom_eqMixin.
-Definition bmultinom_choiceMixin  := [choiceMixin of bmultinom by <:].
-Canonical  bmultinom_choiceType   := Eval hnf in ChoiceType bmultinom bmultinom_choiceMixin.
-Definition bmultinom_countMixin   := [countMixin of bmultinom by <:].
-Canonical  bmultinom_countType    := Eval hnf in CountType bmultinom bmultinom_countMixin.
-Canonical  bmultinom_subCountType := Eval hnf in [subCountType of bmultinom].
+HB.instance Definition _ := [isSub for bmnm].
+HB.instance Definition _ := [Countable of bmultinom by <:].
 
 Lemma bmeqP (m1 m2 : bmultinom) : (m1 == m2) = (m1 == m2 :> 'X_{1..n}).
 Proof. by []. Qed.
@@ -730,9 +698,7 @@ move: lt_dm_Sb; rewrite mdegE (bigD1 i) //= multinomE.
 by move=> /(leq_trans _) ->//; rewrite ltnS leq_addr.
 Qed.
 
-Canonical bmnm_finMixin   := Eval hnf in FinMixin bmnm_enumP.
-Canonical bmnm_finType    := Eval hnf in FinType 'X_{1..n < b} bmnm_finMixin.
-Canonical bmnm_subFinType := Eval hnf in [subFinType of 'X_{1..n < b}].
+HB.instance Definition _ := isFinite.Build 'X_{1..n < b} bmnm_enumP.
 
 End FinDegBound.
 
@@ -780,11 +746,8 @@ Inductive mpoly := MPoly of {freeg 'X_{1..n} / R}.
 
 Coercion mpoly_val p := let: MPoly D := p in D.
 
-Canonical  mpoly_subType     := Eval hnf in [newType for mpoly_val].
-Definition mpoly_eqMixin     := Eval hnf in [eqMixin of mpoly by <:].
-Canonical  mpoly_eqType      := Eval hnf in EqType mpoly mpoly_eqMixin.
-Definition mpoly_choiceMixin := [choiceMixin of mpoly by <:].
-Canonical  mpoly_choiceType  := Eval hnf in ChoiceType mpoly mpoly_choiceMixin.
+HB.instance Definition _ := [isNew for mpoly_val].
+HB.instance Definition _ := [Choice of mpoly by <:].
 
 Definition mpoly_of of phant R := mpoly.
 
@@ -915,13 +878,9 @@ Proof. by move=> p q; apply/mpoly_eqP; rewrite !mpoly_valK addrC. Qed.
 Lemma add_mpolyA : associative mpoly_add.
 Proof. by move=> p q r; apply/mpoly_eqP; rewrite !mpoly_valK addrA. Qed.
 
-Definition mpoly_zmodMixin :=
-  ZmodMixin add_mpolyA add_mpolyC add_mpoly0 add_mpolyN.
-
-Canonical mpoly_zmodType :=
-  Eval hnf in ZmodType {mpoly R[n]} mpoly_zmodMixin.
-Canonical mpolynomial_zmodType :=
-  Eval hnf in ZmodType (mpoly n R) mpoly_zmodMixin.
+HB.instance Definition _ := GRing.isZmodule.Build (mpoly n R)
+  add_mpolyA add_mpolyC add_mpoly0 add_mpolyN.
+HB.instance Definition _ := GRing.Zmodule.on {mpoly R[n]}.
 
 Definition mpoly_scale c p := [mpoly c *: (mpoly_val p)].
 
@@ -943,21 +902,17 @@ Lemma scale_mpolyDl p c1 c2 :
   (c1 + c2) *:M p = c1 *:M p + c2 *:M p.
 Proof. by apply/mpoly_eqP; rewrite !mpoly_valK scalerDl. Qed.
 
-Definition mpoly_lmodMixin :=
-  LmodMixin scale_mpolyA scale_mpoly1m scale_mpolyDr scale_mpolyDl.
-
-Canonical mpoly_lmodType :=
-  Eval hnf in LmodType R {mpoly R[n]} mpoly_lmodMixin.
-Canonical mpolynomial_lmodType :=
-  Eval hnf in LmodType R (mpoly n R) mpoly_lmodMixin.
+HB.instance Definition _ := GRing.Zmodule_isLmodule.Build R (mpoly n R)
+ scale_mpolyA scale_mpoly1m scale_mpolyDr scale_mpolyDl.
+HB.instance Definition _ := GRing.Lmodule.on {mpoly R[n]}.
 
 Local Notation mcoeff := (@mcoeff n R).
 
 Lemma mcoeff_is_additive m : additive (mcoeff m).
 Proof. by move=> p q /=; rewrite /mcoeff raddfB. Qed.
 
-Canonical mcoeff_additive m: {additive {mpoly R[n]} -> R} :=
-  Additive (mcoeff_is_additive m).
+HB.instance Definition _ m := GRing.isAdditive.Build {mpoly R[n]} R (mcoeff m)
+  (mcoeff_is_additive m).
 
 Lemma mcoeff0   m   : mcoeff m 0 = 0               . Proof. exact: raddf0. Qed.
 Lemma mcoeffN   m   : {morph mcoeff m: x / - x}    . Proof. exact: raddfN. Qed.
@@ -969,16 +924,17 @@ Lemma mcoeffMNn m k : {morph mcoeff m: x / x *- k} . Proof. exact: raddfMNn. Qed
 Lemma mcoeffZ c p m : mcoeff m (c *: p) = c * (mcoeff m p).
 Proof. by rewrite /mcoeff coeffZ. Qed.
 
-Canonical mcoeff_linear m : {scalar {mpoly R[n]}} :=
-  AddLinear ((fun c => (mcoeffZ c)^~ m) : scalable_for *%R (mcoeff m)).
+HB.instance Definition _ m :=
+  GRing.isScalable.Build R {mpoly R[n]} R *%R (mcoeff m)
+    (fun c => (mcoeffZ c)^~ m).
 
 Local Notation mpolyC := (@mpolyC n R).
 
 Lemma mpolyC_is_additive : additive mpolyC.
 Proof. by move=> p q; apply/mpoly_eqP; rewrite /= freegUB. Qed.
 
-Canonical mpolyC_additive : {additive R -> {mpoly R[n]}} :=
-  Additive mpolyC_is_additive.
+HB.instance Definition _ := GRing.isAdditive.Build R {mpoly R[n]} mpolyC
+  mpolyC_is_additive.
 
 Lemma mpolyC0     : mpolyC 0 = 0               . Proof. exact: raddf0. Qed.
 Lemma mpolyCN     : {morph mpolyC: x / - x}    . Proof. exact: raddfN. Qed.
@@ -1005,42 +961,24 @@ Qed.
 End MPolyZMod.
 
 (* -------------------------------------------------------------------- *)
-Section MMeasureDef.
-Context (n : nat).
-
-Structure measure := Measure {
-  mf : 'X_{1..n} -> nat;
-  _  : mf 0 = 0%N;
-  _  : {morph mf : m1 m2 / (m1 + m2)%MM >-> (m1 + m2)%N}
+HB.mixin Record isMeasure (n : nat) (mf : 'X_{1..n} -> nat) := {
+  mf0 : mf 0%MM = 0%N;
+  mfD : {morph mf : m1 m2 / (m1 + m2)%MM >-> (m1 + m2)%N};
 }.
 
-Coercion mf : measure >-> Funclass.
+#[short(type="measure")]
+HB.structure Definition Measure (n : nat) := {mf of isMeasure n mf}.
 
-Let measure_id (mf1 mf2 : 'X_{1..n} -> nat) := phant_id mf1 mf2.
-
-Definition clone_measure mf :=
-  fun (mfL : measure) & measure_id mfL mf =>
-  fun mf0 mfD (mfL' := @Measure mf mf0 mfD)
-    & phant_id mfL' mfL => mfL'.
-
-End MMeasureDef.
-
-Notation "[ 'measure' 'of' f ]" := (@clone_measure _ f _ id _ _ id)
+Notation "[ 'measure' 'of' f ]" := (Measure.clone _ f _)
   (at level 0, format"[ 'measure'  'of'  f ]") : form_scope.
 
 (* -------------------------------------------------------------------- *)
-Canonical mdeg_measure n := Eval hnf in @Measure n _ mdeg0 mdegD.
+#[hnf] HB.instance Definition _ n := isMeasure.Build n mdeg mdeg0 mdegD.
 
 (* -------------------------------------------------------------------- *)
 Section MMeasure.
 Context (n : nat) (R : ringType) (mf : measure n).
 Implicit Types (m : 'X_{1..n}) (p q : {mpoly R[n]}).
-
-Lemma mf0 : mf 0%MM = 0%N.
-Proof. by case: mf. Qed.
-
-Lemma mfD : {morph mf : m1 m2 / (m1 + m2)%MM >-> (m1 + m2)%N}.
-Proof. by case: mf. Qed.
 
 Lemma mfE m : mf m = (\sum_(i < n) (m i) * mf U_(i)%MM)%N.
 Proof.
@@ -1146,7 +1084,7 @@ Qed.
 
 End MWeight.
 
-Canonical mnmwgt_measure n := Eval hnf in @Measure n _ mnmwgt0 mnmwgtD.
+#[hnf] HB.instance Definition _ n := isMeasure.Build n mnmwgt mnmwgt0 mnmwgtD.
 
 (* -------------------------------------------------------------------- *)
 Notation mweight p := (@mmeasure _ _ [measure of mnmwgt] p).
@@ -1233,7 +1171,7 @@ Definition msize_msupp0   n R := @mmeasure_msupp0 n R [measure of mdeg].
 
 (* -------------------------------------------------------------------- *)
 Definition polyn (R : ringType) :=
-  fix polyn n := if n is p.+1 then [ringType of {poly (polyn p)}] else R.
+  fix polyn n := if n is p.+1 then {poly (polyn p)} else R.
 
 Definition ipoly (T : Type) : Type := T.
 
@@ -1243,10 +1181,7 @@ Notation "{ 'ipoly' T [ n ] }^p" := (ipoly {ipoly T[n]}).
 Section IPoly.
 Context (R : ringType) (n : nat).
 
-Canonical ipoly_eqType     := [eqType     of {ipoly R[n]}^p].
-Canonical ipoly_choiceType := [choiceType of {ipoly R[n]}^p].
-Canonical ipoly_zmodType   := [zmodType   of {ipoly R[n]}^p].
-Canonical ipoly_ringType   := [ringType   of {ipoly R[n]}^p].
+HB.instance Definition _ := GRing.Ring.on {ipoly R[n]}^p.
 
 End IPoly.
 
@@ -1260,14 +1195,31 @@ Fixpoint inject n m (p : {ipoly R[n]}) : {ipoly R[m + n]} :=
 Lemma inject_inj n m : injective (@inject n m).
 Proof. by elim: m=> [|m ih] p q //= /polyC_inj /ih. Qed.
 
-Lemma inject_is_rmorphism n m : rmorphism (@inject n m).
+Lemma inject_is_additive n m : additive (@inject n m).
 Proof.
 elim: m => [|m ih] //=; rewrite -/(_ \o _).
-by suff ->: inject m = RMorphism ih by exact/rmorphismP.
+pose iaM := GRing.isAdditive.Build _ _ _ ih.
+pose iA : GRing.Additive.type _ _ := HB.pack (@inject n m) iaM.
+have ->: inject m = iA by [].
+exact: raddfB.
 Qed.
 
-Canonical inject_rmorphism n m := RMorphism (inject_is_rmorphism n m).
-Canonical inject_additive  n m := Additive (inject_is_rmorphism n m).
+HB.instance Definition _ n m :=
+  GRing.isAdditive.Build {ipoly R[n]} {ipoly R[m+n]} (@inject n m)
+    (@inject_is_additive n m).
+
+Lemma inject_is_multiplicative n m : multiplicative (@inject n m).
+Proof.
+elim: m => [|m ih] //=; rewrite -/(_ \o _).
+pose imM := GRing.isMultiplicative.Build _ _ _ ih.
+pose iM : GRing.RMorphism.type _ _ := HB.pack (@inject n m) imM.
+have ->: inject m = iM by [].
+exact: (rmorphM _, rmorph1 _).
+Qed.
+
+HB.instance Definition _ n m :=
+  GRing.isMultiplicative.Build {ipoly R[n]} {ipoly R[m+n]} (@inject n m)
+    (@inject_is_multiplicative n m).
 
 Definition inject_cast n m k E : {ipoly R[n]} -> {ipoly R[k]} :=
   ecast k (_ -> {ipoly R[k]}) E (@inject n m).
@@ -1276,12 +1228,22 @@ Lemma inject_cast_inj n m k E :
   injective (@inject_cast n m k E).
 Proof. by case: k / E; apply/inject_inj. Qed.
 
-Lemma inject_cast_is_rmorphism n m k E :
-  rmorphism (@inject_cast n m k E).
-Proof. by case: k / E; apply/rmorphismP. Qed.
+Lemma inject_cast_is_additive n m k E : additive (@inject_cast n m k E).
+Proof. case: k /E; exact: raddfB. Qed.
 
-Canonical inject_cast_rmorphism n m k e := RMorphism (@inject_cast_is_rmorphism n m k e).
-Canonical inject_cast_additive  n m k e := Additive  (@inject_cast_is_rmorphism n m k e).
+Lemma inject_cast_is_multiplicative n m k E :
+  multiplicative (@inject_cast n m k E).
+Proof. case: k / E; exact: (rmorphM _, rmorph1 _). Qed.
+
+HB.instance Definition _ n m k e :=
+  GRing.isAdditive.Build
+    {ipoly R[n]} {ipoly R[k]} (@inject_cast n m k e)
+    (inject_cast_is_additive e).
+
+HB.instance Definition _ n m k e :=
+  GRing.isMultiplicative.Build
+    {ipoly R[n]} {ipoly R[k]} (@inject_cast n m k e)
+    (inject_cast_is_multiplicative e).
 
 Lemma inject1_proof n (i : 'I_n.+1) : (n - i + i = n)%N.
 Proof. by rewrite subnK // -ltnS. Qed.
@@ -1311,11 +1273,8 @@ Proof. by rewrite raddfD /= mulrDl. Qed.
 
 Definition iscale (c : R) (p : {ipoly R[n]}) := c%:IP * p.
 
-Definition ipoly_lmodMixin :=
-  let mkMixin := @GRing.Lmodule.Mixin R (ipoly_zmodType R n) iscale in
-  mkMixin iscaleA iscale1r iscaleDr iscaleDl.
-
-Canonical ipoly_lmodType := LmodType R {ipoly R[n]}^p ipoly_lmodMixin.
+HB.instance Definition _ := GRing.Zmodule_isLmodule.Build R {ipoly R[n]}^p
+  iscaleA iscale1r iscaleDr iscaleDl.
 
 End IScale.
 
@@ -1357,8 +1316,8 @@ Proof. by move/memN_msupp_eq0=> ->; rewrite mulr0 freegU0. Qed.
 Lemma mpoly_mulwE p q kp kq : msize p <= kp -> msize q <= kq ->
   p *M q = [mpoly \sum_(m : 'X_{1..n < kp, kq}) (p *M_[m] q)].
 Proof.
-pose Ip := [subFinType of 'X_{1..n < kp}].
-pose Iq := [subFinType of 'X_{1..n < kq}].
+pose Ip : subFinType _ := 'X_{1..n < kp}.
+pose Iq : subFinType _ := 'X_{1..n < kq}.
 move=> lep leq; apply/mpoly_eqP/esym=> /=.
 rewrite big_allpairs/= big_pairA.
 rewrite (big_mksub Ip) ?msupp_uniq //=; first last.
@@ -1391,8 +1350,8 @@ Proof.
 pose_big_enough i; first rewrite (mpoly_mulwE i i) // => lt_mk.
   rewrite mcoeff_MPoly raddf_sum /=; have lt_mi: k < i by [].
   apply/esym; rewrite big_cond_mulrn !big_pairA /=.
-  pose Ik := [subFinType of 'X_{1..n < k}].
-  pose Ii := [subFinType of 'X_{1..n < i}].
+  pose Ik : subFinType _ := 'X_{1..n < k}.
+  pose Ii : subFinType _ := 'X_{1..n < i}.
   pose F i j := (p@_i * q@_j) *+ (m == (i + j))%MM.
   pose G i   := \sum_(j : 'X_{1..n < k}) (F i j).
   rewrite (big_sub_widen Ik Ii xpredT G) /=; last first.
@@ -1525,13 +1484,9 @@ Qed.
 Lemma poly_oner_neq0 : 1%:MP != 0 :> {mpoly R[n]}.
 Proof. by rewrite mpolyC_eq oner_eq0. Qed.
 
-Definition mpoly_ringMixin :=
-  RingMixin poly_mulA poly_mul1m poly_mulm1
-            poly_mulDl poly_mulDr poly_oner_neq0.
-Canonical mpoly_ringType :=
-  Eval hnf in RingType {mpoly R[n]} mpoly_ringMixin.
-Canonical mpolynomial_ringType :=
-  Eval hnf in RingType (mpoly n R) mpoly_ringMixin.
+HB.instance Definition _ := GRing.Zmodule_isRing.Build (mpoly n R)
+  poly_mulA poly_mul1m poly_mulm1 poly_mulDl poly_mulDr poly_oner_neq0.
+HB.instance Definition _ := GRing.Ring.on {mpoly R[n]}.
 
 Lemma mcoeff1 m : 1@_m = (m == 0%MM)%:R.
 Proof. by rewrite mcoeffC mul1r. Qed.
@@ -1591,8 +1546,9 @@ split=> // p q; apply/mpolyP=> m.
 by rewrite mcoeffCM !mcoeffC mulrA.
 Qed.
 
-Canonical mpolyC_rmorphism : {rmorphism R -> {mpoly R[n]}} :=
-  AddRMorphism mpolyC_is_multiplicative.
+HB.instance Definition _ :=
+  GRing.isMultiplicative.Build R {mpoly R[n]} (@mpolyC n R)
+    mpolyC_is_multiplicative.
 
 Lemma mpolyC1 : mpolyC n 1 = 1.
 Proof. exact: rmorph1. Qed.
@@ -1638,10 +1594,9 @@ Qed.
 Lemma mpoly_scaleAl c p q : c *: (p * q) = (c *: p) * q.
 Proof. by rewrite -!mul_mpolyC mulrA. Qed.
 
-Canonical mpoly_lalgType :=
-  Eval hnf in LalgType R {mpoly R[n]} mpoly_scaleAl.
-Canonical mpolynomial_lalgType :=
-  Eval hnf in LalgType R (mpoly n R) mpoly_scaleAl.
+HB.instance Definition _ := GRing.Lmodule_isLalgebra.Build R (mpoly n R)
+  mpoly_scaleAl.
+HB.instance Definition _ := GRing.Lalgebra.on {mpoly R[n]}.
 
 Lemma alg_mpolyC c : c%:A = c%:MP :> {mpoly R[n]}.
 Proof. by rewrite -mul_mpolyC mulr1. Qed.
@@ -1658,8 +1613,9 @@ rewrite mdegD [X in _=X]mdeg0 => /eqP; rewrite addn_eq0.
 by rewrite !mdeg_eq0=> /andP [/eqP->/eqP->]; rewrite !eqxx.
 Qed.
 
-Canonical mcoeff0_rmorphism  := AddRMorphism mcoeff0_is_multiplicative.
-Canonical mcoeff0_lrmorphism := [lrmorphism of mcoeff 0%MM].
+HB.instance Definition _ :=
+  GRing.isMultiplicative.Build {mpoly R[n]} R (mcoeff 0)
+    mcoeff0_is_multiplicative.
 
 End MPolyRing.
 
@@ -1783,7 +1739,7 @@ Qed.
 Lemma mpolywE k p : msize p <= k ->
   p = \sum_(m : 'X_{1..n < k}) (p@_m *: 'X_[m]).
 Proof.
-move=> lt_pk; pose I := [subFinType of 'X_{1..n < k}].
+move=> lt_pk; pose I : subFinType _ := 'X_{1..n < k}.
 rewrite {1}[p]mpolyE (big_mksub I) //=; first last.
   by move=> x /msize_mdeg_lt /leq_trans; apply.
   by rewrite msupp_uniq.
@@ -1801,7 +1757,7 @@ Qed.
 Lemma mpolywME p q k : msize p <= k -> msize q <= k ->
   p * q = \sum_(m : 'X_{1..n < k, k}) (p@_m.1 * q@_m.2) *: 'X_[m.1 + m.2].
 Proof.
-move=> ltpk ltqk; rewrite mpolyME; pose I := [subFinType of 'X_{1..n < k}].
+move=> ltpk ltqk; rewrite mpolyME; pose I : subFinType _ := 'X_{1..n < k}.
 rewrite big_allpairs (big_mksub I) /=; last first.
   by move=> m /msize_mdeg_lt /leq_trans; apply. by rewrite msupp_uniq.
 rewrite big_rmcond /= => [|i]; last first.
@@ -1874,8 +1830,9 @@ Qed.
 Lemma MPoly_is_linear: linear (@MPoly n R).
 Proof. by move=> c p q; apply/mpoly_eqP. Qed.
 
-Canonical MPoly_additive := Additive MPoly_is_linear.
-Canonical MPoly_linear   := Linear   MPoly_is_linear.
+HB.instance Definition _ :=
+  GRing.isLinear.Build R {freeg 'X_{1.. n} / R} {mpoly R[n]}
+    _ (@MPoly n R) MPoly_is_linear.
 
 Lemma MPolyU c m : MPoly << c *g m >> = c *: 'X_[m].
 Proof.
@@ -2300,7 +2257,7 @@ Local Notation "p ^`M ( i )" := (mderiv i p).
 Lemma mderivwE i p k : msize p <= k ->
   p^`M(i) = \sum_(m : 'X_{1..n < k}) ((m i)%:R * p@_m) *: 'X_[m - U_(i)].
 Proof.
-pose I := [subFinType of 'X_{1..n < k}].
+pose I : subFinType _ := 'X_{1..n < k}.
 move=> le_pk; rewrite /mderiv (big_mksub I) /=; first last.
   by move=> x /msize_mdeg_lt/leq_trans/(_ le_pk).
   by rewrite msupp_uniq.
@@ -2333,8 +2290,8 @@ move=> c p q; pose_big_enough j; first rewrite !(mderivwE j) //.
 by close.
 Qed.
 
-Canonical mderiv_additive i := Additive (mderiv_is_linear i).
-Canonical mderiv_linear   i := Linear   (mderiv_is_linear i).
+HB.instance Definition _ i := GRing.isLinear.Build R {mpoly R[n]} {mpoly R[n]}
+  _ (mderiv i) (mderiv_is_linear i).
 
 Lemma mderiv0 i : mderiv i 0 = 0.
 Proof. exact: raddf0. Qed.
@@ -2474,8 +2431,9 @@ move=> c p q; rewrite /mderivm; elim: (enum _)=> //= i s ih.
 by elim: (m i) => //= {ih}k ->; rewrite mderivD mderivZ.
 Qed.
 
-Canonical mderivm_additive m := Additive (mderivm_is_linear m).
-Canonical mderivm_linear   m := Linear   (mderivm_is_linear m).
+HB.instance Definition _ m :=
+  GRing.isLinear.Build R {mpoly R[n]} {mpoly R[n]} _ (mderivm m)
+    (mderivm_is_linear m).
 
 Lemma mderivmN m : {morph mderivm m: x / - x}.
 Proof. exact: raddfN. Qed.
@@ -2564,8 +2522,7 @@ Proof.
 move=> lt_pk; pose P (m : 'X_{1..n < k}) := (val m) \in msupp p.
 rewrite (bigID P) {}/P /= addrC big1 ?add0r; last first.
   by move=> m' /memN_msupp_eq0=> ->; rewrite mul0r scale0r.
-rewrite mderivmE (big_mksub [subFinType of 'X_{1..n < k}]) //=.
-  exact/msupp_uniq.
+rewrite mderivmE (big_mksub 'X_{1..n < k}) //=; first exact/msupp_uniq.
 by move=> m' /msize_mdeg_lt /leq_trans; apply.
 Qed.
 
@@ -2673,7 +2630,7 @@ Context (h : 'I_n -> S) (f : {additive R -> S}).
 Lemma mmapE p i : msize p <= i ->
   p^[f,h] = \sum_(m : 'X_{1..n < i}) (f p@_m) * m^[h].
 Proof.
-move=> le_pi; set I := [subFinType of 'X_{1..n < i}].
+move=> le_pi; set I : subFinType _ := 'X_{1..n < i}.
 rewrite /mmap (big_mksub I) ?msupp_uniq //=; first last.
   by move=> x /msize_mdeg_lt /leq_trans; apply.
 rewrite big_rmcond //= => j /memN_msupp_eq0 ->.
@@ -2689,7 +2646,8 @@ move=> p q /=; pose_big_enough i.
 by close.
 Qed.
 
-Canonical mmap_additive := Additive mmap_is_additive.
+HB.instance Definition _ := GRing.isAdditive.Build {mpoly R[n]} S (mmap f h)
+  mmap_is_additive.
 
 Local Notation mmap := (mmap f h).
 
@@ -2771,7 +2729,9 @@ Proof.
   + by move=> p m m'; apply/mulrC.
 Qed.
 
-Canonical mmap_rmorphism := AddRMorphism mmap_is_multiplicative.
+HB.instance Definition _ :=
+  GRing.isMultiplicative.Build {mpoly R[n]} S (mmap f h)
+    mmap_is_multiplicative.
 
 End MPolyMorphismComm.
 
@@ -2786,15 +2746,14 @@ apply/mpolyP=> /= m; rewrite mcoeffM mcoeffMr.
 by apply: eq_bigr=> /= i _; rewrite mulrC.
 Qed.
 
-Canonical mpoly_comRingType :=
-  Eval hnf in ComRingType {mpoly R[n]} mpoly_mulC.
-Canonical mpolynomial_comRingType :=
-  Eval hnf in ComRingType (mpoly n R) mpoly_mulC.
+HB.instance Definition _ := GRing.Ring_hasCommutativeMul.Build (mpoly n R)
+  mpoly_mulC.
+HB.instance Definition _ := GRing.ComRing.on {mpoly R[n]}.
 
-Canonical mpoly_algType :=
-  Eval hnf in CommAlgType R {mpoly R[n]}.
-Canonical mpolynomial_algType :=
-  Eval hnf in [algType R of mpoly n R for mpoly_algType].
+#[hnf]
+HB.instance Definition _ := GRing.Lalgebra_isComAlgebra.Build R {mpoly R[n]}.
+#[hnf]
+HB.instance Definition _ := GRing.Lalgebra_isComAlgebra.Build R (mpoly n R).
 
 End MPolyComRing.
 
@@ -2821,7 +2780,8 @@ Qed.
 Lemma comp_mpoly_is_additive lq : additive (comp_mpoly lq).
 Proof. by move=> p q; rewrite /comp_mpoly -mmapB. Qed.
 
-Canonical comp_mpoly_additive lq := Additive (comp_mpoly_is_additive lq).
+HB.instance Definition _ lq := GRing.isAdditive.Build {mpoly R[n]} {mpoly R[k]}
+  (comp_mpoly lq) (comp_mpoly_is_additive lq).
 
 Lemma comp_mpoly0   lq   : 0 \mPo lq = 0                     . Proof. exact: raddf0. Qed.
 Lemma comp_mpolyN   lq   : {morph comp_mpoly lq: x / - x}    . Proof. exact: raddfN. Qed.
@@ -2830,13 +2790,12 @@ Lemma comp_mpolyB   lq   : {morph comp_mpoly lq: x y / x - y}. Proof. exact: rad
 Lemma comp_mpolyMn  lq l : {morph comp_mpoly lq: x / x *+ l} . Proof. exact: raddfMn. Qed.
 Lemma comp_mpolyMNn lq l : {morph comp_mpoly lq: x / x *- l} . Proof. exact: raddfMNn. Qed.
 
-Lemma comp_mpoly_is_linear lq : linear (comp_mpoly lq).
-Proof.
-move=> c p q; rewrite comp_mpolyD /comp_mpoly.
-by rewrite mmapZ mul_mpolyC.
-Qed.
+Lemma comp_mpoly_is_linear lq : scalable (comp_mpoly lq).
+Proof. by move=> c p; rewrite /comp_mpoly mmapZ mul_mpolyC. Qed.
 
-Canonical comp_mpoly_linear lq := Linear (comp_mpoly_is_linear lq).
+HB.instance Definition _ lq :=
+  GRing.isScalable.Build R {mpoly R[n]} {mpoly R[k]} _ (comp_mpoly lq)
+    (comp_mpoly_is_linear lq).
 
 Lemma comp_mpoly1 lq : 1 \mPo lq = 1.
 Proof. by rewrite /comp_mpoly -mpolyC1 mmapC. Qed.
@@ -2867,8 +2826,9 @@ Context (n : nat) (R : comRingType) (k : nat) (lp : n.-tuple {mpoly R[k]}).
 Lemma comp_mpoly_is_multiplicative : multiplicative (comp_mpoly lp).
 Proof. exact: mmap_is_multiplicative. Qed.
 
-Canonical comp_mpoly_rmorphism := AddRMorphism comp_mpoly_is_multiplicative.
-Canonical comp_mpoly_lrmorphism := [lrmorphism of (comp_mpoly lp)].
+HB.instance Definition _ :=
+  GRing.isMultiplicative.Build {mpoly R[n]} {mpoly R[k]} (comp_mpoly lp)
+    comp_mpoly_is_multiplicative.
 
 End MPolyCompComm.
 
@@ -2900,7 +2860,8 @@ Proof. by []. Qed.
 Lemma meval_is_additive v : additive (meval v).
 Proof. exact/mmap_is_additive. Qed.
 
-Canonical meval_additive v := Additive (meval_is_additive v).
+HB.instance Definition _ v := GRing.isAdditive.Build {mpoly R[n]} R (meval v)
+  (meval_is_additive v).
 
 Lemma meval0   v   : meval v 0 = 0               . Proof. exact: raddf0. Qed.
 Lemma mevalN   v   : {morph meval v: x / - x}    . Proof. exact: raddfN. Qed.
@@ -2943,17 +2904,14 @@ Section MEvalCom.
 Context (n k : nat) (R : comRingType).
 Implicit Types (p q r : {mpoly R[n]}) (v : 'I_n -> R).
 
-Lemma meval_is_lrmorphism v : lrmorphism_for *%R (meval v).
-Proof.
-  split; first split.
-  + exact/mmap_is_additive.
-  + exact/mmap_is_multiplicative.
-  by move=> /= c p; rewrite [LHS]mmapZ.
-Qed.
+Lemma meval_is_lrmorphism v : scalable_for *%R (meval v).
+Proof. by move=> /= c p; rewrite /meval mmapZ /=. Qed.
 
-Canonical meval_rmorphism  v := RMorphism (meval_is_lrmorphism v).
-Canonical meval_linear     v := AddLinear (meval_is_lrmorphism v).
-Canonical meval_lrmorphism v := [lrmorphism of meval v].
+HB.instance Definition _ v := GRing.RMorphism.copy (meval v) (meval v).
+
+HB.instance Definition _ v :=
+  GRing.isScalable.Build R {mpoly R[n]} R *%R (meval v)
+    (meval_is_lrmorphism v).
 
 Lemma mevalM v : {morph meval v: x y / x * y}.
 Proof. exact: rmorphM. Qed.
@@ -2970,7 +2928,7 @@ Proof.
 rewrite comp_mpolyEX [X in _ = X.@[_]](mpolyE p) !raddf_sum /=.
 apply/eq_bigr => m _; rewrite !mevalZ; congr *%R.
 rewrite comp_mpolyX rmorph_prod /= mevalX.
-by apply/eq_bigr=> i _; rewrite rmorphX.
+by apply/eq_bigr=> i _; rewrite rmorphXn.
 Qed.
 
 End MEvalComp.
@@ -2991,7 +2949,8 @@ Local Notation "p ^f" := (map_mpoly f p).
 Lemma map_mpoly_is_additive : additive (map_mpoly f).
 Proof. exact/mmap_is_additive. Qed.
 
-Canonical map_mpoly_additive := Additive map_mpoly_is_additive.
+HB.instance Definition _ := GRing.isAdditive.Build {mpoly R[n]} {mpoly S[n]}
+  (map_mpoly f) map_mpoly_is_additive.
 
 Lemma map_mpolyC c : map_mpoly f c%:MP_[n] = (f c)%:MP_[n].
 Proof. by rewrite [LHS]mmapC. Qed.
@@ -3025,8 +2984,9 @@ apply/commr_mmap_is_multiplicative => /=.
 + by move=> p m m'; rewrite mmap1_id; apply/commr_mpolyX.
 Qed.
 
-Canonical map_mpoly_multiplicative :=
-  AddRMorphism map_mpoly_is_multiplicative.
+HB.instance Definition _ :=
+  GRing.isMultiplicative.Build {mpoly R[n]} {mpoly S[n]} (map_mpoly f)
+    map_mpoly_is_multiplicative.
 
 Lemma map_mpolyX (m : 'X_{1..n}) :
   map_mpoly f 'X_[m] = 'X_[m].
@@ -3060,7 +3020,7 @@ move=> inj_f; apply/mpolyP=> m; rewrite mcoeff_map_mpoly.
 rewrite !raddf_sum (perm_big _ (msupp_map_mpoly _ inj_f)) /=.
 apply/eq_bigr=> m' _; rewrite mcoeff_map_mpoly !mcoeffCM rmorphM /=.
 congr *%R; rewrite /mmap1 -mcoeff_map_mpoly rmorph_prod /=.
-by congr _@__; apply/eq_bigr=> i /=; rewrite tnth_map rmorphX.
+by congr _@__; apply/eq_bigr=> i /=; rewrite tnth_map rmorphXn.
 Qed.
 
 End MPolyMapComp.
@@ -3069,11 +3029,10 @@ End MPolyMapComp.
 Section MPolyOver.
 Context (n : nat) (R : ringType).
 
-Definition mpolyOver (S : {pred R}) :=
-  [qualify a p : {mpoly R[n]} | all (mem S) [seq p@_m | m <- msupp p]].
-
-Fact mpolyOver_key S : pred_key (mpolyOver S). Proof. by []. Qed.
-Canonical mpolyOver_keyed S := KeyedQualifier (mpolyOver_key S).
+Definition mpolyOver_pred (S : {pred R}) :=
+  fun p : {mpoly R[n]} => all (mem S) [seq p@_m | m <- msupp p].
+Arguments mpolyOver_pred _ _ /.
+Definition mpolyOver (S : {pred R}) := [qualify a p | mpolyOver_pred S p].
 
 Lemma mpolyOverS (S1 S2 : {pred R}) :
   {subset S1 <= S2} -> {subset mpolyOver S1 <= mpolyOver S2}.
@@ -3083,7 +3042,7 @@ by apply/(all_nthP 0)=> i /S1p; apply: sS12.
 Qed.
 
 Lemma mpolyOver0 S: 0 \is a mpolyOver S.
-Proof. by rewrite qualifE msupp0. Qed.
+Proof. by rewrite qualifE /= msupp0. Qed.
 
 Lemma mpolyOver_mpoly (S : {pred R}) E :
      (forall m : 'X_{1..n}, m \in dom E -> coeff m E \in S)
@@ -3094,9 +3053,9 @@ by rewrite (nth_map 0%MM) // mcoeff_MPoly S_E ?mem_nth.
 Qed.
 
 Section MPolyOverAdd.
-Context (S : predPredType R) (addS : addrPred S) (kS : keyed_pred addS).
+Variable S : addrClosed R.
 
-Lemma mpolyOverP {p} : reflect (forall m, p@_m \in kS) (p \in mpolyOver kS).
+Lemma mpolyOverP {p} : reflect (forall m, p@_m \in S) (p \in mpolyOver S).
 Proof.
 case: p=> E; rewrite qualifE /=; apply: (iffP allP); last first.
   by move=> h x /mapP /= [m m_in_E] ->; apply/h.
@@ -3105,35 +3064,37 @@ move=> h m; case: (boolP (m \in msupp (MPoly E))).
   by rewrite -mcoeff_eq0 => /eqP->; rewrite rpred0.
 Qed.
 
-Lemma mpolyOverC c : (c%:MP \in mpolyOver kS) = (c \in kS).
+Lemma mpolyOverC c : (c%:MP \in mpolyOver S) = (c \in S).
 Proof.
-rewrite qualifE msuppC; case: eqP=> [->|] //=;
+rewrite qualifE /= msuppC; case: eqP=> [->|] //=;
 by rewrite ?rpred0 // andbT mcoeffC eqxx mulr1.
 Qed.
 
-Lemma mpolyOver_addr_closed : addr_closed (mpolyOver kS).
+Lemma mpolyOver_addr_closed : addr_closed (mpolyOver S).
 Proof.
 split=> [|p q Sp Sq]; first exact: mpolyOver0.
 by apply/mpolyOverP=> i; rewrite mcoeffD rpredD ?(mpolyOverP _).
 Qed.
 
-Canonical mpolyOver_addrPred := AddrPred mpolyOver_addr_closed.
+HB.instance Definition _ :=
+  GRing.isAddClosed.Build {mpoly R[n]} (mpolyOver_pred S)
+    mpolyOver_addr_closed.
 
 End MPolyOverAdd.
 
-Lemma mpolyOverNr S (addS : zmodPred S) (kS : keyed_pred addS) :
-  oppr_closed (mpolyOver kS).
+Lemma mpolyOverNr (addS : zmodClosed R) : oppr_closed (mpolyOver addS).
 Proof.
 by move=> p /mpolyOverP Sp; apply/mpolyOverP=> i; rewrite mcoeffN rpredN.
 Qed.
 
-Canonical mpolyOver_opprPred S addS kS := OpprPred (@mpolyOverNr S addS kS).
-Canonical mpolyOver_zmodPred S addS kS := ZmodPred (@mpolyOverNr S addS kS).
+HB.instance Definition _ (addS : zmodClosed R) :=
+  GRing.isOppClosed.Build {mpoly R[n]} (mpolyOver_pred addS)
+    (@mpolyOverNr addS).
 
 Section MPolyOverSemiring.
-Context (S : predPredType R) (ringS : semiringPred S) (kS : keyed_pred ringS).
+Variable S : semiringClosed R.
 
-Lemma mpolyOver_mulr_closed : mulr_closed (mpolyOver kS).
+Lemma mpolyOver_mulr_closed : mulr_closed (mpolyOver S).
 Proof.
 split=> [|p q /mpolyOverP Sp /mpolyOverP Sq].
   by rewrite mpolyOverC rpred1.
@@ -3141,22 +3102,22 @@ apply/mpolyOverP=> i; rewrite mcoeffM rpred_sum //.
 by move=> j _; apply: rpredM.
 Qed.
 
-Canonical mpolyOver_mulrPred := MulrPred mpolyOver_mulr_closed.
-Canonical pmolyOver_semiringPred := SemiringPred mpolyOver_mulr_closed.
+HB.instance Definition _ :=
+  GRing.isMulClosed.Build {mpoly R[n]} (mpolyOver_pred S)
+    mpolyOver_mulr_closed.
 
-Lemma mpolyOverZ :
-  {in kS & mpolyOver kS, forall c p, c *: p \is a mpolyOver kS}.
+Lemma mpolyOverZ : {in S & mpolyOver S, forall c p, c *: p \is a mpolyOver S}.
 Proof.
 move=> c p Sc /mpolyOverP Sp; apply/mpolyOverP=> i.
 by rewrite mcoeffZ rpredM ?Sp.
 Qed.
 
-Lemma mpolyOverX m : 'X_[m] \in mpolyOver kS.
-Proof. by rewrite qualifE msuppX /= mcoeffX eqxx rpred1. Qed.
+Lemma mpolyOverX m : 'X_[m] \in mpolyOver S.
+Proof. by rewrite qualifE /= msuppX /= mcoeffX eqxx rpred1. Qed.
 
 Lemma rpred_mhorner :
-  {in mpolyOver kS, forall p (v : 'I_n -> R),
-     [forall i : 'I_n, v i \in kS] -> p.@[v] \in kS}.
+  {in mpolyOver S, forall p (v : 'I_n -> R),
+     [forall i : 'I_n, v i \in S] -> p.@[v] \in S}.
 Proof.
 move=> p /mpolyOverP Sp v Sv; rewrite mevalE rpred_sum // => m _.
 rewrite rpredM // rpred_prod //= => /= i _.
@@ -3166,16 +3127,18 @@ Qed.
 End MPolyOverSemiring.
 
 Section MPolyOverRing.
-Context (S : predPredType R) (ringS : subringPred S) (kS : keyed_pred ringS).
+Variable S : subringClosed R.
 
-Canonical mpolyOver_smulrPred := SmulrPred (mpolyOver_mulr_closed kS).
-Canonical mpolyOver_subringPred := SubringPred (mpolyOver_mulr_closed kS).
+HB.instance Definition _ :=
+  GRing.isMulClosed.Build {mpoly R[n]} (mpolyOver_pred S)
+    (mpolyOver_mulr_closed S).
 
-Lemma mpolyOverXaddC m c : ('X_[m] + c%:MP \in mpolyOver kS) = (c \in kS).
+Lemma mpolyOverXaddC m c : ('X_[m] + c%:MP \in mpolyOver S) = (c \in S).
 Proof. by rewrite rpredDl ?mpolyOverX ?mpolyOverC. Qed.
 
 End MPolyOverRing.
 End MPolyOver.
+Arguments mpolyOver_pred _ _ _ _ /.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyIdomain.
@@ -3269,28 +3232,15 @@ Qed.
 Lemma mpoly_inv_out : {in [predC mpoly_unit], mpoly_inv =1 id}.
 Proof.  by rewrite /mpoly_inv => p /negbTE /= ->. Qed.
 
-Definition mpoly_comUnitMixin :=
-  ComUnitRingMixin mpoly_mulVp mpoly_intro_unit mpoly_inv_out.
+HB.instance Definition _ := GRing.ComRing_hasMulInverse.Build (mpoly n R)
+  mpoly_mulVp mpoly_intro_unit mpoly_inv_out.
+HB.instance Definition _ := GRing.ComUnitRing.on {mpoly R[n]}.
 
-Canonical mpoly_unitRingType :=
-  Eval hnf in UnitRingType {mpoly R[n]} mpoly_comUnitMixin.
-Canonical mpolynomial_unitRingType :=
-  Eval hnf in [unitRingType of mpoly n R for mpoly_unitRingType].
-
-Canonical mpoly_unitAlgType :=
-  Eval hnf in [unitAlgType R of {mpoly R[n]}].
-Canonical mpolynomial_unitAlgType :=
-  Eval hnf in [unitAlgType R of mpoly n R].
-
-Canonical mpoly_comUnitRingType :=
-  Eval hnf in [comUnitRingType of {mpoly R[n]}].
-Canonical mpolynomial_comUnitRingType :=
-  Eval hnf in [comUnitRingType of mpoly n R].
-
-Canonical mpoly_idomainType :=
-  Eval hnf in IdomainType {mpoly R[n]} mpoly_idomainAxiom.
-Canonical mpolynomial_idomainType :=
-  Eval hnf in [idomainType of mpoly n R for mpoly_idomainType].
+#[hnf]
+HB.instance Definition _ := GRing.ComUnitRing_isIntegral.Build (mpoly n R)
+  mpoly_idomainAxiom.
+#[hnf]
+HB.instance Definition _ := GRing.IntegralDomain.on {mpoly R[n]}.
 
 End MPolyIdomain.
 
@@ -3399,7 +3349,9 @@ Qed.
 Lemma msym_is_additive s: additive (msym s).
 Proof. exact/mmap_is_additive. Qed.
 
-Canonical msym_additive s := Additive (msym_is_additive s).
+HB.instance Definition _ s :=
+  GRing.isAdditive.Build {mpoly R[n]} {mpoly R[n]} (msym s)
+    (msym_is_additive s).
 
 Lemma msym0   s   : msym s 0 = 0               . Proof. exact: raddf0. Qed.
 Lemma msymN   s   : {morph msym s: x / - x}    . Proof. exact: raddfN. Qed.
@@ -3415,7 +3367,9 @@ rewrite /= /mmap1; elim/big_rec: _ => [|i q _]; first exact/commr1.
 exact/commrM/commrX/commr_mpolyX.
 Qed.
 
-Canonical msym_multiplicative s := AddRMorphism (msym_is_multiplicative s).
+HB.instance Definition _ s :=
+  GRing.isMultiplicative.Build {mpoly R[n]} {mpoly R[n]} (msym s)
+    (msym_is_multiplicative s).
 
 Lemma msym1 s : msym s 1 = 1.
 Proof. exact: rmorph1. Qed.
@@ -3431,16 +3385,15 @@ pose_big_enough i; first rewrite !(msymE s i) //.
 by close.
 Qed.
 
-Canonical msym_linear (s : 'S_n) : {linear {mpoly R[n]} -> {mpoly R[n]}} :=
-  AddLinear ((fun c => (msymZ c)^~ s) : scalable_for *:%R (msym s)).
+HB.instance Definition _ s :=
+  GRing.isScalable.Build R {mpoly R[n]} {mpoly R[n]} *:%R (msym s)
+    (fun c => (msymZ c)^~ s).
 
-Canonical msym_lrmorphism s := [lrmorphism of msym s].
-
+Definition symmetric_pred : pred {mpoly R[n]} :=
+  fun p => [forall s, msym s p == p].
+Arguments symmetric_pred _ /.
 Definition symmetric : qualifier 0 {mpoly R[n]} :=
-  [qualify p | [forall s, msym s p == p]].
-
-Fact symmetric_key : pred_key symmetric. Proof. by []. Qed.
-Canonical symmetric_keyed := KeyedQualifier symmetric_key.
+  [qualify p | symmetric_pred p].
 
 Lemma issymP p : reflect (forall s, msym s p = p) (p \is symmetric).
 Proof.
@@ -3455,9 +3408,8 @@ split=> [|p q /issymP sp /issymP sq]; apply/issymP=> s.
 by rewrite msymB sp sq.
 Qed.
 
-Canonical sym_opprPred := OpprPred sym_zmod.
-Canonical sym_addrPred := AddrPred sym_zmod.
-Canonical sym_zmodPred := ZmodPred sym_zmod.
+HB.instance Definition _ :=
+  GRing.isZmodClosed.Build {mpoly R[n]} symmetric_pred sym_zmod.
 
 Lemma sym_mulr_closed : mulr_closed symmetric.
 Proof.
@@ -3466,10 +3418,8 @@ split=> [|p q /issymP sp /issymP sq]; apply/issymP=> s.
 by rewrite msymM sp sq.
 Qed.
 
-Canonical sym_mulrPred     := MulrPred     sym_mulr_closed.
-Canonical sym_smulrPred    := SmulrPred    sym_mulr_closed.
-Canonical sym_semiringPred := SemiringPred sym_mulr_closed.
-Canonical sym_subringPred  := SubringPred  sym_mulr_closed.
+HB.instance Definition _ := GRing.isMulClosed.Build {mpoly R[n]} symmetric_pred
+  sym_mulr_closed.
 
 Lemma sym_submod_closed : submod_closed symmetric.
 Proof.
@@ -3478,8 +3428,9 @@ split=> [|c p q /issymP sp /issymP sq]; apply/issymP=> s.
 by rewrite msymD msymZ sp sq.
 Qed.
 
-Canonical sym_submodPred := SubmodPred sym_submod_closed.
-Canonical sym_subalgPred := SubalgPred sym_submod_closed.
+HB.instance Definition _ :=
+  GRing.isSubmodClosed.Build R {mpoly R[n]} symmetric_pred
+    sym_submod_closed.
 
 Lemma issym_msupp p (s : 'S_n) (m : 'X_{1..n}) : p \is symmetric ->
   (m#s \in msupp p) = (m \in msupp p).
@@ -3525,6 +3476,7 @@ Qed.
 End MPolySym.
 
 Arguments inj_msym  {n R}.
+Arguments symmetric_pred _ _ _ /.
 Arguments symmetric {n R}.
 
 (* -------------------------------------------------------------------- *)
@@ -3578,7 +3530,7 @@ rewrite raddf_sum {1}(reindex_inj (h := F)) /=; last first.
   by move/mperm_inj=> /val_inj.
 apply/eq_bigr=> m _; rewrite linearZ /= FE msym_coeff //.
 rewrite rmorph_prod /= (reindex_inj (perm_inj (s := s'^-1))) /=.
-congr (_ *: _); apply/eq_bigr=> i _; rewrite rmorphX /=.
+congr (_ *: _); apply/eq_bigr=> i _; rewrite rmorphXn /=.
 rewrite mnmE permKV (tnth_nth 0) {1}tE -!tnth_nth.
 rewrite !tnth_map !tnth_ord_tuple permKV -msymMm.
 by rewrite mulVg msym1m -tnth_nth.
@@ -3608,7 +3560,10 @@ rewrite negbK=> inv_q; apply/(msymMK _ sym_q).
 by rewrite mulrCA divrr // mulr1.
 Qed.
 
-Canonical sym_divringPred  := DivringPred sym_divring.
+HB.instance Definition _ :=
+  GRing.isDivringClosed.Build {mpoly R[n]}
+    (@symmetric_pred n R)
+    sym_divring.
 
 End MPolySymUnit.
 
@@ -3968,7 +3923,9 @@ Lemma mwidenB     : {morph mwiden: x y / x - y}. Proof. exact: raddfB. Qed.
 Lemma mwidenMn  k : {morph mwiden: x / x *+ k} . Proof. exact: raddfMn. Qed.
 Lemma mwidenMNn k : {morph mwiden: x / x *- k} . Proof. exact: raddfMNn. Qed.
 
-Canonical mwiden_additive := Additive mwiden_is_additive.
+HB.instance Definition _ :=
+  GRing.isAdditive.Build {mpoly R[n]} {mpoly R[n.+1]} mwiden
+    mwiden_is_additive.
 
 Lemma mwiden_is_multiplicative : multiplicative mwiden.
 Proof.
@@ -3977,7 +3934,9 @@ rewrite /= /mmap1; elim/big_rec: _ => /= [|i q _]; first exact/commr1.
 exact/commrM/commrX/commr_mpolyX.
 Qed.
 
-Canonical mwiden_rmorphism := AddRMorphism mwiden_is_multiplicative.
+HB.instance Definition _ :=
+  GRing.isMultiplicative.Build {mpoly R[n]} {mpoly R[n.+1]} mwiden
+    mwiden_is_multiplicative.
 
 Lemma mwiden1 : mwiden 1 = 1.
 Proof. exact: rmorph1. Qed.
@@ -4031,12 +3990,16 @@ Definition mpwiden (p : {poly {mpoly R[n]}}) : {poly {mpoly R[n.+1]}} :=
 Lemma mpwiden_is_additive : additive mpwiden.
 Proof. exact: map_poly_is_additive. Qed.
 
-Canonical mpwiden_additive := Additive mpwiden_is_additive.
+HB.instance Definition _ :=
+  GRing.isAdditive.Build {poly {mpoly R[n]}} {poly {mpoly R[n.+1]}}
+    mpwiden mpwiden_is_additive.
 
-Lemma mpwiden_is_rmorphism : rmorphism mpwiden.
-Proof. exact: map_poly_is_rmorphism. Qed.
+Lemma mpwiden_is_multiplicative : multiplicative mpwiden.
+Proof. exact: map_poly_is_multiplicative. Qed.
 
-Canonical mpwiden_rmorphism := RMorphism mpwiden_is_rmorphism.
+HB.instance Definition _ :=
+  GRing.isMultiplicative.Build {poly {mpoly R[n]}} {poly {mpoly R[n.+1]}}
+    mpwiden mpwiden_is_multiplicative.
 
 Lemma mpwidenX : mpwiden 'X = 'X.
 Proof. by rewrite /mpwiden map_polyX. Qed.
@@ -4074,7 +4037,7 @@ have X2 i: X (widen i) = ('X_i)%:P.
   by rewrite ord1 /= addn0 => /eqP /=; rewrite ltn_eqF.
 rewrite /mmap1 big_ord_recr /= X1 -mul_polyC.
 rewrite mpolyXE_id rmorph_prod /=; congr (_ * _).
-by apply/eq_bigr=> i _; rewrite X2 rmorphX /= mnmE.
+by apply/eq_bigr=> i _; rewrite X2 rmorphXn /= mnmE.
 Qed.
 
 Lemma muniE p : muni p =
@@ -4090,7 +4053,9 @@ Definition mmulti (p : {poly {mpoly R[n]}}) : {mpoly R[n.+1]} :=
 
 Lemma muni_is_additive : additive muni. Proof. exact/mmap_is_additive. Qed.
 
-Canonical muni_additive := Additive muni_is_additive.
+HB.instance Definition _ :=
+  GRing.isAdditive.Build {mpoly R[n.+1]} {poly {mpoly R[n]}} muni
+    muni_is_additive.
 
 Lemma muni0     : muni 0 = 0               . Proof. exact: raddf0. Qed.
 Lemma muniN     : {morph muni: x / - x}    . Proof. exact: raddfN. Qed.
@@ -4109,8 +4074,9 @@ case: eqP; rewrite ?(mulr0, mul0r, mulr1, mul1r) //= => _.
 exact/commr_mpolyX.
 Qed.
 
-Canonical muni_rmorphism : {rmorphism {mpoly R[n.+1]} -> {poly {mpoly R[n]}}} :=
-  AddRMorphism muni_is_multiplicative.
+HB.instance Definition _ :=
+  GRing.isMultiplicative.Build {mpoly R[n.+1]} {poly {mpoly R[n]}} muni
+    muni_is_multiplicative.
 
 Lemma muni1 : muni 1 = 1.
 Proof. exact: rmorph1. Qed.
@@ -4178,7 +4144,7 @@ Proof.
 rewrite -setI_eq0; apply/eqP/setP=> /= x.
 rewrite !in_set; apply/negP=> /andP[].
 case/imsetP=> /= h1 _ -> /imsetP /= [h2 _].
-move/setP/(_ ord_max); rewrite !in_set eqxx /=.
+move/setP/(_ ord_max); rewrite in_set in_set1 eqxx /=.
 case/imsetP=> /= {h1 h2} m _ /eqP.
 by rewrite eqE /= eq_sym ltn_eqF.
 Qed.
@@ -4249,16 +4215,16 @@ rewrite (eq_bigr (F n \o val)) // -!(big_mkord xpredT).
 rewrite raddf_sum /= mulrBr !mulr_suml.
 rewrite big_nat_recl 1?[X in X-_]big_nat_recl //.
 rewrite -!addrA !Fn0; congr (_ + _).
-  by rewrite rmorphX /= mpwidenX exprSr.
+  by rewrite rmorphXn /= mpwidenX exprSr.
 rewrite big_nat_recr 1?[X in _-X]big_nat_recr //=.
 rewrite opprD !addrA; congr (_ + _); last first.
-  rewrite !Fnn !mpwidenZ !rmorphX /= mwidenN1.
+  rewrite !Fnn !mpwidenZ !rmorphXn /= mwidenN1.
   rewrite exprS mulN1r scaleNr -scalerAl; congr (- (_ *: _)).
   rewrite big_ord_recr rmorph_prod /=; congr (_ * _).
   by apply/eq_bigr=> i _; rewrite mpwidenC mwidenX mnmwiden1.
 rewrite -sumrB !big_seq; apply/eq_bigr => i /=.
 rewrite mem_index_iota => /andP [_ lt_in]; rewrite {Fn0 Fnn}/F.
-rewrite subSS mesymSS !mpwidenZ !rmorphX /= !mwidenN1 !mpwidenX.
+rewrite subSS mesymSS !mpwidenZ !rmorphXn /= !mwidenN1 !mpwidenX.
 rewrite exprS mulN1r !scaleNr mulNr -opprD; congr (-_).
 rewrite -!scalerAl -scalerDr; congr (_ *: _).
 rewrite -exprSr -subSn // subSS scalerDl; congr (_ + _).
@@ -4284,7 +4250,7 @@ rewrite (bigD1 k) //= big1 ?addr0; last first.
   rewrite -(eqn_add2r k) -addnA subnK 1?addnC; last first.
     by move: (ltn_ord k); rewrite ltnS.
   by rewrite eqn_add2l (negbTE ne_ik) !mulr0.
-rewrite !map_polyZ !rmorphX raddfN /= mmapC !coefZ /=.
+rewrite !map_polyZ !rmorphXn /= raddfN /= mmapC !coefZ /=.
 congr (_ * _); rewrite map_polyX coefXn eqxx mulr1.
 rewrite /mesym; rewrite !raddf_sum /=; apply/eq_bigr.
 move=> i _; rewrite !rmorph_prod /=; apply/eq_bigr.
@@ -4462,7 +4428,7 @@ case/and3P: (symf1P sym_p); case/orP=> [/eqP-> _ /eqP pE|].
   by rewrite symfnE0 /= eqxx rpred0 /= {1}pE !simpm.
 move=> le_q1_p /ih /and3P[]; case/orP=> [/eqP-> _|].
   move=> /eqP q1E /eqP pE; rewrite eqxx rpred0 /=.
-  by rewrite {1}pE {1}q1E !simpm raddfD.
+  by rewrite {1}pE {1}q1E !simpm /= addr0 raddfD.
 move=> le_q2_q1 -> /eqP q1E /eqP pE.
 rewrite (lt_trans le_q2_q1) ?orbT //= {1}pE {1}q1E.
 by rewrite addrA raddfD.
@@ -4560,37 +4526,20 @@ Qed.
 End MESymFundamental.
 
 (* -------------------------------------------------------------------- *)
+Definition ishomog1_pred {n} {R : ringType}
+  (d : nat) (mf : measure n) : pred {mpoly R[n]}
+  := fun p => all [pred m | mf m == d] (msupp p).
+Arguments ishomog1_pred _ _ _ _ _ /.
 Definition ishomog1 {n} {R : ringType}
   (d : nat) (mf : measure n) : qualifier 0 {mpoly R[n]}
-  := [qualify p | all [pred m | mf m == d] (msupp p)].
+  := [qualify p | ishomog1_pred d mf p].
 
 (* -------------------------------------------------------------------- *)
-Module MPolyHomog1Key.
-
-Fact homog1_key {n} {R : ringType} d mf : pred_key (@ishomog1 n R d mf).
-Proof. by []. Qed.
-
-Definition homog1_keyed {n R} d mf := KeyedQualifier (@homog1_key n R d mf).
-
-End MPolyHomog1Key.
-
-Canonical MPolyHomog1Key.homog1_keyed.
-
-(* -------------------------------------------------------------------- *)
+Definition ishomog_pred {n} {R : ringType} mf : pred {mpoly R[n]} :=
+  fun p => p \is ishomog1 (@mmeasure _ _ mf p).-1 mf.
+Arguments ishomog_pred _ _ _ _ /.
 Definition ishomog {n} {R : ringType} mf : qualifier 0 {mpoly R[n]} :=
-  [qualify p | p \is ishomog1 (@mmeasure _ _ mf p).-1 mf].
-
-(* -------------------------------------------------------------------- *)
-Module MPolyHomogKey.
-
-Fact homog_key {n} {R : ringType} mf : pred_key (@ishomog n R mf).
-Proof. by []. Qed.
-
-Definition homog_keyed {n R} mf := KeyedQualifier (@homog_key n R mf).
-
-End MPolyHomogKey.
-
-Canonical MPolyHomogKey.homog_keyed.
+  [qualify p | ishomog_pred mf p].
 
 (* -------------------------------------------------------------------- *)
 Section MPolyHomogTheory.
@@ -4639,10 +4588,9 @@ move/msuppD_le; rewrite mem_cat; case/orP=> [/msuppZ_le|].
   by move/hg_p. by move/hg_q.
 Qed.
 
-Canonical dhomog_addPred    d := AddrPred   (dhomog_submod_closed d).
-Canonical dhomog_oppPred    d := OpprPred   (dhomog_submod_closed d).
-Canonical dhomog_zmodPred   d := ZmodPred   (dhomog_submod_closed d).
-Canonical dhomog_submodPred d := SubmodPred (dhomog_submod_closed d).
+HB.instance Definition _ d :=
+  GRing.isSubmodClosed.Build R {mpoly R[n]} (ishomog1_pred d mf)
+    (dhomog_submod_closed d).
 
 Lemma dhomog0 d: 0 \is [in R[n], d.-homog].
 Proof. exact/rpred0. Qed.
@@ -4770,7 +4718,7 @@ Proof. by []. Qed.
 Lemma pihomogwE k p : msize p <= k ->
   pihomog p = \sum_(m : 'X_{1..n < k} | mf m == d) p@_m *: 'X_[m].
 Proof.
-move=> lt_pk; pose I := [subFinType of 'X_{1..n < k}].
+move=> lt_pk; pose I : subFinType _ := 'X_{1..n < k}.
 rewrite pihomogE (big_mksub_cond I) //=; first last.
 + by move=> x /msize_mdeg_lt /leq_trans /(_ lt_pk) ->.
 + by rewrite msupp_uniq.
@@ -4794,9 +4742,9 @@ move=> c p q /=; pose_big_enough l.
 by close.
 Qed.
 
-Canonical pihomog_additive : {additive {mpoly R[n]} -> {mpoly R[n]}} :=
-  Additive pihomog_is_linear.
-Canonical pihomog_linear := Linear pihomog_is_linear.
+HB.instance Definition _ :=
+  GRing.isLinear.Build R {mpoly R[n]} {mpoly R[n]} _ pihomog
+    pihomog_is_linear.
 
 Lemma pihomog0     : pihomog 0 = 0               . Proof. exact: raddf0. Qed.
 Lemma pihomogN     : {morph pihomog: x / - x}    . Proof. exact: raddfN. Qed.
@@ -4858,24 +4806,16 @@ Context (n : nat) (R : ringType) (d : nat).
 Record dhomog :=
   DHomog { mpoly_of_dhomog :> {mpoly R[n]}; _ : mpoly_of_dhomog \is d.-homog }.
 
-Canonical  dhomog_subType := Eval hnf in [subType for @mpoly_of_dhomog].
-Definition dhomog_eqMixin := Eval hnf in [eqMixin of dhomog by <:].
-Canonical  dhomog_eqType  := Eval hnf in EqType dhomog dhomog_eqMixin.
-
-Definition dhomog_choiceMixin := [choiceMixin of dhomog by <:].
-Canonical  dhomog_choiceType  := Eval hnf in ChoiceType dhomog dhomog_choiceMixin.
-
-Definition dhomog_zmodMixin := [zmodMixin of dhomog by <:].
-Canonical  dhomog_zmodType  := Eval hnf in ZmodType dhomog dhomog_zmodMixin.
-
-Definition dhomog_lmodMixin := [lmodMixin of dhomog by <:].
-Canonical  dhomog_lmodType  := Eval hnf in LmodType R dhomog dhomog_lmodMixin.
+HB.instance Definition _ := [isSub for @mpoly_of_dhomog].
+HB.instance Definition _ := [Choice of dhomog by <:].
+HB.instance Definition _ := [SubChoice_isSubLmodule of dhomog by <:].
 
 Lemma mpoly_of_dhomog_is_linear: linear mpoly_of_dhomog.
 Proof. by []. Qed.
 
-Canonical mpoly_of_dhomog_additive := Additive mpoly_of_dhomog_is_linear.
-Canonical mpoly_of_dhomog_linear   := Linear   mpoly_of_dhomog_is_linear.
+HB.instance Definition _ :=
+  GRing.isLinear.Build R dhomog {mpoly R[n]} _ mpoly_of_dhomog
+    mpoly_of_dhomog_is_linear.
 
 End MPolyHomogType.
 
@@ -4883,7 +4823,7 @@ Lemma dhomog_is_dhomog n (R : ringType) d (p : dhomog n R d) :
   (val p) \is [in R[n], d.-homog for [measure of mdeg]].
 Proof. by case: p. Qed.
 
-#[global] Hint Extern 0 (is_true (_ \is _.-homog mf)) =>
+#[global] Hint Extern 0 (is_true (_ \is _.-homog)) =>
   (by apply/dhomog_is_dhomog) : core.
 
 Definition indhomog n (R : ringType) d : {mpoly R[n]} -> dhomog n R d :=
@@ -4990,7 +4930,7 @@ Qed.
 (* -------------------------------------------------------------------- *)
 Context (n : nat) (R : ringType) (d : nat).
 
-Lemma dhomog_vecaxiom: Vector.axiom 'C(d + n, d) (dhomog n.+1 R d).
+Lemma dhomog_vecaxiom: Vector.axiom 'C(d + n, d) (Phant (dhomog n.+1 R d)).
 Proof.
 pose b := sbasis n.+1 d.
 pose t := [tuple of nseq d (0 : 'I_n.+1)].
@@ -5035,10 +4975,8 @@ move=> m'; apply/contraTeq; rewrite mcoeffZ mcoeffX.
 by case: (m' =P m)=> [->|_]; last rewrite mulr0 eqxx.
 Qed.
 
-Definition dhomog_vectMixin := VectMixin dhomog_vecaxiom.
-
-Canonical dhomog_vectType :=
-  Eval hnf in VectType R (dhomog n.+1 R d) dhomog_vectMixin.
+#[hnf] HB.instance Definition _ := Lmodule_hasFinDim.Build R (dhomog n.+1 R d)
+  dhomog_vecaxiom.
 
 End MPolyHomogVec.
 
