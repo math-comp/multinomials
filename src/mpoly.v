@@ -189,7 +189,7 @@ Reserved Notation "[ 'multinom' F | i < n ]"
   (at level 0, i at level 0,
      format "[ '[hv' 'multinom'  F '/'  |  i  <  n ] ']'").
 Reserved Notation "'U_(' n )"
-  (at level 0, n at level 2, no associativity).
+  (at level 0, n at level 2, no associativity, format "'U_(' n )").
 Reserved Notation "{ 'mpoly' T [ n ] }"
   (at level 0, T, n at level 2, format "{ 'mpoly'  T [ n ] }").
 Reserved Notation "[ 'mpoly' D ]"
@@ -568,6 +568,13 @@ Proof. by rewrite -!mdeg_eq0 mdegD addn_eq0. Qed.
 
 Lemma mnm1_eq0 i : (U_(i) == 0 :> 'X_{1..n})%MM = false.
 Proof. by rewrite -mdeg_eq0 mdeg1. Qed.
+
+Lemma eq_mnm1 (i j : 'I_n) : (U_(i)%MM == U_(j)%MM) = (i == j).
+Proof.
+case: (altP (i =P j)) => [->|/negbTE neq]; first by rewrite eqxx.
+apply/negbTE/negP => /eqP; rewrite mnmP => /(_ j).
+by rewrite !mnm1E eqxx neq.
+Qed.
 
 Lemma mdeg_eq1 (m : 'X_{1..n}) :
   (mdeg m == 1)%N = [exists i : 'I_n, m == U_(i)%MM].
@@ -990,14 +997,14 @@ Variable R : ringType.
 
 Implicit Types p q r : {mpoly R[n]}.
 
+Lemma nvar0_mnmE : @all_equal_to 'X_{1..0} 0%MM.
+Proof. by move=> mon; apply/mnmP; case. Qed.
+
 Lemma nvar0_mpolyC (p : {mpoly R[0]}): p = (p@_0%MM)%:MP.
-Proof.
-apply/mpolyP=> m; rewrite mcoeffC; suff ->: m = 0%MM.
-   by rewrite eqxx mulr1. by apply/mnmP; case.
-Qed.
+Proof. by apply/mpolyP=> m; rewrite mcoeffC nvar0_mnmE eqxx mulr1. Qed.
 
 Lemma nvar0_mpolyC_eq p : n = 0%N -> p = (p@_0%MM)%:MP.
-Proof. move=> z_p; move:p; rewrite z_p; apply/nvar0_mpolyC. Qed.
+Proof. by move=> z_p; move:p; rewrite z_p; apply/nvar0_mpolyC. Qed.
 End NVar0.
 
 (* -------------------------------------------------------------------- *)
@@ -1846,6 +1853,9 @@ Proof. by rewrite msuppX mem_seq1; apply: (iffP eqP). Qed.
 
 Lemma mcoeffX m k : 'X_[m]@_k = (m == k)%:R.
 Proof. by rewrite unlock /mpolyX_def mcoeff_MPoly coeffU mul1r. Qed.
+
+Lemma mcoeffXU (i j : 'I_n) : ('X_i : {mpoly R[n]})@_U_(j) = (i == j)%:R.
+Proof. by rewrite mcoeffX eq_mnm1. Qed.
 
 Lemma mmeasureX mf m : mmeasure mf 'X_[R, m] = (mf m).+1.
 Proof. by rewrite mmeasureE msuppX big_seq1. Qed.
@@ -5128,6 +5138,7 @@ case: (ssrnat.leqP k (mf m)) => [|lt_mk].
 rewrite (eq_bigl (fun i : 'I_k => i == Ordinal lt_mk)).
   by rewrite big_pred1_eq. by move=> i /=; rewrite eq_sym.
 Qed.
+
 End ProjHomog.
 
 (* -------------------------------------------------------------------- *)
@@ -5325,6 +5336,32 @@ Definition dhomog_vectMixin :=
 Canonical dhomog_vectType :=
   Eval hnf in VectType R (dhomog n.+1 R d) dhomog_vectMixin.
 End MPolyHomogVec.
+
+(* -------------------------------------------------------------------- *)
+Section MSymHomog.
+
+Variable n : nat.
+Variable R : comRingType.
+Implicit Types p q r : {mpoly R[n]}.
+
+Lemma msym_pihomog d p (s : 'S_n) :
+  msym s (pihomog [measure of mdeg] d p) = pihomog [measure of mdeg] d (msym s p).
+Proof.
+rewrite (mpolyE p) ![_ (\sum_(m <- msupp p) _)]linear_sum /=.
+rewrite [msym s _]linear_sum linear_sum /=.
+apply eq_bigr => m _; rewrite !linearZ /=; congr (_ *: _).
+rewrite msymX !pihomogX /=.
+have -> : mdeg [multinom m ((s^-1)%g i) | i < n] = mdeg m.
+  rewrite /mdeg; apply perm_big.
+  by apply/tuple_permP; exists (s^-1)%g.
+by case: (mdeg m == d); rewrite ?msym0 ?msymX.
+Qed.
+
+Lemma pihomog_sym d p :
+  p \is symmetric -> pihomog [measure of mdeg] d p \is symmetric.
+Proof. by move=> /issymP Hp; apply/issymP => s; rewrite msym_pihomog Hp. Qed.
+
+End MSymHomog.
 
 (* -------------------------------------------------------------------- *)
 Section MESymFundamentalHomog.
