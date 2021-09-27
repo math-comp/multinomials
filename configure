@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Erik Martin-Dorel, 2021 (configure script for SsrMultinomials)
+
+dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )
+
+le_version() {
+    [ "$(printf '%s\n' "$1" "$2" | sort -V -u | tail -n1)" = "$2" ]
+}
+
+# BEGIN TESTS
+fail_test() {
+    echo "error: test $* failed" >&2; exit 2
+}
+unit_tests() {
+    le_version "8.12.1" "8.12.1" || fail_test 0
+    le_version "8.9.0" "8.12.1" || fail_test 1
+    le_version "8.12.1" "8.12.2" || fail_test 2
+    le_version "8.12.2" "8.13.0" || fail_test 3
+}
+# unit_tests
+# END TESTS
+
+coq_version() {
+    coqc --version | grep version | \
+        sed -e 's/^.*version \([-0-9a-z.+~]\+\)\( .*\)\?$/\1/'
+}
+
+coq_native_compiler_default() {
+    coqc -config | grep -q 'COQ_NATIVE_COMPILER_DEFAULT=yes'
+}
+
+coq_native_compiler() {
+    cv=$(coq_version)
+    { le_version "8.12.1" "$cv" && ! le_version "8.13.0" "$cv"; } \
+        || coq_native_compiler_default
+}
+
+main() {
+    if coq_native_compiler; then
+        echo 'coq-native support enabled!' >&2
+        sed -e 's/;coq-native-disabled; \?//' "$dir/src/dune.in" > "$dir/src/dune"
+    else
+        cat "$dir/src/dune.in" > "$dir/src/dune"
+    fi
+}
+
+# Credits: https://stackoverflow.com/a/28776166/9164010
+( return 0 2>/dev/null ) || main
+# ./configure => Run main
+# . configure => Don't run main (useful in .github/workflows/ci.yml)

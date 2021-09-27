@@ -10,11 +10,51 @@ jobs:
         image:
           - mathcomp/mathcomp:1.12.0-coq-8.10
           - mathcomp/mathcomp:1.12.0-coq-8.11
-          - mathcomp/mathcomp:1.12.0-coq-8.12
+          - mathcomp/mathcomp:1.12.0-coq-8.12 # 8.12.1+ support ocaml/dune#3210
+          - coqorg/coq:8.13-native-ocaml-4.07 # with the coq-native opam pkg
+          - coqorg/coq:8.14-native-ocaml-4.07 # with the coq-native opam pkg
+          - mathcomp/mathcomp:1.12.0-coq-8.13 # (without coq-native for now)
+          - mathcomp/mathcomp:1.12.0-coq-8.14 # (without coq-native for now)
+          # the previous comments refer to https://github.com/coq/ceps/pull/48
       fail-fast: false
     steps:
       - uses: actions/checkout@v2
       - uses: coq-community/docker-coq-action@v1
+        env:
+          LIBRARY_NAME: 'SsrMultinomials'
+          ROOT_THEORIES: 'mpoly monalg'
         with:
           opam_file: 'coq-mathcomp-multinomials.opam'
           custom_image: ${{ matrix.image }}
+          export: 'LIBRARY_NAME ROOT_THEORIES'
+          # Note: these native-compiler tests are generic,
+          # thanks to env variables & the configure script
+          after_script: |
+            startGroup "Print native_compiler status"
+              coqc -config
+              . configure  # sourcing mandatory
+              coq_version
+            endGroup
+            if coq_native_compiler; then
+              startGroup "Workaround permission issue"
+                sudo chown -R coq:coq .  # <--(§)
+              endGroup
+              startGroup "Check native_compiler on a test file"
+                printf '%s\n' "From $LIBRARY_NAME Require Import $ROOT_THEORIES." > test.v
+                coqc -debug -native-compiler yes test.v > stdout.txt || ret=$?
+                cat stdout.txt
+                ( exit "${ret:-0}" )
+              endGroup
+              startGroup "Check installation of .coq-native/ files"
+                set -o pipefail
+                # fail noisily if ever 'find' gives 'No such file or directory'
+                num=$(find "$(coqc -where)/user-contrib/$LIBRARY_NAME" -type d -name ".coq-native" | wc -l)
+                [ "$num" -gt 0 ]
+              endGroup
+            fi
+      - name: Revert permissions
+        # to avoid a warning at cleanup time
+        if: ${{ always() }}
+        run: sudo chown -R 1001:116 .  # <--(§)
+
+#(§)=> https://github.com/coq-community/docker-coq-action#permissions
