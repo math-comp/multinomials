@@ -45,6 +45,9 @@ jobs:
                 cat stdout.txt
                 ( exit "${ret:-0}" )
               endGroup
+              # in practice, we get ret=0 even if deps were not native-compiled
+              # but the logs are useful...(*), so we keep this first test group
+              # and add another test group which is less verbose, but stricter.
               startGroup "Check installation of .coq-native/ files"
                 set -o pipefail
                 # fail noisily if ever 'find' gives 'No such file or directory'
@@ -58,3 +61,4 @@ jobs:
         run: sudo chown -R 1001:116 .  # <--(§)
 
 #(§)=> https://github.com/coq-community/docker-coq-action#permissions
+#(*)=> Cannot find native compiler file /home/coq/.opam/4.07.1/lib/coq/user-contrib/SsrMultinomials/.coq-native/NSsrMultinomials_ssrcomplements.cmxs
