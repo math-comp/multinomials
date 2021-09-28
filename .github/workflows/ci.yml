@@ -35,7 +35,9 @@ jobs:
               . configure  # sourcing mandatory
               coq_version
             endGroup
-            if coq_native_compiler; then
+            # Note: Replace with "if coq_native_compiler"
+            # to also test with Coq 8.12.1+
+            if coq_native_compiler_default; then
               startGroup "Workaround permission issue"
                 sudo chown -R coq:coq .  # <--(§)
               endGroup
