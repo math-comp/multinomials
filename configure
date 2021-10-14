@@ -36,9 +36,7 @@ coq_native_compiler() {
 }
 
 main() {
-    # Note: Replace with "if coq_native_compiler"
-    # to also test with Coq 8.12.1+
-    if coq_native_compiler_default; then
+    if coq_native_compiler; then
         echo 'coq-native support enabled!' >&2
         sed -e 's/;coq-native-disabled; \?//' "$dir/src/dune.in" > "$dir/src/dune"
     else
