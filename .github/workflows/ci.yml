@@ -41,7 +41,12 @@ jobs:
               endGroup
               startGroup "Check native_compiler on a test file"
                 printf '%s\n' "From $LIBRARY_NAME Require Import $ROOT_THEORIES." > test.v
-                coqc -debug -native-compiler yes test.v > stdout.txt || ret=$?
+                if le_version "8.14" "$(coq_version)"; then
+                  debug=(-d native-compiler)
+                else
+                  debug=(-debug)
+                fi
+                coqc "${debug[@]}" -native-compiler yes test.v > stdout.txt || ret=$?
                 cat stdout.txt
                 ( exit "${ret:-0}" )
               endGroup
