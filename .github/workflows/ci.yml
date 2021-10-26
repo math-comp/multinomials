@@ -32,16 +32,27 @@ jobs:
           after_script: |
             startGroup "Print native_compiler status"
               coqc -config
-              . configure  # sourcing mandatory
-              coq_version
+              coq_version() {
+                coqc --version | grep version | \
+                  sed -e 's/^.*version \([-0-9a-z.+~]\+\)\( .*\)\?$/\1/'
+              }
+              le_version() {
+                [ "$(printf '%s\n' "$1" "$2" | sort -V -u | tail -n1)" = "$2" ]
+              }
+              coq_native_compiler_default() {
+                coqc -config | grep -q 'COQ_NATIVE_COMPILER_DEFAULT=yes'
+              }
+              coqv=$(coq_version)
+              coq_native_compiler_default && echo native-compiler
+              coq_native=$(opam var coq-native:installed)
             endGroup
-            if coq_native_compiler; then
+            if [ "$coq_native" = "true" ] && le_version "8.12.1" "$coqv"; then
               startGroup "Workaround permission issue"
                 sudo chown -R coq:coq .  # <--(§)
               endGroup
               startGroup "Check native_compiler on a test file"
                 printf '%s\n' "From $LIBRARY_NAME Require Import $ROOT_THEORIES." > test.v
-                if le_version "8.14" "$(coq_version)"; then
+                if le_version "8.14" "$coqv"; then
                   debug=(-d native-compiler)
                 else
                   debug=(-debug)
