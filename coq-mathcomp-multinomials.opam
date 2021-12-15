@@ -6,9 +6,7 @@ dev-repo: "git+https://github.com/math-comp/multinomials.git"
 license: "CeCILL-B"
 authors: ["Pierre-Yves Strub"]
 build: [
-  [ "bash" "./configure"
-    "--native-compiler" {coq-native:installed & coq:version >= "8.12.1" & coq:version < "8.13~" }
-    "yes" {coq-native:installed & coq:version >= "8.12.1" & coq:version < "8.13~" } ]
+  [ "bash" "./configure" ]
   [ "dune" "build" "-p" name "-j" jobs ]
 ]
 depends: [

@@ -34,5 +34,5 @@ Ltac done := do [fset_big_enough_trans|BigEnough.done].
 
 Ltac pose_big_fset K i :=
   evar (i : {fset K}); suff : closed i; first do
-    [move=> _; instantiate (1 := bigger_than (@fsubset K) _) in (Value of i)].
+    [move=> _; instantiate (1 := bigger_than (@fsubset K) _) in (value of i)].
 End BigEnoughFSet.
