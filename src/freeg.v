@@ -204,7 +204,7 @@ Section FreegTheory.
       [pred zx | zx.1 != 0]
       (foldr (fun zx s => augment s zx.1 zx.2) [::] s).
 
-  Definition predom s: seq K := [seq x.2 | x <- s].
+  Definition predom s: seq K := [seq v.2 | v <- s].
 
   Definition dom D := [seq zx.2 | zx <- (repr D)].
 
@@ -526,7 +526,7 @@ Section FreegTheory.
   (* -------------------------------------------------------------------- *)
   Lemma precoeff_uniqE s x:
       uniq (predom s) ->
-        precoeff x s = [seq x.1 | x <- s]`_(index x (predom s)).
+        precoeff x s = [seq v.1 | v <- s]`_(index x (predom s)).
   Proof.
     elim: s => [|[z y s ih]].
       by rewrite precoeff_nil nth_nil.
