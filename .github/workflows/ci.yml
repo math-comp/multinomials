@@ -19,11 +19,14 @@ jobs:
           - coqorg/coq:8.14-native-ocaml-4.07 # with the coq-native opam pkg
           - mathcomp/mathcomp:1.13.0-coq-8.13 # (without coq-native for now)
           - mathcomp/mathcomp:1.13.0-coq-8.14 # (without coq-native for now)
-          - mathcomp/mathcomp:1.13.0-coq-dev # (without coq-native for now)
-          - mathcomp/mathcomp-dev:coq-8.11
-          - mathcomp/mathcomp-dev:coq-8.12
-          - mathcomp/mathcomp-dev:coq-8.13 # (without coq-native for now)
-          - mathcomp/mathcomp-dev:coq-8.14 # (without coq-native for now)
+          - mathcomp/mathcomp:1.13.0-coq-8.15 # (without coq-native for now)
+          - mathcomp/mathcomp:1.15.0-coq-8.13
+          - mathcomp/mathcomp:1.15.0-coq-8.14
+          - mathcomp/mathcomp:1.15.0-coq-8.15
+          - mathcomp/mathcomp:1.15.0-coq-8.16
+          - mathcomp/mathcomp:1.15.0-coq-dev
+          - mathcomp/mathcomp-dev:coq-8.15 # (without coq-native for now)
+          - mathcomp/mathcomp-dev:coq-8.16 # (without coq-native for now)
           - mathcomp/mathcomp-dev:coq-dev # (without coq-native for now)
           # the previous comments refer to https://github.com/coq/ceps/pull/48
       fail-fast: false
