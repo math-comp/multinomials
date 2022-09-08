@@ -988,7 +988,7 @@ Notation "c %:MP_[ n ]" := (mpolyC n c) : ring_scope.
 
 Notation "p @_ i" := (mcoeff i p) : ring_scope.
 
-Hint Resolve msupp_uniq : core.
+#[global] Hint Resolve msupp_uniq : core.
 
 (* -------------------------------------------------------------------- *)
 Section NVar0.
@@ -5176,7 +5176,8 @@ Lemma dhomog_is_dhomog n (R : ringType) d (p : dhomog n R d) :
   (val p) \is [in R[n], d.-homog for [measure of mdeg]].
 Proof. by case: p. Qed.
 
-Hint Extern 0 (is_true (_ \is _.-homog mf)) => (by apply/dhomog_is_dhomog) : core.
+#[global] Hint Extern 0 (is_true (_ \is _.-homog mf)) =>
+  (by apply/dhomog_is_dhomog) : core.
 
 Definition indhomog n (R : ringType) d : {mpoly R[n]} -> dhomog n R d :=
   fun p => insubd (0 : dhomog n R d) p.

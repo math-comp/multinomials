@@ -189,7 +189,7 @@ Arguments big_sub_widen [S idx op T sT rT].
 (* add to mathcomp *)
 Lemma prod_inj A B : injective (prod_curry (@pair A B)).
 Proof. by move=> [? ?] [? ?]. Qed.
-Hint Resolve prod_inj : core.
+#[global] Hint Resolve prod_inj : core.
 
 (* add to mathcomp *)
 Lemma in_allpairs (S T R : eqType) (f : S -> T -> R)
