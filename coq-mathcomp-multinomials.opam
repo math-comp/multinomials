@@ -22,6 +22,6 @@ tags: [
   "keyword:monoid algebra"
   "category:Math/Algebra/Multinomials"
   "category:Math/Algebra/Monoid algebra"
-  "logpath:SsrMultinomials"
+  "logpath:mathcomp.multinomials"
 ]
 synopsis: "A Multivariate polynomial Library for the Mathematical Components Library"

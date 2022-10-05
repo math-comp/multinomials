@@ -3,4 +3,4 @@
 -arg -w -arg -redundant-canonical-projection
 -arg -w -arg -projection-no-head-constant
 
--R _build/default/src SsrMultinomials
+-R _build/default/src mathcomp.multinomials
