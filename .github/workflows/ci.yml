@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: coq-community/docker-coq-action@v1
         env:
-          LIBRARY_NAME: 'SsrMultinomials'
+          LIBRARY_NAME: 'mathcomp.multinomials'
           ROOT_THEORIES: 'mpoly monalg'
         with:
           opam_file: 'coq-mathcomp-multinomials.opam'
@@ -78,7 +78,7 @@ jobs:
               startGroup "Check installation of .coq-native/ files"
                 set -o pipefail
                 # fail noisily if ever 'find' gives 'No such file or directory'
-                num=$(find "$(coqc -where)/user-contrib/$LIBRARY_NAME" -type d -name ".coq-native" | wc -l)
+                num=$(find "$(coqc -where)/user-contrib/${LIBRARY_NAME//\.//}" -type d -name ".coq-native" | wc -l)
                 [ "$num" -gt 0 ]
               endGroup
             fi
@@ -88,4 +88,4 @@ jobs:
         run: sudo chown -R 1001:116 .  # <--(§)
 
 #(§)=> https://github.com/coq-community/docker-coq-action#permissions
-#(*)=> Cannot find native compiler file /home/coq/.opam/4.07.1/lib/coq/user-contrib/SsrMultinomials/.coq-native/NSsrMultinomials_ssrcomplements.cmxs
+#(*)=> Cannot find native compiler file /home/coq/.opam/4.07.1/lib/coq/user-contrib/mathcomp.multinomials/.coq-native/Nmathcomp.multinomials_ssrcomplements.cmxs
