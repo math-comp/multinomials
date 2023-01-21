@@ -2623,8 +2623,8 @@ Qed.
 
 Lemma mderivm0m p : p^`M[0] = p.
 Proof.
-rewrite mderivm_foldr (eq_map (f2 := fun _ => [::])).
-  by elim: (enum _). by move=> i /=; rewrite mnm0E.
+rewrite mderivm_foldr (eq_map (_ : _ =1 fun=> [::])); first by elim: (enum _).
+by move=> i /=; rewrite mnm0E.
 Qed.
 
 Lemma mderivmDm m1 m2 p : p^`M[m1 + m2] = p^`M[m1]^`M[m2].
@@ -5240,8 +5240,7 @@ Qed.
 Lemma size_m2s n (m : 'X_{1..n}): size (m2s m) = mdeg m.
 Proof.
 rewrite /m2s size_flatten /shape -map_comp /=.
-rewrite (eq_map (f2 := fun i : 'I_n => m i)).
-  by rewrite mdegE sumnE !big_map.
+rewrite (eq_map (_ : _ =1 m)); first by rewrite mdegE sumnE !big_map.
 by move=> i /=; rewrite size_nseq.
 Qed.
 
