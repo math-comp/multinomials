@@ -49,9 +49,9 @@ Reserved Notation "{ 'malg' K }"
 Reserved Notation "[ 'malg' g ]"
   (at level 0, g at level 2, format "[ 'malg'  g ]").
 Reserved Notation "[ 'malg' x 'in' aT => E ]"
-  (at level 0, x ident, format "[ 'malg'  x  'in'  aT  =>  E ]").
+  (at level 0, x name, format "[ 'malg'  x  'in'  aT  =>  E ]").
 Reserved Notation "[ 'malg' x => E ]"
-  (at level 0, x ident, format "[ 'malg'  x  =>  E ]").
+  (at level 0, x name, format "[ 'malg'  x  =>  E ]").
 Reserved Notation "{ 'mpoly' T [ n ] }"
   (at level 0, T, n at level 2, format "{ 'mpoly'  T [ n ] }").
 Reserved Notation "<< z *p k >>"
