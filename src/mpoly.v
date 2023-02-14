@@ -85,7 +85,8 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import Monoid GRing.Theory BigEnough Order.Theory RelOrder.POrderTheory.
+Import Monoid GRing.Theory BigEnough.
+Import Order.Theory RelOrder.Tactics RelOrder.POrderTheory.
 
 Local Open Scope ring_scope.
 
@@ -113,7 +114,7 @@ Definition dup (P : Prop) (h : P) := DupC h h.
 
 (* -------------------------------------------------------------------- *)
 Section LatticeMisc.
-Context {T : eqType} {disp : unit} {U : bOrderType disp}.
+Context {T : eqType} {disp : Order.disp_t} {U : bOrderType disp}.
 Context (P : pred T) (F : T -> U).
 
 Lemma eq_bigjoin (r : seq T) : r != [::] ->
@@ -142,7 +143,7 @@ Import Order.DefaultTupleLexiOrder.
 Local Open Scope order_scope.
 
 Section WF.
-Context {disp : unit} {T : porderType disp}.
+Context {disp : Order.disp_t} {T : porderType disp}.
 
 Hypothesis wf: forall (P : T -> Type),
      (forall x, (forall y, y < x -> P y) -> P x)
@@ -614,9 +615,9 @@ Context {n : nat}.
 Implicit Types t : n.-tuple nat.
 Implicit Types m : 'X_{1..n}.
 
-Definition mnmc_le m1 m2 := (mdeg m1 :: m1 <= mdeg m2 :: m2)%O.
+Definition mnmc_le m1 m2 := (mdeg m1 :: m1 <=^l mdeg m2 :: m2)%O.
 
-Definition mnmc_lt m1 m2 := (mdeg m1 :: m1 < mdeg m2 :: m2)%O.
+Definition mnmc_lt m1 m2 := (mdeg m1 :: m1 <^l mdeg m2 :: m2)%O.
 
 Local Lemma lemc_refl : reflexive mnmc_le.
 Proof. by move=> m; apply/le_refl. Qed.
@@ -633,14 +634,14 @@ Proof. by move=> m1 m2; apply/le_total. Qed.
 Local Lemma ltmc_def m1 m2 : mnmc_lt m1 m2 = (m2 != m1) && (mnmc_le m1 m2).
 Proof.
 rewrite /mnmc_lt /mnmc_le ltxi_cons lexi_cons /= -!(val_eqE _)/=.
-by case: (comparableP (_ : seq _)) => //= /val_inj/val_inj->; rewrite lexx.
+by case: comparableP => //= /val_inj/val_inj->; rewrite lexx.
 Qed.
 
 Definition multinom_porderMixin :=
   LePOrderMixin ltmc_def lemc_refl lemc_anti lemc_trans.
 
 Canonical multinom_porderType :=
-  Eval hnf in POrderType tt 'X_{1..n} multinom_porderMixin.
+  Eval hnf in POrderType Order.disp_tt 'X_{1..n} multinom_porderMixin.
 
 Lemma lemc_total_mixin : totalPOrderMixin 'X_{1..n}.
 Proof. exact/lemc_total. Qed.
@@ -1652,17 +1653,7 @@ transitivity (\sum_(mj : 'X_{1..n < b} | (mj <= mi - mk)%MM) coef3 mj mk).
     move=> i; rewrite mnmBE /leq subnBA // addnC -subnBA //.
     by rewrite -mnmBE; apply/le2.
   * move=> le1; have le2: (m <= mi)%MM.
-rewrite (rle_trans le1) //=.
-Set Printing All.
-rewrite /RelOrder.POrder.le /=.
-rewrite /mnm_pOrderType.
-rewrite /RelOrder.POrder.le.
-
-rewrite /=.
-rewrite lem_subr.
-
-
- by rewrite (rle_trans le1) /= ?lem_subr.
+      by rewrite (rle_trans le1) //; rosimpl; rewrite ?lem_subr.
     rewrite le2; apply/mnm_lepP=> i; rewrite mnmBE /leq.
     move/mnm_lepP: le2 => le2; rewrite subnBA // addnC.
     rewrite -subnBA // -/(leq _ _); move/mnm_lepP: le1.
