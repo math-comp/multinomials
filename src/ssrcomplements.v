@@ -5,19 +5,15 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
-From mathcomp Require Import seq path choice finset fintype finfun.
-From mathcomp Require Import tuple bigop ssralg.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path.
+From mathcomp Require Import choice fintype tuple finfun bigop finset order.
+From mathcomp Require Import ssralg.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import Monoid GRing.Theory.
-
-Local Open Scope ring_scope.
-
-Local Notation simpm := Monoid.simpm.
+Import Order.Theory GRing.Theory.
 
 (* -------------------------------------------------------------------- *)
 Lemma lreg_prod (T : eqType) (R : ringType) (r : seq T) (P : pred T) (F : T -> R):
@@ -25,33 +21,19 @@ Lemma lreg_prod (T : eqType) (R : ringType) (r : seq T) (P : pred T) (F : T -> R
    -> GRing.lreg (\prod_(x <- r | P x) F x).
 Proof.
   elim: r => [|x r ih] h; first by rewrite !big_nil; apply/lreg1.
-  rewrite big_cons; set X := \prod_(_ <- _ | _) _.
-  have lreg_X: GRing.lreg X.
-    by apply/ih=> y y_in_r; apply: (h y); rewrite mem_behead.
-  by case Px: (P x)=> //; apply/lregM=> //; apply/h; rewrite ?mem_head.
-Qed.
-
-(* -------------------------------------------------------------------- *)
-Lemma sumnB (T : Type) (r : seq T) (a b : T -> nat) (P : pred T):
-  (forall i, P i -> b i <= a i) ->
-       (\sum_(i <- r | P i) (a i - b i))%N
-     = (\sum_(i <- r | P i) a i - \sum_(i <- r | P i) b i)%N.
-Proof.
-  move=> h; elim: r=> [|x r ih]; first by rewrite !big_nil subn0.
-  rewrite !big_cons; case: (boolP (P x)) => // Px.
-  rewrite ih addnBA ?subnDA ?leq_sum //.
-  by congr (_ - _)%N; rewrite addnC addnBA 1?addnC // h.
+  rewrite big_cons; set X := (\prod_(_ <- _ | _) _)%R.
+  have lreg_X: GRing.lreg X by apply/ih=> y ? /h; apply; rewrite mem_behead.
+  by case: ifP => // Px; apply/lregM/lreg_X/h/Px/mem_head.
 Qed.
 
 (* -------------------------------------------------------------------- *)
 Lemma sumn_range (k1 k2 : nat) (c : nat -> nat): k1 <= k2 ->
-     (forall i j, i <= j < (k2 - k1).+1 -> c (j + k1) <= c (i + k1))%N
-  -> (\sum_(k1 <= i < k2) (c i - c i.+1) = c k1 - c k2)%N.
+     (forall i j, i <= j < (k2 - k1).+1 -> c (j + k1) <= c (i + k1))
+  -> \sum_(k1 <= i < k2) (c i - c i.+1) = c k1 - c k2.
 Proof.
-  rewrite leq_eqVlt; case/orP=> [/eqP<- h|].
-    by rewrite big_geq // subnn.
+  rewrite leq_eqVlt => /predU1P[<- h|]; first by rewrite big_geq // subnn.
   rewrite -subn_gt0=> gt0_k2Bk1 h; rewrite -{1}[k1]add0n big_addn.
-  case k1Bk2E: (k2-k1)%N  gt0_k2Bk1 h => [|n] // _ h.
+  case k1Bk2E: (k2 - k1)  gt0_k2Bk1 h => [|n] // _ h.
   rewrite big_nat sumnB -?big_nat; last first.
     move=> i /andP[_]; rewrite ltnS -addSn => le_in.
     by apply/h; rewrite leqnSn /= !ltnS.
@@ -61,8 +43,8 @@ Proof.
 Qed.
 
 Lemma sum0n_range (k : nat) (c : nat -> nat):
-     (forall i j, i <= j < k.+1 -> c j <= c i)%N
-  -> (\sum_(0 <= i < k) (c i - c i.+1) = c 0 - c k)%N.
+     (forall i j, i <= j < k.+1 -> c j <= c i)
+  -> \sum_(0 <= i < k) (c i - c i.+1) = c 0 - c k.
 Proof.
   move=> h; apply/sumn_range; rewrite ?subn0=> // i j le.
   by rewrite !addn0; apply/h.
@@ -71,43 +53,36 @@ Qed.
 (* -------------------------------------------------------------------- *)
 Lemma sumn_wgt_range (k : nat) (c : nat -> nat):
      (forall i j, i <= j < k.+1 -> c j <= c i)
-  -> (  \sum_(i < k) (c i - c i.+1) * i.+1
-      = \sum_(i < k) c i - k * (c k))%N.
+  -> \sum_(i < k) (c i - c i.+1) * i.+1 = \sum_(i < k) c i - k * c k.
 Proof.
-  pose F i := ((c i) * i.+1 - (c i.+1) * i.+1)%N.
+  pose F i := c i * i.+1 - c i.+1 * i.+1.
   rewrite (eq_bigr (F \o val)) /=; first last.
     by move=> i _; rewrite mulnBl.
-  rewrite [(k*_)%N]mulnC; elim: k=> [|k ih] h.
+  rewrite [k * _]mulnC; elim: k=> [|k ih] h.
     by rewrite !big_ord0 muln0 subn0.
   rewrite !big_ord_recr /= ih; last first.
-    move=> i j /andP[le_ij lt_jSk]; apply/h.
-    by rewrite le_ij ltnS ltnW.
-  rewrite {ih}/F addnBA ?leq_mul //; last first.
-    by apply/h; rewrite leqnn ltnW.
-  congr (_ - _)%N; rewrite addnC addnBA 1?addnC -?addnBA.
+    by move=> i j /andP[le_ij lt_jSk]; rewrite h // le_ij leqW.
+  rewrite {ih}/F addnBA ?leq_mul //; last by apply/h; rewrite leqnn ltnW.
+  congr subn; rewrite addnC addnBA 1?addnC -?addnBA.
   + by rewrite -mulnBr subSnn muln1.
   + by rewrite leq_mul.
   elim: k h => [|k ih] h; first by rewrite muln0.
   rewrite big_ord_recr //= mulnS addnC leq_add //; last first.
     by apply/h; rewrite !ltnS !leqnSn.
-  apply/(@leq_trans (c k * k)); last apply/ih.
-    by rewrite leq_mul=> //; apply/h; rewrite !ltnS !leqnSn.
-  move=> i j /andP[le_ij lt_jSSk]; apply/h.
-  by rewrite le_ij !ltnS ltnW.
+  apply/leq_trans/ih; first by apply/leq_mul/leqnn/h; rewrite !ltnS leqnSn.
+  by move=> i j /andP[le_ij lt_jSSk]; apply/h; rewrite le_ij !ltnS ltnW.
 Qed.
 
 (* -------------------------------------------------------------------- *)
 Lemma psumn_eq k (F1 F2 : nat -> nat):
-     (forall j, j <= k ->
-          \sum_(i < k | i < j) F1 i
-        = \sum_(i < k | i < j) F2 i)%N
+     (forall j, j <= k -> \sum_(i < k | i < j) F1 i = \sum_(i < k | i < j) F2 i)
   -> forall j, j < k -> F1 j = F2 j.
 Proof.
   pose rw := (big_ord_narrow, big_ord_recr).
   move=> h j; elim: j {-2}j (leqnn j)=> [|j ih] l.
-    rewrite leqn0=> /eqP-> lt; have := h 1%N lt.
+    rewrite leqn0=> /eqP-> lt; have := h 1 lt.
     by rewrite !rw !big_ord0 /= !add0n=> ->.
-  rewrite leq_eqVlt ltnS; case/orP=>[/eqP->|]; last by apply/ih.
+  rewrite leq_eqVlt ltnS => /predU1P[->|]; last by apply/ih.
   move: {-2}j.+1 (leqnn j.+1)=> x le_xSj lt; have := h _ lt.
   rewrite !rw /=; set S1 := bigop _ _ _; set S2 := bigop _ _ _.
   suff <-: S1 = S2 by move/addnI. apply/eq_bigr=> /=.
@@ -131,7 +106,7 @@ Section BigMkSub.
       uniq r
    -> (forall x, x \in r -> P x -> sT x)
    -> \big[op/idx]_(x <- r | P x) (F x)
-    = \big[op/idx]_(x : I | (P (val x)) && (val x \in r)) (F (val x)).
+    = \big[op/idx]_(x : I | P (val x) && (val x \in r)) (F (val x)).
   Proof.
     move=> uniq_r h; rewrite -big_filter; apply/esym.
     pose Q x := P x && (x \in r); rewrite -(big_map val Q).
@@ -148,8 +123,7 @@ Section BigMkSub.
   Lemma big_mksub {F : T -> S} (r : seq T):
       uniq r
    -> (forall x, x \in r -> sT x)
-   -> \big[op/idx]_(x <- r) (F x)
-    = \big[op/idx]_(x : I | val x \in r) (F (val x)).
+   -> \big[op/idx]_(x <- r) F x = \big[op/idx]_(x : I | val x \in r) F (val x).
   Proof. by move=> uniq_r h; apply/big_mksub_cond=> // x /h. Qed.
 
   Lemma big_sub_widen {P : pred T} {F : T -> S}:
@@ -173,12 +147,12 @@ Section BigMkSub.
 
   Lemma eq_big_widen {P : pred T} {F : T -> S}:
          (forall x, sT x -> rT x)
-    ->   (forall x, ~~ (sT x) -> F x = idx)
+    ->   (forall x, ~~ sT x -> F x = idx)
     ->   \big[op/idx]_(x : I | P (val x)) (F (val x))
        = \big[op/idx]_(x : J | P (val x)) (F (val x)).
   Proof.
     move=> h1 h2; rewrite big_sub_widen //; apply/esym.
-    rewrite (bigID (sT \o val)) [X in op _ X]big1 ?simpm //.
+    rewrite (bigID (sT \o val)) [X in op _ X]big1 ?Monoid.simpm //.
     by move=> j /andP [_ /h2].
   Qed.
 End BigMkSub.
@@ -235,7 +209,7 @@ Section BigOpMulrn.
   Variable P : pred I.
 
   Lemma big_cond_mulrn r:
-    \sum_(i <- r | P i) (F i) = \sum_(i <- r) (F i) *+ (P i).
+    (\sum_(i <- r | P i) F i = \sum_(i <- r) F i *+ P i)%R.
   Proof. by rewrite big_mkcond; apply: eq_bigr => i; rewrite mulrb. Qed.
 
 End BigOpMulrn.
@@ -244,3 +218,84 @@ End BigOpMulrn.
 Lemma tval_tcast (T : Type) (n m : nat) (e : n = m) (t : n.-tuple T):
   tval (tcast e t) = tval t.
 Proof. by case: m / e. Qed.
+
+(* -------------------------------------------------------------------- *)
+Local Open Scope order_scope.
+
+Lemma lePseqprod d d' (T : porderType d) (s1 s2 : seqprod_with d' T) :
+  reflect ((size s1 <= size s2)%N /\
+             (forall x i, i < size s1 -> nth x s1 i <= nth x s2 i))
+    (s1 <= s2).
+Proof.
+elim: s1 s2 => [|x s1 IHs] [|y s2] //=; try by constructor; try case.
+rewrite ltnS leEseq; apply: (iffP idP) => [/andP[lexy /IHs [-> Hs12]]|[? Hs12]].
+  by split => // ? [] //= i /Hs12.
+by rewrite (Hs12 x 0%N) //=; apply/IHs; split => // ? i; apply: (Hs12 _ i.+1).
+Qed.
+
+(* -------------------------------------------------------------------- *)
+Section LatticeMisc.
+Context {T : eqType} {disp : unit} {U : bDistrLatticeType disp}.
+Context (P : pred T) (F : T -> U).
+
+Implicit Type (r : seq T).
+
+(* FIXME: introducing bOrderType improves the statement of the lemmas below. *)
+Hypothesis letot : @total U <=%O.
+
+Variant bigjoin_spec r : U -> Type :=
+  | BigJoinEmpty : nilp r -> bigjoin_spec r 0%O
+  | BigJoinNonempty i : i \in r -> bigjoin_spec r (F i).
+
+Lemma bigjoinP r : bigjoin_spec r (\join_(i <- r) F i).
+Proof.
+elim: r => [|i r]; first by rewrite big_nil; constructor.
+rewrite big_cons; case=> [|j jr].
+  by case: r => // _; rewrite joinx0; constructor; rewrite mem_head.
+by case: lcomparableP (letot (F i) (F j)) => //= _ _;
+  constructor; rewrite ?mem_head // in_cons jr orbT.
+Qed.
+
+Lemma eq_bigjoin r :
+  r != [::] -> {x : T | x \in r & (\join_(i <- r) F i)%O == F x}.
+Proof. by case: r => // x r _; case: bigjoinP => // y y_in_r; exists y. Qed.
+
+Variant bigjoin_cond_spec r : U -> Type :=
+  | BigJoinCondEmpty : all (xpredC P) r -> bigjoin_cond_spec r 0%O
+  | BigJoinCondNonempty i : i \in r -> P i -> bigjoin_cond_spec r (F i).
+
+Lemma bigjoinPcond r : bigjoin_cond_spec r (\join_(i <- r | P i) F i).
+Proof.
+rewrite -big_filter; case: bigjoinP => [nilPr|i].
+  by constructor; rewrite all_predC has_filter negbK; case: filter nilPr.
+by rewrite mem_filter => /andP[? ?]; constructor.
+Qed.
+
+End LatticeMisc.
+
+(* -------------------------------------------------------------------- *)
+Section WF.
+Context {disp : unit} {T : porderType disp}.
+
+Hypothesis wf: forall (P : T -> Type),
+     (forall x, (forall y, y < x -> P y) -> P x)
+  -> forall x, P x.
+
+Section WFTuple.
+Context {n : nat} (P : n.-tuple T -> Type).
+
+Implicit Types t : n.-tuplelexi T.
+
+Hypothesis ih: forall t1, (forall t2, t2 < t1 -> P t2) -> P t1.
+
+Lemma ltxwf t : P t.
+Proof.
+elim: n P ih t => [|k wih] Pn kih t; last have [a {}t] := tupleP t.
+  by rewrite tuple0; apply/kih=> t2; rewrite tuple0.
+elim/wf: a t => a iha t; elim/wih: t => t iht.
+apply/kih => t'; have [a' {}t'] := tupleP t'; rewrite [_ < _]ltxi_cons.
+by case: (comparableP a a') => //= [/iha/(_ t')|<- /iht].
+Qed.
+
+End WFTuple.
+End WF.

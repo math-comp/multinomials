@@ -419,7 +419,7 @@ Lemma mcoeff_outdom (g : {malg G[K]}) (k : K) :
   k \notin msupp g -> g@_k = 0.
 Proof. by move/fsfun_dflt. Qed.
 
-CoInductive msupp_spec (g : {malg G[K]}) (k : K) : bool -> G -> Type :=
+Variant msupp_spec (g : {malg G[K]}) (k : K) : bool -> G -> Type :=
 | MsuppIn  (_ : k \in    msupp g) : msupp_spec g k true  g@_k
 | MsuppOut (_ : k \notin msupp g) : msupp_spec g k false 0.
 
@@ -1675,7 +1675,7 @@ Proof. by rewrite memNfinsupp. Qed.
 Lemma cmE_neq0 m i : (m i != 0%N) = (i \in finsupp m).
 Proof. by rewrite cmE_eq0 negbK. Qed.
 
-CoInductive mdom_spec m (i : I) : bool -> nat -> Type :=
+Variant mdom_spec m (i : I) : bool -> nat -> Type :=
 | MdomIn  (_ : i \in    finsupp m) : mdom_spec m i true  (m i)
 | MdomOut (_ : i \notin finsupp m) : mdom_spec m i false 0%N.
 
