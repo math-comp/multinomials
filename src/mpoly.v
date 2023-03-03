@@ -2166,7 +2166,7 @@ by apply/(le_trans (mleadD_le _ _))/leU2.
 Qed.
 
 Lemma mlead_sum {T} (r : seq T) P F :
-  uniq [seq mlead (F p) | p <- r & P p] ->
+  uniq [seq mlead (F x) | x <- r & P x] ->
 
      mlead (\sum_(p <- r | P p) F p)
   = (\join_(p <- r | P p) (mlead (F p)))%O.
