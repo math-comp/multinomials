@@ -514,7 +514,7 @@ Section FreegTheory.
   Qed.
 
   Lemma Freeg_dom D:
-    [freeg [seq (coeff z D, z) | z <- dom D]] = D.
+    [freeg [seq (coeff x D, x) | x <- dom D]] = D.
   Proof.
     apply/esym/eqP/freeg_eqP=> k.
     rewrite -{1 2}[D]freeg_repr !coeff_Freeg /dom.
@@ -943,7 +943,7 @@ Section FreeglModType.
   Canonical freeg_lmodType :=
     Eval hnf in LmodType R {freeg K / R} freeg_lmodMixin.
 End FreeglModType.
-  
+
 (* -------------------------------------------------------------------- *)
 Section FreeglModTheory.
   Variable R : ringType.
