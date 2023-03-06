@@ -178,9 +178,7 @@ Reserved Notation "-%MM"
 Section MultinomDef.
 Context (n : nat).
 
-Record multinom : predArgType := Multinom { multinom_val : n.-tuple nat }.
-
-Coercion multinom_val : multinom >-> tuple_of.
+Record multinom : predArgType := Multinom { multinom_val :> n.-tuple nat }.
 
 Canonical multinom_subType := Eval hnf in [newType for multinom_val].
 
@@ -585,7 +583,7 @@ have [/lemc_mdeg|Hgt] := leP; first by case: ltngtP.
 by apply/esym/maxn_idPl; apply/contra_lt_leq: Hgt => /lt_mdeg_ltmc /ltW.
 Qed.
 
-(* FIXME: introduce \max_ ? *)
+(* FIXME: introduce \max_ to replace \join_ ? This would require bOrderType. *)
 Lemma mdeg_bigmax (r : seq 'X_{1..n}) :
   mdeg (\join_(m <- r) m)%O = \max_(m <- r) mdeg m.
 Proof.
@@ -4858,9 +4856,7 @@ Section MPolyHomogType.
 Context (n : nat) (R : ringType) (d : nat).
 
 Record dhomog :=
-  DHomog { mpoly_of_dhomog : {mpoly R[n]}; _ : mpoly_of_dhomog \is d.-homog }.
-
-Coercion mpoly_of_dhomog : dhomog >-> mpoly_of.
+  DHomog { mpoly_of_dhomog :> {mpoly R[n]}; _ : mpoly_of_dhomog \is d.-homog }.
 
 Canonical  dhomog_subType := Eval hnf in [subType for @mpoly_of_dhomog].
 Definition dhomog_eqMixin := Eval hnf in [eqMixin of dhomog by <:].
