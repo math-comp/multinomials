@@ -16,7 +16,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import Monoid GRing.Theory Num.Theory BigEnoughFSet.
+Import GRing.Theory Num.Theory BigEnoughFSet.
 
 (* temporary fix for mathcomp 1.8.0 *)
 Notation "{ 'pred' T }" := (pred_sort (predPredType T)) (at level 0,
@@ -25,15 +25,6 @@ Notation "{ 'pred' T }" := (pred_sort (predPredType T)) (at level 0,
 Local Open Scope fset.
 Local Open Scope fmap.
 Local Open Scope ring_scope.
-
-Declare Scope malg_scope.
-Delimit Scope malg_scope with MP.
-
-Local Notation simpm := Monoid.simpm.
-Local Notation ilift := fintype.lift.
-
-Local Notation efst := (@fst _ _) (only parsing).
-Local Notation esnd := (@snd _ _) (only parsing).
 
 Declare Scope m_scope.
 Delimit Scope m_scope with M.
@@ -87,16 +78,19 @@ Module MonomialDefExports.
 Bind Scope m_scope with MonomialDef.sort.
 Notation monomType := MonomialDef.type.
 End MonomialDefExports.
+Export MonomialDefExports.
 
 (* -------------------------------------------------------------------- *)
-Import MonomialDefExports.
+Notation mone := one.
+Notation mmul := mul.
 
-Definition mone {m} := @one m.
-Definition mmul {m} := @mul m.
+Local Notation "1" := (@mone _) : m_scope.
+Local Notation "*%M" := (@mmul _) : fun_scope.
+Local Notation "x * y" := (mmul x y) : m_scope.
 
 (* -------------------------------------------------------------------- *)
 HB.mixin Record MonomialDef_isConomialDef V of MonomialDef V := {
-  mulmC : commutative (@mul [the monomType of V])
+  mulmC : commutative (@mul V)
 }.
 
 HB.structure Definition ConomialDef :=
@@ -106,27 +100,13 @@ Module ConomialDefExports.
 Bind Scope m_scope with ConomialDef.sort.
 Notation conomType := ConomialDef.type.
 End ConomialDefExports.
-
-(* -------------------------------------------------------------------- *)
-Export MonomialDefExports.
 Export ConomialDefExports.
 
-Local Notation "1" := (@mone _) : m_scope.
-Local Notation "*%R" := (@mmul _) : m_scope.
-Local Notation "x * y" := (mmul x y) : m_scope.
-
 (* -------------------------------------------------------------------- *)
-Module MonomialTheory.
 Section Monomial.
 Variable M : monomType.
 
-Lemma mulmA : associative  (@mmul M). Proof. exact: mulmA. Qed.
-Lemma mul1m : left_id  1%M (@mmul M). Proof. exact: mul1m. Qed.
-Lemma mulm1 : right_id 1%M (@mmul M). Proof. exact: mulm1. Qed.
-
 Local Open Scope m_scope.
-
-Lemma unitm (x y : M) : x * y = 1 -> x = 1 /\ y = 1. Proof. exact: unitm. Qed.
 
 #[export]
 HB.instance Definition _ := Monoid.isLaw.Build M 1 mmul mulmA mul1m mulm1.
@@ -138,22 +118,12 @@ by move/eqP/unitm=> [-> ->]; rewrite !eqxx.
 Qed.
 End Monomial.
 
-Section Conomial.
-Variable M : conomType.
-
-Local Open Scope m_scope.
-
-Lemma mulmC : commutative (@mmul M). Proof. exact: mulmC. Qed.
-
 #[export]
-HB.instance Definition _ := Monoid.isComLaw.Build M 1 mmul
+HB.instance Definition _ (M : conomType) := Monoid.isComLaw.Build M mone mmul
   (@mulmA M) mulmC (@mul1m M).
-End Conomial.
 
 Module Exports. HB.reexport. End Exports.
-End MonomialTheory.
-
-Export MonomialTheory.Exports.
+Export Exports.
 
 (* -------------------------------------------------------------------- *)
 Definition mmorphism (M : monomType) (S : ringType) (f : M -> S) :=
@@ -292,31 +262,25 @@ Proof. by []. Qed.
 Lemma malgP (g1 g2 : {malg G[K]}) :
   reflect (forall k, g1@_k = g2@_k) (g1 == g2).
 Proof.
-apply: (iffP eqP)=> [->//|]; move: g1 g2.
-case=> [g1] [g2] h.
-by apply/f_equal/fsfunP=> k; move/(_ k): h.
+apply: (iffP eqP) => [->//|]; case: g1 g2 => [g1] [g2] h.
+by congr Malg; apply/fsfunP/h.
 Qed.
 
-Lemma mcoeff_fnd (g : {fmap K -> G}) k :
-  [malg x => g x]@_k = odflt 0 g.[?k].
-Proof. by apply/fsfun_ffun. Qed.
+Lemma mcoeff_fnd (g : {fmap K -> G}) k : [malg x => g x]@_k = odflt 0 g.[?k].
+Proof. exact/fsfun_ffun. Qed.
 
 Lemma mcoeffE (domf : {fset K}) (E : K -> G) k :
-    [malg k in domf => E k]@_k
-  = if k \in domf then E k else 0.
-Proof. by apply/fsfun_fun. Qed.
+  [malg k in domf => E k]@_k = if k \in domf then E k else 0.
+Proof. exact/fsfun_fun. Qed.
 
-Lemma mcoeff_eq0 (g : {malg G[K]}) (k : K) :
-  (g@_k == 0) = (k \notin msupp g).
+Lemma mcoeff_eq0 (g : {malg G[K]}) (k : K) : (g@_k == 0) = (k \notin msupp g).
 Proof. by rewrite memNfinsupp. Qed.
 
-Lemma mcoeff_neq0 (g : {malg G[K]}) (k : K) :
-  (g@_k != 0) = (k \in msupp g).
+Lemma mcoeff_neq0 (g : {malg G[K]}) (k : K) : (g@_k != 0) = (k \in msupp g).
 Proof. by rewrite mcoeff_eq0 negbK. Qed.
 
-Lemma mcoeff_outdom (g : {malg G[K]}) (k : K) :
-  k \notin msupp g -> g@_k = 0.
-Proof. by move/fsfun_dflt. Qed.
+Lemma mcoeff_outdom (g : {malg G[K]}) (k : K) : k \notin msupp g -> g@_k = 0.
+Proof. exact: fsfun_dflt. Qed.
 
 Variant msupp_spec (g : {malg G[K]}) (k : K) : bool -> G -> Type :=
 | MsuppIn  (_ : k \in    msupp g) : msupp_spec g k true  g@_k
@@ -356,7 +320,7 @@ Proof. by rewrite (mcoeffE _ (EN g)); case: msuppP; rewrite ?oppr0. Qed.
 Lemma fgaddE g1 g2 k : (fgadd g1 g2)@_k = g1@_k + g2@_k.
 Proof.
 rewrite (mcoeffE _ (ED g1 g2)); rewrite in_fsetE /ED.
-by case: (msuppP g1); case: (msuppP g2); rewrite !simpm.
+by case: (msuppP g1); case: (msuppP g2); rewrite ?(add0r, addr0).
 Qed.
 
 Let fgE := (fgzeroE, fgoppE, fgaddE).
@@ -416,7 +380,7 @@ Lemma mcoeffMn  k n : {morph mcoeff k: x / x *+ n} . Proof. exact: raddfMn. Qed.
 Lemma mcoeffMNn k n : {morph mcoeff k: x / x *- n} . Proof. exact: raddfMNn. Qed.
 
 Lemma mcoeffU k x k' : << x *g k >>@_k' = x *+ (k == k').
-Proof. by rewrite mcoeff_fnd fnd_set fnd_fmap0 eq_sym; case: eqP. Qed.
+Proof. by rewrite mcoeff_fnd fnd_set fnd_fmap0; case: eqVneq. Qed.
 
 Lemma mcoeffUU k x : << x *g k >>@_k = x.
 Proof. by rewrite mcoeffU eqxx. Qed.
@@ -432,10 +396,9 @@ Qed.
 
 Lemma msuppU k x : msupp << x *g k >> = if x == 0 then fset0 else [fset k].
 Proof.
-apply/fsetP=> k'; rewrite -mcoeff_neq0 mcoeffU 2!fun_if.
-rewrite in_fset0 in_fset1 [k'==_]eq_sym; case: (x =P 0).
-  by move=> ->; rewrite mul0rn eqxx.
-  by move=> /eqP nz_x; case: (k =P k')=> //=; rewrite eqxx.
+apply/fsetP=> k'; rewrite -mcoeff_neq0 mcoeffU 2!fun_if in_fset0 in_fset1.
+have [->|nz_x] := eqVneq x 0; first by rewrite mul0rn eqxx.
+by case: (eqVneq k k'); rewrite //= eqxx.
 Qed.
 
 Lemma msuppU_le {k x} : msupp << x *g k >> `<=` [fset k].
@@ -447,7 +410,7 @@ Proof. by apply/fsetP=> k; rewrite -!mcoeff_neq0 mcoeffN oppr_eq0. Qed.
 Lemma msuppD_le g1 g2 : msupp (g1 + g2) `<=` msupp g1 `|` msupp g2.
 Proof.
 apply/fsubsetP=> k; rewrite in_fsetU -mcoeff_neq0 mcoeffD.
-by case: (msuppP g1); case: (msuppP g2)=> //=; rewrite addr0 eqxx.
+by case: (msuppP g1); case: (msuppP g2); rewrite //= addr0 eqxx.
 Qed.
 
 Lemma msuppB_le g1 g2 : msupp (g1 - g2) `<=` msupp g1 `|` msupp g2.
@@ -456,15 +419,10 @@ Proof. by rewrite -[msupp g2]msuppN; apply/msuppD_le. Qed.
 Lemma msuppD g1 g2 : [disjoint msupp g1 & msupp g2] ->
   msupp (g1 + g2) = msupp g1 `|` msupp g2.
 Proof.
-move=> dj_g1g2; apply/fsetP=> k; rewrite in_fsetU.
-rewrite -!mcoeff_neq0 mcoeffD; case: (boolP (_ || _)); last first.
-  by rewrite negb_or !negbK => /andP[/eqP-> /eqP->]; rewrite addr0 eqxx.
-wlog: g1 g2 dj_g1g2 / (k \notin msupp g2) => [wlog h|].
-  case/orP: {+}h; rewrite mcoeff_neq0; last rewrite addrC.
-    by move/(fdisjointP dj_g1g2)/wlog; apply.
-  move/(fdisjointP_sym dj_g1g2)/wlog; apply.
-    by rewrite fdisjoint_sym. by rewrite orbC.
-by move=> /mcoeff_outdom ->; rewrite eqxx orbF addr0.
+move=> dj_g1g2; apply/fsetP=> k; move/fdisjointP/(_ k): dj_g1g2.
+rewrite in_fsetU -!mcoeff_neq0 mcoeffD.
+have [->|] //= := eqVneq (g1@_k) 0; first by rewrite add0r.
+by rewrite negbK => + /(_ isT) /eqP ->; rewrite addr0.
 Qed.
 
 Lemma msuppB g1 g2 : [disjoint msupp g1 & msupp g2] ->
@@ -498,8 +456,8 @@ Lemma monalgUMNn k n : {morph mkmalgU k: x / x *- n} . Proof. exact: raddfMNn. Q
 
 Lemma monalgU_eq0 x k: (<< x *g k >> == 0) = (x == 0).
 Proof.
-apply/eqP/eqP; last by move=> ->; rewrite monalgU0.
-by move/(congr1 (mcoeff k)); rewrite !mcoeffsE eqxx.
+apply/eqP/eqP => [/(congr1 (mcoeff k))|->]; last by rewrite monalgU0.
+by rewrite !mcoeffsE eqxx.
 Qed.
 
 Definition monalgUE :=
@@ -510,7 +468,7 @@ Lemma monalgEw (g : {malg G[K]}) (domg : {fset K}) : msupp g `<=` domg ->
   g = \sum_(k <- domg) << g@_k *g k >>.
 Proof.
 move/fsubsetP=> le_gd; apply/eqP/malgP=> k /=; case: msuppP=> [kg|k_notin_g].
-  rewrite raddf_sum /= (big_fsetD1 k) //=; last by apply: le_gd.
+  rewrite raddf_sum /= (big_fsetD1 k) //=; last exact: le_gd.
   rewrite mcoeffUU ?addr0 // big1_fset ?addr0 // => k'.
   rewrite in_fsetD1 => /andP [/negbTE k_ne_k' _ _].
   by rewrite mcoeffU k_ne_k'.
@@ -520,7 +478,7 @@ Qed.
 
 Lemma monalgE (g : {malg G[K]}) :
   g = \sum_(k <- msupp g) << g@_k *g k >>.
-Proof. by apply/monalgEw/fsubset_refl. Qed.
+Proof. exact/monalgEw/fsubset_refl. Qed.
 End MAlgZModTheory.
 
 (* -------------------------------------------------------------------- *)
@@ -530,7 +488,7 @@ Context {K : monomType} {G : zmodType}.
 (* -------------------------------------------------------------------- *)
 Lemma msuppC (c : G) :
   msupp c%:MP = (if c == 0 then fset0 else [fset 1%M]) :> {fset K}.
-Proof. by apply/msuppU. Qed.
+Proof. exact/msuppU. Qed.
 
 Lemma msuppC_le (c : G) : msupp c%:MP `<=` ([fset 1%M] : {fset K}).
 Proof. by rewrite msuppC; case: eqP=> _; rewrite ?fsubset_refl // fsub0set. Qed.
@@ -632,7 +590,7 @@ Proof. by []. Qed.
 
 (* -------------------------------------------------------------------- *)
 Lemma mcoeffZ c g k : (c *: g)@_k = c * g@_k.
-Proof. by apply/fgscaleE. Qed.
+Proof. exact/fgscaleE. Qed.
 
 (* FIXME: make the production of a LRMorphism fail below *)
 (* HB.instance Definition _ m := *)
@@ -838,7 +796,7 @@ move=> g1 g2 g3; pose_big_fset K E.
       HB.pack (fgmul << g1@_k1 *g k1 >>) fgmullaM.
     have /= raddf := raddf_sum fgmullA.
     rewrite raddf; apply/eq_bigr=> /= k2 _; rewrite raddf.
-    by apply/eq_bigr=> /= k3 _; rewrite fgmulUU mulrA /mmul mulmA.
+    by apply/eq_bigr=> /= k3 _; rewrite fgmulUU mulrA mulmA.
   2: by close.
 rewrite [LHS](eq_bigr _ (fun _ _ => exchange_big _ _ _ _ _ _)) /=.
 rewrite exchange_big /=; apply/esym; rewrite (@fgmulEr1w E) //.
@@ -856,14 +814,14 @@ Lemma fgmul1g : left_id fgone fgmul.
 Proof.
 move=> g; rewrite fgmull; apply/eqP/malgP=> k.
 rewrite msuppU1 big_seq_fset1 [X in _=X@__]monalgE !raddf_sum /=.
-by apply/eq_bigr=> kg _; rewrite fgoneE eqxx /mmul mul1r mul1m.
+by apply/eq_bigr=> kg _; rewrite fgoneE eqxx mul1r mul1m.
 Qed.
 
 Lemma fgmulg1 : right_id fgone fgmul.
 Proof.
 move=> g; rewrite fgmulr; apply/eqP/malgP=> k.
 rewrite msuppU1 big_seq_fset1 [X in _=X@__]monalgE !raddf_sum /=.
-by apply/eq_bigr=> kg _; rewrite fgoneE eqxx /mmul mulr1 mulm1.
+by apply/eq_bigr=> kg _; rewrite fgoneE eqxx mulr1 mulm1.
 Qed.
 
 Lemma fgmulgDl : left_distributive fgmul +%R.
@@ -917,31 +875,31 @@ Lemma malgMEw (d1 d2 : {fset K}) g1 g2 :
   msupp g1 `<=` d1 -> msupp g2 `<=` d2 ->
   g1 * g2 = \sum_(k1 <- d1) \sum_(k2 <- d2)
     << g1@_k1 * g2@_k2 *g (k1 * k2)%M >>.
-Proof. by apply/fgmullw. Qed.
+Proof. exact/fgmullw. Qed.
 
 (* -------------------------------------------------------------------- *)
 Lemma mcoeffMl g1 g2 k :
   (g1 * g2)@_k = \sum_(k1 <- msupp g1) \sum_(k2 <- msupp g2)
     (g1@_k1 * g2@_k2) *+ (k1 * k2 == k)%M.
-Proof. by apply/fgmulElw; apply/fsubset_refl. Qed.
+Proof. exact/fgmulElw/fsubset_refl. Qed.
 
 Lemma mcoeffMr g1 g2 k :
   (g1 * g2)@_k = \sum_(k2 <- msupp g2) \sum_(k1 <- msupp g1)
     (g1@_k1 * g2@_k2) *+ (k1 * k2 == k)%M.
-Proof. by apply/fgmulErw; apply/fsubset_refl. Qed.
+Proof. exact/fgmulErw/fsubset_refl. Qed.
 
 (* -------------------------------------------------------------------- *)
 Lemma mcoeffMlw (d1 d2 : {fset K}) g1 g2 k :
   msupp g1 `<=` d1 -> msupp g2 `<=` d2 ->
   (g1 * g2)@_k = \sum_(k1 <- d1) \sum_(k2 <- d2)
     (g1@_k1 * g2@_k2) *+ (k1 * k2 == k)%M.
-Proof. by apply/fgmulElw. Qed.
+Proof. exact/fgmulElw. Qed.
 
 Lemma mcoeffMrw (d1 d2 : {fset K}) g1 g2 k :
   msupp g1 `<=` d1 -> msupp g2 `<=` d2 ->
   (g1 * g2)@_k = \sum_(k2 <- d2) \sum_(k1 <- d1)
     (g1@_k1 * g2@_k2) *+ (k1 * k2 == k)%M.
-Proof. by apply/fgmulErw. Qed.
+Proof. exact/fgmulErw. Qed.
 
 (* -------------------------------------------------------------------- *)
 Lemma mcoeff1 k : 1@_k = (k == 1%M)%:R :> R.
@@ -950,7 +908,7 @@ Proof. by rewrite mcoeffC. Qed.
 Lemma mul_malgC c g : c%:MP * g = c *: g.
 Proof.
 rewrite malgCE malgM_def malgZ_def (fgmulUg _ _ (fsubset_refl _)).
-by apply/eq_bigr=> /= k _; rewrite /mmul mul1m.
+by apply/eq_bigr=> /= k _; rewrite mul1m.
 Qed.
 
 Lemma mcoeffCM c g k : (c%:MP * g)@_k = c * g@_k :> R.
@@ -989,8 +947,7 @@ have sum_neq0 f (s : seq K) (H : \sum_(i <- s) f i != 0) :
 apply/fsubsetP => k.
 rewrite -mcoeff_neq0 mcoeffMl => /sum_neq0 [k1 Hk1] /sum_neq0 [k2 Hk2] H.
 apply/imfset2P; exists k1 => //; exists k2 => //.
-apply/esym/eqP; move: H; rewrite eq_sym; apply contraR => /negbTE ->.
-by rewrite mulr0n.
+by apply/esym; apply/contra_neq_eq: H => /negbTE ->; rewrite mulr0n.
 Qed.
 
 (* -------------------------------------------------------------------- *)
@@ -1023,11 +980,11 @@ Proof.
 split=> [g1 g2|]; rewrite ?malgCK //; pose_big_fset K E.
 have E1: 1%M \in E by rewrite -fsub1set.
 rewrite (@malgMEw E E) // (big_fsetD1 1%M) //=. 2: by close.
-rewrite (big_fsetD1 1%M) //= /mmul mulm1 2!mcoeffD mcoeffUU.
+rewrite (big_fsetD1 1%M) //= mulm1 2!mcoeffD mcoeffUU.
 rewrite ![\sum_(i <- E `\ 1%M) _]big_seq.
-rewrite !raddf_sum !big1 ?simpm //= => k; rewrite in_fsetD1 => /andP [ne1_k _].
+rewrite !raddf_sum !big1 ?addr0 //= => k; rewrite in_fsetD1 => /andP [ne1_k _].
   rewrite raddf_sum big1 ?mcoeff0 //= => k'; rewrite mcoeffU.
-  by case: eqP=> // /eqP /MonomialTheory.unitmP []; rewrite (negbTE ne1_k).
+  by case: eqP=> // /eqP /unitmP []; rewrite (negbTE ne1_k).
 by rewrite mcoeffU mul1m (negbTE ne1_k).
 Qed.
 
@@ -1235,10 +1192,9 @@ Qed.
 Lemma monalgOverU c k S :
   << c *g k >> \in monalgOver S = (c == 0) || (c \in S).
 Proof.
-rewrite qualifE /= msuppU; case: (c =P 0)=> [->|] //=.
-move=> nz_c; apply/allP/idP=> /= [h | h x].
-  by move/(_ k): h; rewrite mcoeffUU; apply; rewrite in_fset1.
-by rewrite in_fset1=> /eqP->; rewrite mcoeffUU.
+rewrite qualifE /= msuppU; have [->|nz_c] //= := eqVneq c 0.
+apply/allP/idP => [h|h x]; last by rewrite in_fset1=> /eqP->; rewrite mcoeffUU.
+by move: (h k); rewrite mcoeffUU in_fset1 eqxx; apply.
 Qed.
 
 Lemma monalgOver0 S: 0 \is a monalgOver S.
@@ -1404,14 +1360,14 @@ rewrite {1}mmeasureE big_seq_fsetE /=.
 (* Going briefly through finType as lemmas about max apply only to them *)
 apply/bigmax_leqP=> [[i ki]] _ /=.
 have /fsubsetP /(_ i ki) := (msuppD_le g1 g2); rewrite in_fsetU.
-by rewrite leq_max; case/orP=> /mmeasure_mnm_lt->; rewrite !simpm.
+by rewrite leq_max; case/orP=> /mmeasure_mnm_lt->; rewrite ?orbT.
 Qed.
 
 Lemma mmeasure_sum (T : Type) (r : seq _) (F : T -> {malg G[M]}) (P : pred T) :
   (mmeasure (\sum_(i <- r | P i) F i) <= \max_(i <- r | P i) mmeasure (F i))%N.
 Proof.
 elim/big_rec2: _ => /= [|i k p _ le]; first by rewrite mmeasure0.
-apply/(leq_trans (mmeasureD_le _ _)); rewrite geq_max.
+apply: leq_trans (mmeasureD_le _ _) _; rewrite geq_max.
 by rewrite leq_maxl /= leq_max le orbC.
 Qed.
 
@@ -1494,8 +1450,8 @@ Proof. by rewrite cmE fsfun_ffun insubF. Qed.
 
 Lemma cmuE i j : (cmu i) j = (i == j) :> nat.
 Proof.
-rewrite cmE fsfun_ffun -/(fnd _ _) fnd_set eq_sym.
-by case: (i == j) => //; rewrite fnd_fmap0.
+rewrite cmE fsfun_ffun -/(fnd _ _) fnd_set.
+by case: eqVneq; rewrite // fnd_fmap0.
 Qed.
 
 Lemma cmmulE m1 m2 i : (cmmul m1 m2) i = (m1 i + m2 i)%N.
@@ -1521,7 +1477,7 @@ Proof. by move=> m; apply/eqP/cmP=> i; rewrite !cmE addn0. Qed.
 Lemma cmmul_eq0 m1 m2 : cmmul m1 m2 = cmone -> m1 = cmone /\ m2 = cmone.
 Proof.
 move: m1 m2; have gen m1 m2 : cmmul m1 m2 = cmone -> m1 = cmone.
-  move/eqP/cmP=> h; apply/eqP/cmP=> i; move/(_ i)/eqP: h.
+  move/eqP/cmP=> h; apply/eqP/cmP=> i; move/eqP: (h i).
   by rewrite !cmE addn_eq0 => /andP[] /eqP->.
 by move=> m1 m2 h; split; move: h; last rewrite cmmulC; apply/gen.
 Qed.
@@ -1548,16 +1504,16 @@ Local Notation "'U_(' i )" := (@cmu I i).
 Local Notation mdeg := (@mdeg I).
 
 Lemma cm1 i : (1%M : {cmonom I}) i = 0%N.
-Proof. by apply/cmoneE. Qed.
+Proof. exact/cmoneE. Qed.
 
 Lemma cmU i j : U_(i) j = (i == j) :> nat.
-Proof. by apply/cmuE. Qed.
+Proof. exact/cmuE. Qed.
 
 Lemma cmUU i : U_(i) i = 1%N.
 Proof. by rewrite cmU eqxx. Qed.
 
 Lemma cmM i m1 m2 : (m1 * m2)%M i = (m1 i + m2 i)%N.
-Proof. by apply/cmmulE. Qed.
+Proof. exact/cmmulE. Qed.
 
 Lemma cmE_eq0 m i : (m i == 0%N) = (i \notin finsupp m).
 Proof. by rewrite memNfinsupp. Qed.
@@ -1580,8 +1536,7 @@ Proof. by apply/fsetP=> j; rewrite -!cmE_neq0 cmU in_fset1 eqb0 negbK. Qed.
 
 Lemma mdomD m1 m2 : finsupp (m1 * m2)%M = finsupp m1 `|` finsupp m2.
 Proof.
-apply/fsetP=> i; rewrite in_fsetU -!cmE_neq0 cmM.
-by rewrite addn_eq0 negb_and.
+by apply/fsetP=> i; rewrite in_fsetU -!cmE_neq0 cmM addn_eq0 negb_and.
 Qed.
 
 Lemma mdegE m : mdeg m = (\sum_(i <- finsupp m) (m i))%N.
@@ -1590,7 +1545,7 @@ Proof. by []. Qed.
 Lemma mdegEw m (d : {fset I}) : finsupp m `<=` d ->
   mdeg m = (\sum_(i <- d) (m i))%N.
 Proof.
-move=> le; pose F i := m i; rewrite mdegE (big_fset_incl _ le) //.
+move=> le; rewrite mdegE (big_fset_incl _ le) //.
 by move=> i i_in_d; rewrite -cmE_neq0 negbK => /eqP.
 Qed.
 
@@ -1612,13 +1567,12 @@ Qed.
 Lemma mdeg_prod (T : Type) r P (F : T -> {cmonom I}) :
     mdeg (\big[mmul/1%M]_(x <- r | P x) (F x))
   = (\sum_(x <- r | P x) (mdeg (F x)))%N.
-Proof. by apply/big_morph; [apply/mdegM|apply/mdeg1]. Qed.
+Proof. exact/big_morph/mdeg1/mdegM. Qed.
 
 Lemma mdeg_eq0I m : mdeg m = 0%N -> m = 1%M.
 Proof.
 move=> h; apply/eqP/cmP=> i; move: h; rewrite mdegE cm1.
-case: mdomP=> // ki; rewrite (big_fsetD1 i) //= => /eqP.
-by rewrite addn_eq0=> /andP[/eqP->].
+by case: mdomP=> // ki /eqP; rewrite (big_fsetD1 i) //= addn_eq0 => /andP[/eqP].
 Qed.
 
 (* -------------------------------------------------------------------- *)
@@ -1626,7 +1580,7 @@ Qed.
   mdeg mdeg1 mdegM mdeg_eq0I.
 
 Lemma mdeg_eq0 m : (mdeg m == 0%N) = (m == 1%M).
-Proof. by apply/mf_eq0. Qed.
+Proof. exact/mf_eq0. Qed.
 
 Lemma cmM_eq1 m1 m2 : (m1 * m2 == 1)%M = (m1 == 1%M) && (m2 == 1%M).
 Proof. by rewrite -!mdeg_eq0 mdegM addn_eq0. Qed.
@@ -1674,7 +1628,7 @@ Qed.
   mnmwgt mnmwgt1 mnmwgtM mnmwgt_eq0I.
 
 Lemma mnmwgt_eq0 m : (mnmwgt m == 0%N) = (m == 1%M).
-Proof. by apply/mf_eq0. Qed.
+Proof. exact/mf_eq0. Qed.
 End MWeight.
 End ComMonomial.
 
@@ -1696,11 +1650,9 @@ Definition fmonom_of_seq     k := locked_with k FMonom.
 Canonical  fmonom_unlockable k := [unlockable fun fmonom_of_seq k].
 End Def.
 
-Local Notation "{ 'fmonom' I }" :=
-  (@fmonom_of _ (Phant I)) : type_scope.
+Local Notation "{ 'fmonom' I }" := (@fmonom_of _ (Phant I)) : type_scope.
 
-Local Notation mkfmonom s :=
-  (fmonom_of_seq fmonom_key s).
+Local Notation mkfmonom s := (fmonom_of_seq fmonom_key s).
 
 (* -------------------------------------------------------------------- *)
 Section Canonicals.
@@ -1725,7 +1677,7 @@ Lemma fmP m1 m2 : (m1 == m2) = (m1 == m2 :> seq I).
 Proof. by rewrite val_eqE. Qed.
 
 Lemma fmK m : FMonom m = m.
-Proof. by apply/innew_val. Qed.
+Proof. exact/innew_val. Qed.
 
 Definition fmone : {fmonom I} := mkfmonom [::].
 Definition fmu i : {fmonom I} := mkfmonom [:: i].
@@ -1753,9 +1705,8 @@ Proof. by move=> m; rewrite !fmE cats0 fmK. Qed.
 
 Lemma fmmul_eq1 m1 m2 : fmmul m1 m2 = fmone -> m1 = fmone /\ m2 = fmone.
 Proof.
-rewrite !fmE; case=> /(congr1 size)/eqP; rewrite size_cat.
-rewrite addn_eq0 !size_eq0 => /andP[/eqP zm1 /eqP zm2].
-by split; apply/val_eqP; rewrite /= ?(zm1, zm2).
+rewrite !fmE; case=> /(congr1 size)/eqP; rewrite size_cat addn_eq0 !size_eq0.
+by move=> /andP[/eqP zm1 /eqP zm2]; split; apply/val_inj.
 Qed.
 
 HB.instance Definition _ := Choice_isMonomialDef.Build {fmonom I}
@@ -1813,7 +1764,7 @@ Qed.
   fdeg fdeg1 fdegM fdeg_eq0I.
 
 Lemma fdeg_eq0 m : (fdeg m == 0%N) = (m == 1%M).
-Proof. by apply/mf_eq0. Qed.
+Proof. exact/mf_eq0. Qed.
 
 Lemma fmM_eq1 m1 m2 : (m1 * m2 == 1)%M = (m1 == 1%M) && (m2 == 1%M).
 Proof. by rewrite -!fdeg_eq0 fdegM addn_eq0. Qed.
@@ -1845,13 +1796,13 @@ Implicit Types g : {malg G[{cmonom I}]}.
 Local Notation mdeg := (@mdeg I).
 
 Lemma msizeE g : msize g = (\max_(m <- msupp g) (mdeg m).+1)%N.
-Proof. by apply/mmeasureE. Qed.
+Proof. exact/mmeasureE. Qed.
 
 Lemma msize_mdeg_lt g m : m \in msupp g -> (mdeg m < msize g)%N.
-Proof. by apply/mmeasure_mnm_lt. Qed.
+Proof. exact/mmeasure_mnm_lt. Qed.
 
 Lemma msize_mdeg_ge g m : (msize g <= mdeg m)%N -> m \notin msupp g.
-Proof. by apply/mmeasure_mnm_ge. Qed.
+Proof. exact/mmeasure_mnm_ge. Qed.
 
 Definition msize0       := @mmeasure0       _ G [measure of mdeg].
 Definition msizeC       := @mmeasureC       _ G [measure of mdeg].
