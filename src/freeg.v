@@ -631,22 +631,12 @@ Section FreegZmodTypeTheory.
        [predI (dom D1) & (dom D2)] =1 pred0
     -> perm_eq (dom (D1 + D2)) (dom D1 ++ dom D2).
   Proof.
-    move=> D12_nI; have inD1E p: p \in dom D1 -> p \notin dom D2.
-      move=> p_in_D1; move/(_ p): D12_nI; rewrite !inE p_in_D1.
-      by rewrite andTb => /= ->.
-    have inD2E p: p \in dom D2 -> p \notin dom D1.
-      move=> p_in_D2; move/(_ p): D12_nI; rewrite !inE p_in_D2.
-      by rewrite andbT => /= ->.
-    apply: uniq_perm; rewrite ?uniq_dom //.
-      rewrite cat_uniq ?uniq_dom //= andbT; apply/hasP.
-      case=> p p_in_D2; move/(_ p): D12_nI => /=.
-      by rewrite p_in_D2 andbT=> ->.
-    move=> p; rewrite mem_cat !mem_dom coeffD.
-    move/(_ p): D12_nI; rewrite /= !mem_dom.
-    case nz_D1p: (_ != 0) => /=.
-      by move/negbT; rewrite negbK=> /eqP->; rewrite addr0.
-    move=> _; move/negbT: nz_D1p; rewrite negbK.
-    by move/eqP->; rewrite add0r.
+    move=> D12_nI; apply/uniq_perm; first exact: uniq_dom.
+      rewrite cat_uniq !uniq_dom andbT; apply/hasPn => p p_in_D2.
+      by move: (D12_nI p); rewrite /= p_in_D2 andbT => /negbT.
+    move=> p; move: (D12_nI p); rewrite /= mem_cat !mem_dom coeffD.
+    have [->|nz_D1p] /= := eqVneq (coeff p D1) 0; first by rewrite add0r.
+    by move=> /negbFE /eqP ->; rewrite addr0.
   Qed.
 
   Lemma domD D1 D2 x :
@@ -1021,24 +1011,16 @@ Section FreegPosDecomp.
   Proof. by rewrite -fgposN fgpos_le0. Qed.
 
   Lemma coeff_fgposE D k : coeff k (fgpos D) = Num.max 0 (coeff k D).
-  Proof.
-    by rewrite fgmap_f0_coeffE ?normr0 //inE; case: leP => // /ger0_norm->.
-  Qed.
+  Proof. by rewrite fgmap_f0_coeffE ?normr0 //=; case: ger0P. Qed.
 
   Lemma coeff_fgnegE D k : coeff k (fgneg D) = - Num.min 0 (coeff k D).
-  Proof.
-    by rewrite -fgposN coeff_fgposE coeffN -{1}[0]oppr0 -oppr_min.
-  Qed.
+  Proof. by rewrite -fgposN coeff_fgposE coeffN -{1}[0]oppr0 -oppr_min. Qed.
 
   Lemma fgpos_dom D : {subset dom (fgpos D) <= dom D}.
-  Proof.
-    by move=> x /fgmap_dom; rewrite mem_filter => /andP [_].
-  Qed.
+  Proof. by move=> x /fgmap_dom; rewrite mem_filter => /andP []. Qed.
 
   Lemma fgneg_dom D : {subset dom (fgneg D) <= dom D}.
-  Proof.
-    by move=> k; rewrite -fgposN => /fgpos_dom; rewrite domN.
-  Qed.
+  Proof. by move=> k; rewrite -fgposN => /fgpos_dom; rewrite domN. Qed.
 
   Lemma fg_decomp D : D = fgpos D - fgneg D.
   Proof.
