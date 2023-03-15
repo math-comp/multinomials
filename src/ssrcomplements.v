@@ -161,14 +161,14 @@ Arguments big_sub_widen [S idx op T sT rT].
 Arguments big_sub_widen [S idx op T sT rT].
 
 (* add to mathcomp *)
-Lemma prod_inj A B : injective (prod_curry (@pair A B)).
+Lemma prod_inj A B : injective (uncurry (@pair A B)).
 Proof. by move=> [? ?] [? ?]. Qed.
 #[global] Hint Resolve prod_inj : core.
 
 (* add to mathcomp *)
 Lemma in_allpairs (S T R : eqType) (f : S -> T -> R)
   (s : seq S) (t : seq T) x y :
-  injective (prod_curry f) ->
+  injective (uncurry f) ->
   f x y \in [seq f x0 y0 | x0 <- s, y0 <- t] =
   (x \in s) && (y \in t).
 Proof.
