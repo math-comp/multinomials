@@ -3,4 +3,10 @@
 -arg -w -arg -redundant-canonical-projection
 -arg -w -arg -projection-no-head-constant
 
--R _build/default/src mathcomp.multinomials
+-R src mathcomp.multinomials
+
+src/freeg.v
+src/monalg.v
+src/mpoly.v
+src/ssrcomplements.v
+src/xfinmap.v
