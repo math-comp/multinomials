@@ -8,8 +8,6 @@ jobs:
     strategy:
       matrix:
         image:
-          - mathcomp/mathcomp:1.13.0-coq-8.11
-          - mathcomp/mathcomp:1.13.0-coq-8.12
           - coqorg/coq:8.13-native-ocaml-4.07 # with the coq-native opam pkg
           - coqorg/coq:8.17-native-ocaml-4.13-flambda # with the coq-native opam pkg
           - mathcomp/mathcomp:1.13.0-coq-8.13 # (without coq-native for now)
