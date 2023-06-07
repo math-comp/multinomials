@@ -12,5 +12,8 @@ default: build
 build:
 	$(DUNE) build
 
+install:
+	$(DUNE) install
+
 clean:
 	$(DUNE) clean
