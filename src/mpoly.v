@@ -4662,7 +4662,7 @@ case/tupleP: dt hom => d dt; case/tupleP: mt => p mt /= hom.
 rewrite !big_cons; apply/dhomogM.
   by move: (hom ord0); rewrite (tnth_nth 0) (tnth_nth 0%N).
 apply/ihl => i; have:= hom (inord i.+1).
-by rewrite !(tnth_nth 0) !(tnth_nth 0%N) !inordK ?ltnS.
+by rewrite !(tnth_nth 0) ?(tnth_nth 0%N) !inordK ?ltnS.
 Qed.
 
 End MPolyHomogTheory.
