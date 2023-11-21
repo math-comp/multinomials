@@ -18,10 +18,6 @@ Unset Printing Implicit Defensive.
 
 Import GRing.Theory Num.Theory BigEnoughFSet.
 
-(* temporary fix for mathcomp 1.8.0 *)
-Notation "{ 'pred' T }" := (pred_sort (predPredType T)) (at level 0,
-  format "{ 'pred'  T }") : type_scope.
-
 Local Open Scope fset.
 Local Open Scope fmap.
 Local Open Scope ring_scope.
@@ -62,6 +58,10 @@ Reserved Notation "'U_(' n )"
   (at level 0, n at level 2, no associativity, format "'U_(' n )").
 Reserved Notation "x ^[ f , g ]"
   (at level 2, left associativity, format "x ^[ f , g ]").
+
+Reserved Notation "'{' 'mmorphism' M '->' S '}'"
+  (at level 0, M at level 98, S at level 99,
+   format "{ 'mmorphism'  M  ->  S }").
 
 (* -------------------------------------------------------------------- *)
 HB.mixin Record Choice_isMonomialDef V of Choice V := {
@@ -140,16 +140,13 @@ HB.structure Definition MMorphism (M : monomType) (S : ringType) :=
   {f of isMultiplicative M S f}.
 
 Module MMorphismExports.
-Module MMorphism.
-Definition map (M : monomType) (S : ringType) (phR : phant (M -> S)) :=
-  MMorphism.type M S.
-End MMorphism.
-Notation "{ 'mmorphism' fR }" := (MMorphism.map (Phant fR))
-  (at level 0, format "{ 'mmorphism'  fR }") : ring_scope.
+Notation "{ 'mmorphism' M -> S }" := (@MMorphism.type M S) : type_scope.
+#[deprecated(since="multinomials 2.2.0", note="Use MMorphism.clone instead.")]
 Notation "[ 'mmorphism' 'of' f 'as' g ]" := (MMorphism.clone _ _ f g)
-  (at level 0, format "[ 'mmorphism'  'of'  f  'as'  g ]") : form_scope.
+  (at level 0, only parsing) : form_scope.
+#[deprecated(since="multinomials 2.2.0", note="Use MMorphism.clone instead.")]
 Notation "[ 'mmorphism' 'of' f ]" := (MMorphism.clone _ _ f _)
-  (at level 0, format "[ 'mmorphism'  'of'  f ]") : form_scope.
+  (at level 0, only parsing) : form_scope.
 End MMorphismExports.
 Export MMorphismExports.
 
@@ -170,8 +167,6 @@ Variable (K : choiceType) (G : zmodType).
 
 Record malg : predArgType := Malg { malg_val : {fsfun K -> G with 0} }.
 
-Definition malg_of (_ : phant K) (_ : phant G) := malg.
-
 Fact malg_key : unit. Proof. by []. Qed.
 
 Definition malg_of_fsfun   k := locked_with k Malg.
@@ -180,12 +175,9 @@ End MalgDef.
 
 (* -------------------------------------------------------------------- *)
 Bind Scope ring_scope with malg.
-Bind Scope ring_scope with malg_of.
 
-Notation "{ 'malg' G [ K ] }" :=
-  (@malg_of _ _ (Phant K) (Phant G)) : type_scope.
-Notation "{ 'malg' K }" :=
-  {malg int[K]} : type_scope.
+Notation "{ 'malg' G [ K ] }" := (@malg K G) : type_scope.
+Notation "{ 'malg' K }" := {malg int[K]} : type_scope.
 
 (* -------------------------------------------------------------------- *)
 Section MalgCanonicals.
@@ -1198,7 +1190,7 @@ HB.mixin Record isMeasure (M : monomType) (mf : M -> nat) := {
 HB.structure Definition Measure (M : monomType) := {mf of isMeasure M mf}.
 
 Notation "[ 'measure' 'of' f ]" := (Measure.clone _ f _)
-  (at level 0, format"[ 'measure'  'of'  f ]") : form_scope.
+  (at level 0, only parsing) : form_scope.
 
 (* -------------------------------------------------------------------- *)
 Section MMeasure.
@@ -1274,8 +1266,6 @@ Context (I : choiceType).
 
 Record cmonom : predArgType := CMonom { cmonom_val : {fsfun of _ : I => 0%N} }.
 
-Definition cmonom_of (_ : phant I) := cmonom.
-
 Coercion cmonom_val : cmonom >-> fsfun.
 
 Fact cmonom_key : unit. Proof. by []. Qed.
@@ -1284,8 +1274,8 @@ Definition cmonom_of_fsfun   k := locked_with k CMonom.
 Canonical  cmonom_unlockable k := [unlockable fun cmonom_of_fsfun k].
 End CmonomDef.
 
-Notation "{ 'cmonom' I }" := (@cmonom_of _ (Phant I)) : type_scope.
-Notation "''X_{1..' n '}'" :=  {cmonom 'I_n} : type_scope.
+Notation "{ 'cmonom' I }" := (cmonom I) : type_scope.
+Notation "''X_{1..' n '}'" :=  (cmonom 'I_n) : type_scope.
 Notation "{ 'mpoly' R [ n ] }" := {malg R['X_{1..n}]} : type_scope.
 
 Notation mkcmonom := (cmonom_of_fsfun cmonom_key).
@@ -1300,10 +1290,9 @@ Context (I : choiceType).
 
 HB.instance Definition _ := [isNew for @cmonom_val I].
 HB.instance Definition _ := [Choice of cmonom I by <:].
-HB.instance Definition _ := [Choice of {cmonom I} by <:].
 
 (* -------------------------------------------------------------------- *)
-Implicit Types (m : {cmonom I}).
+Implicit Types (m : cmonom I).
 
 Lemma cmE (f : {fsfun of _ : I => 0%N}) : mkcmonom f =1 CMonom f.
 Proof. by rewrite unlock. Qed.
@@ -1311,16 +1300,16 @@ Proof. by rewrite unlock. Qed.
 Lemma cmP m1 m2 : reflect (forall i, m1 i = m2 i) (m1 == m2).
 Proof. by apply: (iffP eqP) => [->//|eq]; apply/val_inj/fsfunP. Qed.
 
-Definition onecm : {cmonom I} := mkcmonom [fsfun of _ => 0%N].
+Definition onecm : cmonom I := mkcmonom [fsfun of _ => 0%N].
 
-Definition ucm (i : I) : {cmonom I} := [cmonom 1 | _ in fset1 i]%M.
+Definition ucm (i : I) : cmonom I := [cmonom 1 | _ in fset1 i]%M.
 
-Definition mulcm m1 m2 : {cmonom I} :=
+Definition mulcm m1 m2 : cmonom I :=
   [cmonom m1 i + m2 i | i in finsupp m1 `|` finsupp m2]%M.
 
-Definition divcm m1 m2 : {cmonom I} := [cmonom m1 i - m2 i | i in finsupp m1]%M.
+Definition divcm m1 m2 : cmonom I := [cmonom m1 i - m2 i | i in finsupp m1]%M.
 
-Definition expcmn m n : {cmonom I} := iterop n mulcm m onecm.
+Definition expcmn m n : cmonom I := iterop n mulcm m onecm.
 
 Lemma onecmE i : onecm i = 0%N.
 Proof. by rewrite cmE fsfun_ffun insubF. Qed.
@@ -1356,28 +1345,28 @@ move: m1 m2; have gen m1 m2 : mulcm m1 m2 = onecm -> m1 = onecm.
 by move=> m1 m2 h; split; move: h; last rewrite mulcmC; apply/gen.
 Qed.
 
-HB.instance Definition _ := Choice_isMonomialDef.Build {cmonom I}
+HB.instance Definition _ := Choice_isMonomialDef.Build (cmonom I)
   mulcmA mul0cm mulcm0 mulcm_eq0.
-HB.instance Definition _ := MonomialDef_isConomialDef.Build {cmonom I} mulcmC.
+HB.instance Definition _ := MonomialDef_isConomialDef.Build (cmonom I) mulcmC.
 End CmonomCanonicals.
 
 (* -------------------------------------------------------------------- *)
-Definition mdeg {I : choiceType} (m : {cmonom I}) :=
+Definition mdeg {I : choiceType} (m : cmonom I) :=
   (\sum_(k <- finsupp m) m k)%N.
 
-Definition mnmwgt {n} (m : {cmonom 'I_n}) :=
+Definition mnmwgt {n} (m : cmonom 'I_n) :=
   (\sum_i m i * i.+1)%N.
 
 (* -------------------------------------------------------------------- *)
 Section CmonomTheory.
 Context {I : choiceType}.
 
-Implicit Types (m : {cmonom I}) (i : I).
+Implicit Types (m : cmonom I) (i : I).
 
 Local Notation "'U_(' i )" := (@ucm I i) : monom_scope.
 Local Notation mdeg := (@mdeg I).
 
-Lemma cm1 i : (1%M : {cmonom I}) i = 0%N.
+Lemma cm1 i : (1%M : cmonom I) i = 0%N.
 Proof. exact/onecmE. Qed.
 
 Lemma cmU i j : U_(i)%M j = (i == j) :> nat.
@@ -1402,7 +1391,7 @@ Variant mdom_spec m (i : I) : bool -> nat -> Type :=
 Lemma mdomP m i : mdom_spec m i (i \in finsupp m) (m i).
 Proof. by case: finsuppP=> h; constructor. Qed.
 
-Lemma mdom1 : finsupp (1 : {cmonom I})%M = fset0 :> {fset I}.
+Lemma mdom1 : finsupp (1 : cmonom I)%M = fset0 :> {fset I}.
 Proof. by apply/fsetP=> i; rewrite in_fset0 -cmE_neq0 cm1 eqxx. Qed.
 
 Lemma mdomU i : finsupp U_(i)%M = [fset i].
@@ -1438,7 +1427,7 @@ rewrite
 by rewrite -big_split /=; apply/eq_bigr=> /= i _; rewrite cmM.
 Qed.
 
-Lemma mdeg_prod (T : Type) r P (F : T -> {cmonom I}) :
+Lemma mdeg_prod (T : Type) r P (F : T -> cmonom I) :
     mdeg (\big[mmul/1%M]_(x <- r | P x) (F x))
   = (\sum_(x <- r | P x) (mdeg (F x)))%N.
 Proof. exact/big_morph/mdeg1/mdegM. Qed.
@@ -1450,7 +1439,7 @@ by case: mdomP=> // ki /eqP; rewrite (big_fsetD1 i) //= addn_eq0 => /andP[/eqP].
 Qed.
 
 (* -------------------------------------------------------------------- *)
-#[hnf] HB.instance Definition _ := isMeasure.Build {cmonom I}
+#[hnf] HB.instance Definition _ := isMeasure.Build (cmonom I)
   mdeg mdeg1 mdegM mdeg_eq0I.
 
 Lemma mdeg_eq0 m : (mdeg m == 0%N) = (m == 1%M).
@@ -1484,7 +1473,7 @@ rewrite mnmwgtE (bigD1 i) //= cmUU mul1n big1 ?addn0 //.
 by move=> j ne_ij; rewrite cmU eq_sym (negbTE ne_ij).
 Qed.
 
-Lemma mnmwgtM : {morph mnmwgt: m1 m2 / (m1 * m2)%M >->  (m1 + m2)%N}.
+Lemma mnmwgtM : {morph mnmwgt: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N}.
 Proof.
 move=> m1 m2 /=; rewrite !mnmwgtE -big_split /=.
 by apply/eq_bigr=> i _; rewrite cmM mulnDl.
@@ -1506,13 +1495,13 @@ Proof. exact/mf_eq0. Qed.
 End MWeight.
 
 (* -------------------------------------------------------------------- *)
-Notation msize := (@mmeasure _ _ [measure of mdeg]).
-Notation mweight := (@mmeasure _ _ [measure of mnmwgt]).
+Notation msize := (@mmeasure _ _ mdeg).
+Notation mweight := (@mmeasure _ _ mnmwgt).
 
 Section MSize.
 Context (I : choiceType) (G : zmodType).
 
-Implicit Types (m : {cmonom I}) (g : {malg G[{cmonom I}]}).
+Implicit Types (m : cmonom I) (g : {malg G[cmonom I]}).
 
 Local Notation mdeg := (@mdeg I).
 
@@ -1525,13 +1514,13 @@ Proof. exact/mmeasure_mnm_lt. Qed.
 Lemma msize_mdeg_ge g m : (msize g <= mdeg m)%N -> m \notin msupp g.
 Proof. exact/mmeasure_mnm_ge. Qed.
 
-Definition msize0       := @mmeasure0       _ G [measure of mdeg].
-Definition msizeC       := @mmeasureC       _ G [measure of mdeg].
-Definition msizeD_le    := @mmeasureD_le    _ G [measure of mdeg].
-Definition msize_sum    := @mmeasure_sum    _ G [measure of mdeg].
-Definition msizeN       := @mmeasureN       _ G [measure of mdeg].
-Definition msize_eq0    := @mmeasure_eq0    _ G [measure of mdeg].
-Definition msize_msupp0 := @mmeasure_msupp0 _ G [measure of mdeg].
+Definition msize0       := @mmeasure0       _ G mdeg.
+Definition msizeC       := @mmeasureC       _ G mdeg.
+Definition msizeD_le    := @mmeasureD_le    _ G mdeg.
+Definition msize_sum    := @mmeasure_sum    _ G mdeg.
+Definition msizeN       := @mmeasureN       _ G mdeg.
+Definition msize_eq0    := @mmeasure_eq0    _ G mdeg.
+Definition msize_msupp0 := @mmeasure_msupp0 _ G mdeg.
 End MSize.
 
 (* -------------------------------------------------------------------- *)
@@ -1539,8 +1528,6 @@ Section FmonomDef.
 Context (I : choiceType).
 
 Record fmonom : predArgType := FMonom { fmonom_val : seq I }.
-
-Definition fmonom_of (_ : phant I) := fmonom.
 
 Coercion fmonom_val : fmonom >-> seq.
 
@@ -1550,7 +1537,7 @@ Definition fmonom_of_seq     k := locked_with k FMonom.
 Canonical  fmonom_unlockable k := [unlockable fun fmonom_of_seq k].
 End FmonomDef.
 
-Notation "{ 'fmonom' I }" := (@fmonom_of _ (Phant I)) : type_scope.
+Notation "{ 'fmonom' I }" := (fmonom I) : type_scope.
 
 Local Notation mkfmonom s := (fmonom_of_seq fmonom_key s).
 
@@ -1560,10 +1547,9 @@ Context (I : choiceType).
 
 HB.instance Definition _ := [isNew for @fmonom_val I].
 HB.instance Definition _ := [Choice of fmonom I by <:].
-HB.instance Definition _ := [Choice of {fmonom I} by <:].
 
 (* -------------------------------------------------------------------- *)
-Implicit Types (m : {fmonom I}).
+Implicit Types (m : fmonom I).
 
 Lemma fmE (s : seq I) : mkfmonom s = FMonom s.
 Proof. by rewrite unlock. Qed.
@@ -1574,9 +1560,9 @@ Proof. by rewrite val_eqE. Qed.
 Lemma fmK m : FMonom m = m.
 Proof. exact/innew_val. Qed.
 
-Definition fmone : {fmonom I} := mkfmonom [::].
-Definition fmu i : {fmonom I} := mkfmonom [:: i].
-Definition fmmul m1 m2 : {fmonom I} := mkfmonom (m1 ++ m2).
+Definition fmone : fmonom I := mkfmonom [::].
+Definition fmu i : fmonom I := mkfmonom [:: i].
+Definition fmmul m1 m2 : fmonom I := mkfmonom (m1 ++ m2).
 
 Lemma fmoneE : fmone = FMonom [::].
 Proof. by apply/eqP; rewrite fmP /fmone fmE. Qed.
@@ -1603,22 +1589,21 @@ Proof. by case: m1 m2 => [[|? ?]] [[|? ?]]; rewrite !fmE. Qed.
 
 HB.instance Definition _ := Choice_isMonomialDef.Build (fmonom I)
   fmmulA fmmul1m fmmulm1 fmmul_eq1.
-HB.instance Definition _ := MonomialDef.on {fmonom I}.
 End FmonomCanonicals.
 
 (* -------------------------------------------------------------------- *)
-Definition fdeg (I : choiceType) (m : {fmonom I}) := size m.
+Definition fdeg (I : choiceType) (m : fmonom I) := size m.
 
 (* -------------------------------------------------------------------- *)
 Section FmonomTheory.
 Context {I : choiceType}.
 
-Implicit Types (m : {fmonom I}).
+Implicit Types (m : fmonom I).
 
 Local Notation "'U_(' i )" := (@fmu I i).
 Local Notation fdeg := (@fdeg I).
 
-Lemma fm1 : (1%M : {fmonom I}) = [::] :> seq I.
+Lemma fm1 : (1%M : fmonom I) = [::] :> seq I.
 Proof. by rewrite /mone /one /= fmoneE. Qed.
 
 Lemma fmU i : U_(i) = [:: i] :> seq I.
@@ -1639,7 +1624,7 @@ Proof. by rewrite fdegE fmU. Qed.
 Lemma fdegM : {morph fdeg: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N }.
 Proof. by move=> m1 m2; rewrite !fdegE fmM size_cat. Qed.
 
-Lemma fdeg_prod (T : Type) r P (F : T -> {fmonom I}) :
+Lemma fdeg_prod (T : Type) r P (F : T -> fmonom I) :
     fdeg (\big[mmul/1%M]_(x <- r | P x) (F x))
   = (\sum_(x <- r | P x) (fdeg (F x)))%N.
 Proof. by apply/big_morph; [apply/fdegM|apply/fdeg1]. Qed.
@@ -1651,7 +1636,7 @@ by rewrite -val_eqE /= z_m fm1.
 Qed.
 
 (* -------------------------------------------------------------------- *)
-#[hnf] HB.instance Definition _ := isMeasure.Build {fmonom I}
+#[hnf] HB.instance Definition _ := isMeasure.Build (fmonom I)
   fdeg fdeg1 fdegM fdeg_eq0I.
 
 Lemma fdeg_eq0 m : (fdeg m == 0%N) = (m == 1%M).

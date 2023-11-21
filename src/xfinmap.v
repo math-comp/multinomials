@@ -10,7 +10,6 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Local Open Scope fset.
-Local Open Scope fmap.
 
 (* -------------------------------------------------------------------- *)
 Module BigEnoughFSet.
