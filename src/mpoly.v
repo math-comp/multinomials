@@ -770,8 +770,7 @@ split=> [->//|]; case: p q => [p] [q].
 by rewrite !mpoly_valK=> ->.
 Qed.
 
-Definition mpolyC (c : R) : {mpoly R[n]} :=
-  [mpoly << c *g 0%MM >>].
+Definition mpolyC (c : R) : {mpoly R[n]} := [mpoly << c *g 0%MM >>].
 
 Local Notation "c %:MP" := (mpolyC c) : ring_scope.
 
@@ -857,7 +856,7 @@ Section MPolyZMod.
 Context (n : nat) (R : ringType).
 Implicit Types (p q r : {mpoly R[n]}).
 
-Definition mpoly_opp p := [mpoly -(mpoly_val p)].
+Definition mpoly_opp p := [mpoly - mpoly_val p].
 
 Definition mpoly_add p q := [mpoly mpoly_val p + mpoly_val q].
 
@@ -877,24 +876,20 @@ HB.instance Definition _ := GRing.isZmodule.Build (mpoly n R)
   add_mpolyA add_mpolyC add_mpoly0 add_mpolyN.
 HB.instance Definition _ := GRing.Zmodule.on {mpoly R[n]}.
 
-Definition mpoly_scale c p := [mpoly c *: (mpoly_val p)].
+Definition mpoly_scale c p := [mpoly c *: mpoly_val p].
 
-Local Notation "c *:M p" := (mpoly_scale c p)
-  (at level 40, left associativity).
+Local Notation "c *:M p" := (mpoly_scale c p) (at level 40, left associativity).
 
-Lemma scale_mpolyA c1 c2 p :
-  c1 *:M (c2 *:M p) = (c1 * c2) *:M p.
+Lemma scale_mpolyA c1 c2 p : c1 *:M (c2 *:M p) = (c1 * c2) *:M p.
 Proof. by apply/mpoly_eqP; rewrite !mpoly_valK scalerA. Qed.
 
 Lemma scale_mpoly1m p : 1 *:M p = p.
 Proof. by apply/mpoly_eqP; rewrite !mpoly_valK scale1r. Qed.
 
-Lemma scale_mpolyDr c p1 p2 :
-  c *:M (p1 + p2) = c *:M p1 + c *:M p2.
+Lemma scale_mpolyDr c p1 p2 : c *:M (p1 + p2) = c *:M p1 + c *:M p2.
 Proof. by apply/mpoly_eqP; rewrite !mpoly_valK scalerDr. Qed.
 
-Lemma scale_mpolyDl p c1 c2 :
-  (c1 + c2) *:M p = c1 *:M p + c2 *:M p.
+Lemma scale_mpolyDl p c1 c2 : (c1 + c2) *:M p = c1 *:M p + c2 *:M p.
 Proof. by apply/mpoly_eqP; rewrite !mpoly_valK scalerDl. Qed.
 
 HB.instance Definition _ := GRing.Zmodule_isLmodule.Build R (mpoly n R)
@@ -1295,9 +1290,8 @@ Local Notation "p *M_[ m ] q" :=
   << (p@_m.1)%MM * (q@_m.2)%MM *g (m.1 + m.2)%MM >>
   (at level 40, no associativity, format "p  *M_[ m ]  q").
 
-Definition mpoly_mul p q : {mpoly R[n]} := [mpoly
-  \sum_(m <- msupp p @@ msupp q) (p *M_[m] q)
-].
+Definition mpoly_mul p q : {mpoly R[n]} :=
+  [mpoly \sum_(m <- msupp p @@ msupp q) p *M_[m] q].
 
 Local Notation "p *M q" := (mpoly_mul p q)
   (at level 40, left associativity, format "p  *M  q").
@@ -1311,7 +1305,7 @@ Lemma mul_poly1_eq0R p q (m : 'X_{1..n} * 'X_{1..n}) :
 Proof. by move/memN_msupp_eq0=> ->; rewrite mulr0 freegU0. Qed.
 
 Lemma mpoly_mulwE p q kp kq : msize p <= kp -> msize q <= kq ->
-  p *M q = [mpoly \sum_(m : 'X_{1..n < kp, kq}) (p *M_[m] q)].
+  p *M q = [mpoly \sum_(m : 'X_{1..n < kp, kq}) p *M_[m] q].
 Proof.
 pose Ip : subFinType _ := 'X_{1..n < kp}.
 pose Iq : subFinType _ := 'X_{1..n < kq}.
@@ -1332,7 +1326,7 @@ Qed.
 Arguments mpoly_mulwE [p q].
 
 Lemma mpoly_mul_revwE p q kp kq : msize p <= kp -> msize q <= kq ->
-  p *M q = [mpoly \sum_(m : 'X_{1..n < kq, kp}) (p *M_[(m.2, m.1)] q)].
+  p *M q = [mpoly \sum_(m : 'X_{1..n < kq, kp}) p *M_[(m.2, m.1)] q].
 Proof.
 by move=> lep leq; rewrite big_pairA exchange_big pair_bigA -mpoly_mulwE.
 Qed.
@@ -1341,8 +1335,7 @@ Arguments mpoly_mul_revwE [p q].
 
 Lemma mcoeff_poly_mul p q m k : !|m| < k ->
   (p *M q)@_m =
-    \sum_(k : 'X_{1..n < k, k} | m == (k.1 + k.2)%MM)
-      (p@_k.1 * q@_k.2).
+    \sum_(k : 'X_{1..n < k, k} | m == (k.1 + k.2)%MM) p@_k.1 * q@_k.2.
 Proof.
 pose_big_enough i; first rewrite (mpoly_mulwE i i) // => lt_mk.
   rewrite mcoeff_MPoly raddf_sum /=; have lt_mi: k < i by [].
@@ -1371,7 +1364,7 @@ Qed.
 
 Lemma mcoeff_poly_mul_rev p q m k : !|m| < k ->
   (p *M q)@_m =
-    \sum_(k : 'X_{1..n < k, k} | m == (k.1 + k.2)%MM) (p@_k.2 * q@_k.1).
+    \sum_(k : 'X_{1..n < k, k} | m == (k.1 + k.2)%MM) p@_k.2 * q@_k.1.
 Proof.
 move=> /mcoeff_poly_mul ->; rewrite big_cond_mulrn.
 rewrite big_pairA /= exchange_big pair_bigA /=.
@@ -3838,8 +3831,7 @@ have h: E = [set i : {set 'I_n} | #|i| == k].
     * by apply/setP=> i; rewrite !(inE, memtE) tval_tcast mem_enum.
 rewrite -h {h}/E big_imset 1?big_set /=; last first.
   move=> t1 t2; rewrite !inE => tmono_t1 tmono_t2 /setP eq.
-  apply/eqP; rewrite eqE /=; apply/eqP/eq_tmono => // i.
-  by move/(_ i): eq; rewrite /t2s !inE.
+  by apply/val_inj/eq_tmono => // i; move: (eq i); rewrite !inE.
 apply/eq_big=> // i; rewrite inE 1?big_set /=.
 case: i => i sz_i /= tmono_i; rewrite (eq_bigl (mem i)) //=.
 by rewrite !mprodXE big_uniq //; apply/uniq_tmono.
