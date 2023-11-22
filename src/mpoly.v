@@ -749,17 +749,12 @@ Coercion mpoly_val p := let: MPoly D := p in D.
 HB.instance Definition _ := [isNew for mpoly_val].
 HB.instance Definition _ := [Choice of mpoly by <:].
 
-Definition mpoly_of of phant R := mpoly.
-
-Identity Coercion type_mpoly_of : mpoly_of >-> mpoly.
-
 End MPolyDef.
 
-Bind Scope ring_scope with mpoly_of.
 Bind Scope ring_scope with mpoly.
 
-Notation "{ 'mpoly' T [ n ] }" := (mpoly_of n (Phant T)).
-Notation "[ 'mpoly' D ]" := (@MPoly _ _ D : {mpoly _[_]}).
+Notation "{ 'mpoly' T [ n ] }" := (mpoly n T).
+Notation "[ 'mpoly' D ]" := (@MPoly _ _ D).
 
 (* -------------------------------------------------------------------- *)
 Section MPolyTheory.
@@ -775,8 +770,7 @@ split=> [->//|]; case: p q => [p] [q].
 by rewrite !mpoly_valK=> ->.
 Qed.
 
-Definition mpolyC (c : R) : {mpoly R[n]} :=
-  [mpoly << c *g 0%MM >>].
+Definition mpolyC (c : R) : {mpoly R[n]} := [mpoly << c *g 0%MM >>].
 
 Local Notation "c %:MP" := (mpolyC c) : ring_scope.
 
@@ -862,7 +856,7 @@ Section MPolyZMod.
 Context (n : nat) (R : ringType).
 Implicit Types (p q r : {mpoly R[n]}).
 
-Definition mpoly_opp p := [mpoly -(mpoly_val p)].
+Definition mpoly_opp p := [mpoly - mpoly_val p].
 
 Definition mpoly_add p q := [mpoly mpoly_val p + mpoly_val q].
 
@@ -882,24 +876,20 @@ HB.instance Definition _ := GRing.isZmodule.Build (mpoly n R)
   add_mpolyA add_mpolyC add_mpoly0 add_mpolyN.
 HB.instance Definition _ := GRing.Zmodule.on {mpoly R[n]}.
 
-Definition mpoly_scale c p := [mpoly c *: (mpoly_val p)].
+Definition mpoly_scale c p := [mpoly c *: mpoly_val p].
 
-Local Notation "c *:M p" := (mpoly_scale c p)
-  (at level 40, left associativity).
+Local Notation "c *:M p" := (mpoly_scale c p) (at level 40, left associativity).
 
-Lemma scale_mpolyA c1 c2 p :
-  c1 *:M (c2 *:M p) = (c1 * c2) *:M p.
+Lemma scale_mpolyA c1 c2 p : c1 *:M (c2 *:M p) = (c1 * c2) *:M p.
 Proof. by apply/mpoly_eqP; rewrite !mpoly_valK scalerA. Qed.
 
 Lemma scale_mpoly1m p : 1 *:M p = p.
 Proof. by apply/mpoly_eqP; rewrite !mpoly_valK scale1r. Qed.
 
-Lemma scale_mpolyDr c p1 p2 :
-  c *:M (p1 + p2) = c *:M p1 + c *:M p2.
+Lemma scale_mpolyDr c p1 p2 : c *:M (p1 + p2) = c *:M p1 + c *:M p2.
 Proof. by apply/mpoly_eqP; rewrite !mpoly_valK scalerDr. Qed.
 
-Lemma scale_mpolyDl p c1 c2 :
-  (c1 + c2) *:M p = c1 *:M p + c2 *:M p.
+Lemma scale_mpolyDl p c1 c2 : (c1 + c2) *:M p = c1 *:M p + c2 *:M p.
 Proof. by apply/mpoly_eqP; rewrite !mpoly_valK scalerDl. Qed.
 
 HB.instance Definition _ := GRing.Zmodule_isLmodule.Build R (mpoly n R)
@@ -969,8 +959,9 @@ HB.mixin Record isMeasure (n : nat) (mf : 'X_{1..n} -> nat) := {
 #[short(type="measure")]
 HB.structure Definition Measure (n : nat) := {mf of isMeasure n mf}.
 
+#[deprecated(since="multinomials 2.2.0", note="Use Measure.clone instead.")]
 Notation "[ 'measure' 'of' f ]" := (Measure.clone _ f _)
-  (at level 0, format"[ 'measure'  'of'  f ]") : form_scope.
+  (at level 0, only parsing) : form_scope.
 
 (* -------------------------------------------------------------------- *)
 #[hnf] HB.instance Definition _ n := isMeasure.Build n mdeg mdeg0 mdegD.
@@ -1057,7 +1048,7 @@ Qed.
 End MSuppZMod.
 
 (* -------------------------------------------------------------------- *)
-Notation msize p := (@mmeasure _ _ [measure of mdeg] p).
+Notation msize p := (@mmeasure _ _ mdeg p).
 
 (* -------------------------------------------------------------------- *)
 Section MWeight.
@@ -1087,7 +1078,8 @@ End MWeight.
 #[hnf] HB.instance Definition _ n := isMeasure.Build n mnmwgt mnmwgt0 mnmwgtD.
 
 (* -------------------------------------------------------------------- *)
-Notation mweight p := (@mmeasure _ _ [measure of mnmwgt] p).
+(* FIXME: removing Measure.clone below breaks the proof of mweight_XLS *)
+Notation mweight p := (@mmeasure _ _ (Measure.clone _ mnmwgt _) p).
 
 Section MSize.
 Context (n : nat) (R : ringType).
@@ -1096,7 +1088,7 @@ Implicit Types (m : 'X_{1..n}) (p : {mpoly R[n]}).
 Lemma msizeE p : msize p = (\max_(m <- msupp p) (mdeg m).+1)%N.
 Proof. exact/mmeasureE. Qed.
 
-Definition msize0 := mmeasure0 R [measure of @mdeg n].
+Definition msize0 := mmeasure0 R (@mdeg n).
 
 Lemma msize_mdeg_lt p m : m \in msupp p -> mdeg m < msize p.
 Proof. exact/mmeasure_mnm_lt. Qed.
@@ -1161,13 +1153,13 @@ Qed.
 End MMeasureZMod.
 
 (* -------------------------------------------------------------------- *)
-Definition msizeC    n R := @mmeasureC n R [measure of mdeg].
-Definition msizeD_le n R := @mmeasureD_le n R [measure of mdeg].
-Definition msize_sum n R := @mmeasure_sum n R [measure of mdeg].
-Definition msizeN    n R := @mmeasureN n R [measure of mdeg].
+Definition msizeC    n R := @mmeasureC n R mdeg.
+Definition msizeD_le n R := @mmeasureD_le n R mdeg.
+Definition msize_sum n R := @mmeasure_sum n R mdeg.
+Definition msizeN    n R := @mmeasureN n R mdeg.
 
-Definition msize_poly_eq0 n R := @mmeasure_poly_eq0 n R [measure of mdeg].
-Definition msize_msupp0   n R := @mmeasure_msupp0 n R [measure of mdeg].
+Definition msize_poly_eq0 n R := @mmeasure_poly_eq0 n R mdeg.
+Definition msize_msupp0   n R := @mmeasure_msupp0 n R mdeg.
 
 (* -------------------------------------------------------------------- *)
 Definition polyn (R : ringType) :=
@@ -1298,9 +1290,8 @@ Local Notation "p *M_[ m ] q" :=
   << (p@_m.1)%MM * (q@_m.2)%MM *g (m.1 + m.2)%MM >>
   (at level 40, no associativity, format "p  *M_[ m ]  q").
 
-Definition mpoly_mul p q : {mpoly R[n]} := [mpoly
-  \sum_(m <- msupp p @@ msupp q) (p *M_[m] q)
-].
+Definition mpoly_mul p q : {mpoly R[n]} :=
+  [mpoly \sum_(m <- msupp p @@ msupp q) p *M_[m] q].
 
 Local Notation "p *M q" := (mpoly_mul p q)
   (at level 40, left associativity, format "p  *M  q").
@@ -1314,7 +1305,7 @@ Lemma mul_poly1_eq0R p q (m : 'X_{1..n} * 'X_{1..n}) :
 Proof. by move/memN_msupp_eq0=> ->; rewrite mulr0 freegU0. Qed.
 
 Lemma mpoly_mulwE p q kp kq : msize p <= kp -> msize q <= kq ->
-  p *M q = [mpoly \sum_(m : 'X_{1..n < kp, kq}) (p *M_[m] q)].
+  p *M q = [mpoly \sum_(m : 'X_{1..n < kp, kq}) p *M_[m] q].
 Proof.
 pose Ip : subFinType _ := 'X_{1..n < kp}.
 pose Iq : subFinType _ := 'X_{1..n < kq}.
@@ -1335,7 +1326,7 @@ Qed.
 Arguments mpoly_mulwE [p q].
 
 Lemma mpoly_mul_revwE p q kp kq : msize p <= kp -> msize q <= kq ->
-  p *M q = [mpoly \sum_(m : 'X_{1..n < kq, kp}) (p *M_[(m.2, m.1)] q)].
+  p *M q = [mpoly \sum_(m : 'X_{1..n < kq, kp}) p *M_[(m.2, m.1)] q].
 Proof.
 by move=> lep leq; rewrite big_pairA exchange_big pair_bigA -mpoly_mulwE.
 Qed.
@@ -1344,8 +1335,7 @@ Arguments mpoly_mul_revwE [p q].
 
 Lemma mcoeff_poly_mul p q m k : !|m| < k ->
   (p *M q)@_m =
-    \sum_(k : 'X_{1..n < k, k} | m == (k.1 + k.2)%MM)
-      (p@_k.1 * q@_k.2).
+    \sum_(k : 'X_{1..n < k, k} | m == (k.1 + k.2)%MM) p@_k.1 * q@_k.2.
 Proof.
 pose_big_enough i; first rewrite (mpoly_mulwE i i) // => lt_mk.
   rewrite mcoeff_MPoly raddf_sum /=; have lt_mi: k < i by [].
@@ -1374,7 +1364,7 @@ Qed.
 
 Lemma mcoeff_poly_mul_rev p q m k : !|m| < k ->
   (p *M q)@_m =
-    \sum_(k : 'X_{1..n < k, k} | m == (k.1 + k.2)%MM) (p@_k.2 * q@_k.1).
+    \sum_(k : 'X_{1..n < k, k} | m == (k.1 + k.2)%MM) p@_k.2 * q@_k.1.
 Proof.
 move=> /mcoeff_poly_mul ->; rewrite big_cond_mulrn.
 rewrite big_pairA /= exchange_big pair_bigA /=.
@@ -3841,8 +3831,7 @@ have h: E = [set i : {set 'I_n} | #|i| == k].
     * by apply/setP=> i; rewrite !(inE, memtE) tval_tcast mem_enum.
 rewrite -h {h}/E big_imset 1?big_set /=; last first.
   move=> t1 t2; rewrite !inE => tmono_t1 tmono_t2 /setP eq.
-  apply/eqP; rewrite eqE /=; apply/eqP/eq_tmono => // i.
-  by move/(_ i): eq; rewrite /t2s !inE.
+  by apply/val_inj/eq_tmono => // i; move: (eq i); rewrite !inE.
 apply/eq_big=> // i; rewrite inE 1?big_set /=.
 case: i => i sz_i /= tmono_i; rewrite (eq_bigl (mem i)) //=.
 by rewrite !mprodXE big_uniq //; apply/uniq_tmono.
@@ -4671,14 +4660,13 @@ Notation "[ 'in' R [ n ] , d .-homog 'for' mf ]" := (@ishomog1 n R d mf)
   (at level 0, R, n at level 2, d at level 0,
      format "[ 'in'  R [ n ] , d .-homog  'for'  mf ]") : form_scope.
 
-Notation "[ 'in' R [ n ] , d .-homog ]" :=
-  [in R[n], d.-homog for [measure of mdeg]]
+Notation "[ 'in' R [ n ] , d .-homog ]" := [in R[n], d.-homog for mdeg]
   (at level 0, R, n at level 2, d at level 0) : form_scope.
 
 Notation "d .-homog 'for' mf" := (@ishomog1 _ _ d mf)
   (at level 1, format "d .-homog  'for'  mf") : form_scope.
 
-Notation "d .-homog" := (d .-homog for [measure of mdeg])
+Notation "d .-homog" := (d .-homog for mdeg)
   (at level 1, format "d .-homog") : form_scope.
 
 Notation "'homog' mf" := (@ishomog _ _ mf)
@@ -4820,7 +4808,7 @@ HB.instance Definition _ :=
 End MPolyHomogType.
 
 Lemma dhomog_is_dhomog n (R : ringType) d (p : dhomog n R d) :
-  (val p) \is [in R[n], d.-homog for [measure of mdeg]].
+  val p \is d.-homog.
 Proof. by case: p. Qed.
 
 #[global] Hint Extern 0 (is_true (_ \is _.-homog)) =>
@@ -4930,7 +4918,7 @@ Qed.
 (* -------------------------------------------------------------------- *)
 Context (n : nat) (R : ringType) (d : nat).
 
-Lemma dhomog_vecaxiom: Vector.axiom 'C(d + n, d) (Phant (dhomog n.+1 R d)).
+Lemma dhomog_vecaxiom: vector_axiom 'C(d + n, d) (dhomog n.+1 R d).
 Proof.
 pose b := sbasis n.+1 d.
 pose t := [tuple of nseq d (0 : 'I_n.+1)].
@@ -4969,7 +4957,7 @@ case: (mdeg m =P d)=> /eqP; rewrite basis_cover -/b.
   rewrite mcoeffZ mcoeffX eqxx mulr1 big1 ?addr0 // => m' ne.
   by rewrite mcoeffZ mcoeffX (negbTE ne) mulr0.
 move=> m_notin_b; rewrite big_seq big1 /=.
-  apply/esym/(@dhomog_nemf_coeff _ _ [measure of mdeg] d).
+  apply/esym/(@dhomog_nemf_coeff _ _ mdeg d).
     exact/dhomog_is_dhomog. by rewrite basis_cover.
 move=> m'; apply/contraTeq; rewrite mcoeffZ mcoeffX.
 by case: (m' =P m)=> [->|_]; last rewrite mulr0 eqxx.
@@ -4986,8 +4974,7 @@ Context (n : nat) (R : comRingType).
 Implicit Types (p q r : {mpoly R[n]}).
 
 Lemma msym_pihomog d p (s : 'S_n) :
-  msym s (pihomog [measure of mdeg] d p) =
-    pihomog [measure of mdeg] d (msym s p).
+  msym s (pihomog mdeg d p) = pihomog mdeg d (msym s p).
 Proof.
 rewrite (mpolyE p) ![_ (\sum_(m <- msupp p) _)]linear_sum /=.
 rewrite [msym s _]linear_sum linear_sum /=.
@@ -4998,8 +4985,7 @@ have -> : mdeg [multinom m ((s^-1)%g i) | i < n] = mdeg m.
 by case: (mdeg m == d); rewrite ?msym0 ?msymX.
 Qed.
 
-Lemma pihomog_sym d p :
-  p \is symmetric -> pihomog [measure of mdeg] d p \is symmetric.
+Lemma pihomog_sym d p : p \is symmetric -> pihomog mdeg d p \is symmetric.
 Proof. by move=> /issymP Hp; apply/issymP => s; rewrite msym_pihomog Hp. Qed.
 
 End MSymHomog.
@@ -5030,9 +5016,7 @@ apply/dhomog_prod => i; rewrite !tnth_mktuple => {mt dt}.
 exact/dhomogMn/dhomog_mesym.
 Qed.
 
-Lemma pihomog_mPo p d :
-    pihomog [measure of mdeg] d (p \mPo S)
- = (pihomog [measure of mnmwgt] d p) \mPo S.
+Lemma pihomog_mPo p d : pihomog mdeg d (p \mPo S) = pihomog mnmwgt d p \mPo S.
 Proof.
 elim/mpolyind: p; first by rewrite !linear0.
 move=> c m p msupp cn0 ihp; rewrite !linearP /= {}ihp.
@@ -5044,17 +5028,17 @@ by rewrite (pihomog_ne0 wgtm) ?linear0 // dhomogX.
 Qed.
 
 Lemma mwmwgt_homogE (p : {mpoly R[n]}) d :
-  (p \is d.-homog for [measure of mnmwgt]) = (p \mPo S \is d.-homog).
+  (p \is d.-homog for mnmwgt) = (p \mPo S \is d.-homog).
 Proof.
 by rewrite !homog_piE pihomog_mPo; apply/eqP/eqP=> [->|/msym_fundamental_un ->].
 Qed.
 
 Lemma sym_fundamental_homog (p : {mpoly R[n]}) (d : nat) :
   p \is symmetric -> p \is d.-homog ->
-  { t | t \mPo S = p /\ t \is d.-homog for [measure of mnmwgt] }.
+  { t | t \mPo S = p /\ t \is d.-homog for mnmwgt }.
 Proof.
 move/sym_fundamental => [t [tSp _]] homp.
-exists (pihomog [measure of mnmwgt] d t); split.
+exists (pihomog mnmwgt d t); split.
 + by rewrite -pihomog_mPo tSp pihomog_dE.
 + exact: pihomogP.
 Qed.

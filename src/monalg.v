@@ -18,10 +18,6 @@ Unset Printing Implicit Defensive.
 
 Import GRing.Theory Num.Theory BigEnoughFSet.
 
-(* temporary fix for mathcomp 1.8.0 *)
-Notation "{ 'pred' T }" := (pred_sort (predPredType T)) (at level 0,
-  format "{ 'pred'  T }") : type_scope.
-
 Local Open Scope fset.
 Local Open Scope fmap.
 Local Open Scope ring_scope.
@@ -62,6 +58,10 @@ Reserved Notation "'U_(' n )"
   (at level 0, n at level 2, no associativity, format "'U_(' n )").
 Reserved Notation "x ^[ f , g ]"
   (at level 2, left associativity, format "x ^[ f , g ]").
+
+Reserved Notation "'{' 'mmorphism' M '->' S '}'"
+  (at level 0, M at level 98, S at level 99,
+   format "{ 'mmorphism'  M  ->  S }").
 
 (* -------------------------------------------------------------------- *)
 HB.mixin Record Choice_isMonomialDef V of Choice V := {
@@ -140,16 +140,13 @@ HB.structure Definition MMorphism (M : monomType) (S : ringType) :=
   {f of isMultiplicative M S f}.
 
 Module MMorphismExports.
-Module MMorphism.
-Definition map (M : monomType) (S : ringType) (phR : phant (M -> S)) :=
-  MMorphism.type M S.
-End MMorphism.
-Notation "{ 'mmorphism' fR }" := (MMorphism.map (Phant fR))
-  (at level 0, format "{ 'mmorphism'  fR }") : ring_scope.
+Notation "{ 'mmorphism' M -> S }" := (@MMorphism.type M S) : type_scope.
+#[deprecated(since="multinomials 2.2.0", note="Use MMorphism.clone instead.")]
 Notation "[ 'mmorphism' 'of' f 'as' g ]" := (MMorphism.clone _ _ f g)
-  (at level 0, format "[ 'mmorphism'  'of'  f  'as'  g ]") : form_scope.
+  (at level 0, only parsing) : form_scope.
+#[deprecated(since="multinomials 2.2.0", note="Use MMorphism.clone instead.")]
 Notation "[ 'mmorphism' 'of' f ]" := (MMorphism.clone _ _ f _)
-  (at level 0, format "[ 'mmorphism'  'of'  f ]") : form_scope.
+  (at level 0, only parsing) : form_scope.
 End MMorphismExports.
 Export MMorphismExports.
 
@@ -170,64 +167,56 @@ Variable (K : choiceType) (G : zmodType).
 
 Record malg : predArgType := Malg { malg_val : {fsfun K -> G with 0} }.
 
-Definition malg_of (_ : phant K) (_ : phant G) := malg.
-
 Fact malg_key : unit. Proof. by []. Qed.
 
 Definition malg_of_fsfun   k := locked_with k Malg.
 Canonical  malg_unlockable k := [unlockable fun malg_of_fsfun k].
+
+HB.instance Definition _ := [isNew for @malg_val].
+HB.instance Definition _ := [Choice of malg by <:].
+
 End MalgDef.
 
 (* -------------------------------------------------------------------- *)
 Bind Scope ring_scope with malg.
-Bind Scope ring_scope with malg_of.
 
-Notation "{ 'malg' G [ K ] }" :=
-  (@malg_of _ _ (Phant K) (Phant G)) : type_scope.
-Notation "{ 'malg' K }" :=
-  {malg int[K]} : type_scope.
+Notation "{ 'malg' G [ K ] }" := (@malg K G) : type_scope.
+Notation "{ 'malg' K }" := {malg int[K]} : type_scope.
 
 (* -------------------------------------------------------------------- *)
-Section MalgCanonicals.
-Variable (K : choiceType) (G : zmodType).
+Section MalgBaseOp.
 
-HB.instance Definition _ := [isNew for @malg_val K G].
-HB.instance Definition _ := [Choice of malg K G by <:].
-HB.instance Definition _ := SubChoice.on {malg G[K]}.
-End MalgCanonicals.
+Context {K : choiceType} {G : zmodType}.
 
-(* -------------------------------------------------------------------- *)
-Section MkMalg.
-Variable (K : choiceType) (G : zmodType).
+Definition mcoeff (x : K) (g : {malg G[K]}) : G := malg_val g x.
 
 Definition mkmalg : {fsfun K -> G with 0} -> {malg G[K]} := @Malg K G.
 
 Definition mkmalgU (k : K) (x : G) := mkmalg [fsfun y => [fmap].[k <- x] y].
-End MkMalg.
 
-Notation malgC := (@mkmalgU _ _ 1%M).
-Notation "@ 'malgC' K G" := (@mkmalgU K G 1%M)
-  (at level 10, K at level 8, G at level 8, only parsing) : fun_scope.
+Definition msupp (g : {malg G[K]}) : {fset K} := finsupp (malg_val g).
+
+End MalgBaseOp.
+
+Arguments mcoeff  {K G} x%monom_scope g%ring_scope.
+Arguments mkmalg  {K G} _.
+Arguments mkmalgU {K G} k%monom_scope x%ring_scope.
+Arguments msupp   {K G} g%ring_scope.
 
 (* -------------------------------------------------------------------- *)
+Notation "g @_ k" := (mcoeff k g).
+
 Notation "[ 'malg' g ]" := (mkmalg g) : ring_scope.
 Notation "[ 'malg' x 'in' aT => E ]" :=
   (mkmalg [fsfun x in aT => E]) : ring_scope.
 Notation "[ 'malg' x => E ]" := (mkmalg [fsfun x => E]) : ring_scope.
 Notation "<< z *g k >>" := (mkmalgU k z) : ring_scope.
 Notation "<< k >>" := << 1 *g k >> : ring_scope.
+
+Notation malgC := (mkmalgU 1).
+Notation "@ 'malgC' K G" := (@mkmalgU K G 1)
+  (at level 10, K at level 8, G at level 8, only parsing) : fun_scope.
 Notation "c %:MP" := (malgC c) : ring_scope.
-
-(* -------------------------------------------------------------------- *)
-Section MalgBaseOp.
-Variable (K : choiceType) (G : zmodType).
-
-Definition msupp (g : {malg G[K]}) : {fset K} := finsupp (malg_val g).
-
-Definition mcoeff (x : K) (g : {malg G[K]}) : G := malg_val g x.
-End MalgBaseOp.
-
-Notation "g @_ k" := (mcoeff k g).
 
 (* -------------------------------------------------------------------- *)
 Section MalgTheory.
@@ -236,11 +225,9 @@ Variable (K : choiceType) (G : zmodType).
 Lemma mkmalgK (g : {fsfun K -> G with 0}) : malg_val (mkmalg g) = g.
 Proof. by []. Qed.
 
-Lemma malgP (g1 g2 : {malg G[K]}) :
-  reflect (forall k, g1@_k = g2@_k) (g1 == g2).
+Lemma malgP (g1 g2 : {malg G[K]}) : (forall k, g1@_k = g2@_k) <-> g1 = g2.
 Proof.
-apply: (iffP eqP) => [->//|]; case: g1 g2 => [g1] [g2] h.
-by congr Malg; apply/fsfunP/h.
+by case: g1 g2 => [g1] [g2]; split=> [h|->//]; congr Malg; apply/fsfunP/h.
 Qed.
 
 Lemma mcoeff_fnd (g : {fmap K -> G}) k : [malg x => g x]@_k = odflt 0 g.[?k].
@@ -264,7 +251,7 @@ Variant msupp_spec (g : {malg G[K]}) (k : K) : bool -> G -> Type :=
 | MsuppOut (_ : k \notin msupp g) : msupp_spec g k false 0.
 
 Lemma msuppP (g : {malg G[K]}) (k : K) : msupp_spec g k (k \in msupp g) g@_k.
-Proof. by rewrite /mcoeff /msupp; case: finsuppP => h; constructor. Qed.
+Proof. by rewrite /mcoeff; case: finsuppP => h; constructor. Qed.
 End MalgTheory.
 
 (* -------------------------------------------------------------------- *)
@@ -272,9 +259,6 @@ Section MalgZMod.
 Variable (K : choiceType) (G : zmodType).
 
 Implicit Types (g : {malg G[K]}) (k : K).
-
-Let EN g     k := - g@_k.
-Let ED g1 g2 k := g1@_k + g2@_k.
 
 Definition fgzero : {malg G[K]} := [malg x => [fmap] x].
 Definition fgopp g := [malg k in msupp g => - g@_k].
@@ -284,30 +268,28 @@ Lemma fgzeroE k : fgzero@_k = 0.
 Proof. by rewrite mcoeff_fnd !(in_fsetE, not_fnd). Qed.
 
 Lemma fgoppE g k : (fgopp g)@_k = - g@_k.
-Proof. by rewrite (mcoeffE _ (EN g)); case: msuppP; rewrite ?oppr0. Qed.
+Proof. by rewrite mcoeffE; case: msuppP; rewrite ?oppr0. Qed.
 
 Lemma fgaddE g1 g2 k : (fgadd g1 g2)@_k = g1@_k + g2@_k.
 Proof.
-rewrite (mcoeffE _ (ED g1 g2)); rewrite in_fsetE /ED.
-by case: (msuppP g1); case: (msuppP g2); rewrite ?(add0r, addr0).
+rewrite mcoeffE in_fsetE.
+by case: (msuppP g1); case: (msuppP g2); rewrite ?addr0.
 Qed.
 
-Let fgE := (fgzeroE, fgoppE, fgaddE).
-
 Lemma fgaddA : associative fgadd.
-Proof. by move=> x y z; apply/eqP/malgP=> k; rewrite !fgE addrA. Qed.
+Proof. by move=> x y z; apply/malgP=> k; rewrite !fgaddE addrA. Qed.
 
 Lemma fgaddC : commutative fgadd.
-Proof. by move=> x y; apply/eqP/malgP=> k; rewrite !fgaddE addrC. Qed.
+Proof. by move=> x y; apply/malgP=> k; rewrite !fgaddE addrC. Qed.
 
 Lemma fgadd0g : left_id fgzero fgadd.
-Proof. by move=> x; apply/eqP/malgP=> k; rewrite !fgE add0r. Qed.
+Proof. by move=> x; apply/malgP=> k; rewrite fgaddE fgzeroE add0r. Qed.
 
 Lemma fgaddg0 : right_id fgzero fgadd.
 Proof. by move=> x; rewrite fgaddC fgadd0g. Qed.
 
 Lemma fgaddNg : left_inverse fgzero fgopp fgadd.
-Proof. by move=> x; apply/eqP/malgP=> k; rewrite !fgE addNr. Qed.
+Proof. by move=> x; apply/malgP=> k; rewrite !fgaddE fgzeroE fgoppE addNr. Qed.
 
 Lemma fgaddgN : right_inverse fgzero fgopp fgadd.
 Proof. by move=> x; rewrite fgaddC fgaddNg. Qed.
@@ -363,13 +345,12 @@ Qed.
 
 Lemma msuppU k x : msupp << x *g k >> = if x == 0 then fset0 else [fset k].
 Proof.
-apply/fsetP=> k'; rewrite -mcoeff_neq0 mcoeffU 2!fun_if in_fset0 in_fset1.
-have [->|nz_x] := eqVneq x 0; first by rewrite mul0rn eqxx.
-by case: (eqVneq k k'); rewrite //= eqxx.
+apply/fsetP=> k'; rewrite -mcoeff_neq0 mcoeffU 2!fun_if !inE.
+by have [//|_] := eqVneq k k'; rewrite eqxx if_same.
 Qed.
 
 Lemma msuppU_le {k x} : msupp << x *g k >> `<=` [fset k].
-Proof. by rewrite msuppU; case: eqP=> _; rewrite (fsub0set, fsubset_refl). Qed.
+Proof. by rewrite msuppU; case: eqP. Qed.
 
 Lemma msuppN g : msupp (-g) = msupp g.
 Proof. by apply/fsetP=> k; rewrite -!mcoeff_neq0 mcoeffN oppr_eq0. Qed.
@@ -387,9 +368,9 @@ Lemma msuppD g1 g2 : [disjoint msupp g1 & msupp g2] ->
   msupp (g1 + g2) = msupp g1 `|` msupp g2.
 Proof.
 move=> dj_g1g2; apply/fsetP=> k; move/fdisjointP/(_ k): dj_g1g2.
-rewrite in_fsetU -!mcoeff_neq0 mcoeffD.
+rewrite in_fsetU -!mcoeff_neq0 mcoeffD negbK.
 have [->|] //= := eqVneq (g1@_k) 0; first by rewrite add0r.
-by rewrite negbK => + /(_ isT) /eqP ->; rewrite addr0.
+by move=> + /(_ isT) /eqP ->; rewrite addr0.
 Qed.
 
 Lemma msuppB g1 g2 : [disjoint msupp g1 & msupp g2] ->
@@ -398,9 +379,8 @@ Proof. by move=> dj_g1g2; rewrite msuppD msuppN. Qed.
 
 Lemma msuppMn_le g n : msupp (g *+ n) `<=` msupp g.
 Proof.
-elim: n => [|n ih]; first by rewrite mulr0n msupp0 fsub0set.
-rewrite mulrS (fsubset_trans (msuppD_le _ _)) //.
-by rewrite fsubUset fsubset_refl.
+apply/fsubsetP=> k; rewrite -!mcoeff_neq0 mcoeffMn.
+by apply/contra_neq => ->; rewrite mul0rn.
 Qed.
 
 Lemma msuppMNm_le g n : msupp (g *- n) `<=` msupp g.
@@ -408,7 +388,7 @@ Proof. by rewrite msuppN msuppMn_le. Qed.
 
 (* -------------------------------------------------------------------- *)
 Lemma monalgU_is_additive k : additive (mkmalgU k).
-Proof. by move=> x1 x2 /=; apply/eqP/malgP=> k'; rewrite !mcoeffsE mulrnBl. Qed.
+Proof. by move=> x1 x2 /=; apply/malgP=> k'; rewrite !mcoeffsE mulrnBl. Qed.
 
 HB.instance Definition _ k := GRing.isAdditive.Build G {malg G[K]} (mkmalgU k)
   (monalgU_is_additive k).
@@ -433,17 +413,15 @@ Definition monalgUE :=
 Lemma monalgEw (g : {malg G[K]}) (domg : {fset K}) : msupp g `<=` domg ->
   g = \sum_(k <- domg) << g@_k *g k >>.
 Proof.
-move/fsubsetP=> le_gd; apply/eqP/malgP=> k /=; case: msuppP=> [kg|k_notin_g].
-  rewrite raddf_sum /= (big_fsetD1 k) //=; last exact: le_gd.
-  rewrite mcoeffUU ?addr0 // big1_fset ?addr0 // => k'.
-  rewrite in_fsetD1 => /andP [/negbTE k_ne_k' _ _].
-  by rewrite mcoeffU k_ne_k'.
+move/fsubsetP=> le_gd; apply/malgP=> k; have [/le_gd kg|k_notin_g] := msuppP.
+  rewrite raddf_sum (big_fsetD1 k) //= mcoeffUU big1_fset ?addr0 // => k'.
+  by rewrite in_fsetD1 mcoeffU; case: eqP.
 rewrite raddf_sum /= big1_fset // => k' _ _.
-by rewrite mcoeffU; case: eqP k_notin_g=> // <- /mcoeff_outdom ->.
+by rewrite mcoeffU; case: eqP k_notin_g => // <- /mcoeff_outdom ->.
 Qed.
 
 Lemma monalgE (g : {malg G[K]}) : g = \sum_(k <- msupp g) << g@_k *g k >>.
-Proof. exact/monalgEw/fsubset_refl. Qed.
+Proof. exact/monalgEw. Qed.
 End MAlgZModTheory.
 
 (* -------------------------------------------------------------------- *)
@@ -468,19 +446,18 @@ Lemma msuppC0 : msupp (0 : G)%:MP = fset0 :> {fset K}.
 Proof. by rewrite msuppC eqxx. Qed.
 
 Lemma malgC0E : 0%:MP = 0 :> {malg G[K]}.
-Proof. by apply/eqP/malgP=> k; rewrite mcoeffC0 mcoeff0. Qed.
+Proof. by apply/malgP=> k; rewrite mcoeffC0 mcoeff0. Qed.
 
 Lemma malgCK : cancel malgC (@mcoeff K G 1%M).
 Proof. by move=> c; rewrite mcoeffC eqxx mulr1n. Qed.
 
 Lemma malgC_eq (c1 c2 : G) : (c1%:MP == c2%:MP :> {malg G[K]}) = (c1 == c2).
-Proof. by apply/eqP/eqP=> [|->//] /eqP/malgP/(_ 1%M); rewrite !mcoeffU eqxx. Qed.
+Proof. by apply/eqP/eqP=> [|->//] /malgP/(_ 1%M); rewrite !mcoeffU eqxx. Qed.
 
 Lemma msupp_eq0 (g : {malg G[K]}) : (msupp g == fset0) = (g == 0).
 Proof.
-apply/eqP/eqP=> [/fsetP z_g|->]; rewrite ?msupp0 //.
-apply/eqP/malgP=> i; rewrite mcoeff0; case: msuppP=> //.
-by rewrite z_g in_fset0.
+apply/eqP/eqP=> [/fsetP z_g|->]; last exact: msupp0.
+by apply/malgP=> i; rewrite mcoeff0 mcoeff_outdom // z_g.
 Qed.
 End MalgMonomTheory.
 
@@ -499,16 +476,16 @@ by apply/eq_bigr=> /= i _; rewrite !mcoeffU mulrnAr.
 Qed.
 
 Lemma fgscaleA c1 c2 g : c1 *:g (c2 *:g g) = (c1 * c2) *:g g.
-Proof. by apply/eqP/malgP=> x; rewrite !fgscaleE mulrA. Qed.
+Proof. by apply/malgP=> x; rewrite !fgscaleE mulrA. Qed.
 
 Lemma fgscale1r D: 1 *:g D = D.
-Proof. by apply/eqP/malgP=> k; rewrite !fgscaleE mul1r. Qed.
+Proof. by apply/malgP=> k; rewrite !fgscaleE mul1r. Qed.
 
 Lemma fgscaleDr c g1 g2 : c *:g (g1 + g2) = c *:g g1 + c *:g g2.
-Proof. by apply/eqP/malgP=> k; rewrite !(mcoeffD, fgscaleE) mulrDr. Qed.
+Proof. by apply/malgP=> k; rewrite !(mcoeffD, fgscaleE) mulrDr. Qed.
 
 Lemma fgscaleDl g c1 c2: (c1 + c2) *:g g = c1 *:g g + c2 *:g g.
-Proof. by apply/eqP/malgP=> x; rewrite !(mcoeffD, fgscaleE) mulrDl. Qed.
+Proof. by apply/malgP=> x; rewrite !(mcoeffD, fgscaleE) mulrDl. Qed.
 
 HB.instance Definition _ := GRing.Zmodule_isLmodule.Build R (malg K R)
   fgscaleA fgscale1r fgscaleDr fgscaleDl.
@@ -566,12 +543,6 @@ Context (K : monomType) (R : ringType).
 
 Implicit Types (g : {malg R[K]}) (k l : K).
 
-Lemma mcoeffU1 k k' : (<< k >> : {malg R[K]})@_k' = (k == k')%:R.
-Proof. by rewrite mcoeffU. Qed.
-
-Lemma msuppU1 k : @msupp _ R << k >> = [fset k].
-Proof. by rewrite msuppU oner_eq0. Qed.
-
 Definition fgone : {malg R[K]} := << 1%M >>.
 
 Local Notation "g1 *M_[ k1 , k2 ] g2" :=
@@ -597,24 +568,16 @@ Lemma fgmulr g1 g2 :
   fgmul g1 g2 = \sum_(k2 <- msupp g2) \sum_(k1 <- msupp g1) g1 *M_[k1, k2] g2.
 Proof. by rewrite fgmull exchange_big. Qed.
 
-Let fg1mulzg g1 g2 k1 k2 : k1 \notin msupp g1 ->
-  << g1@_k1 * g2@_k2 *g (k1 * k2)%M >> = 0.
-Proof. by move/mcoeff_outdom=> ->; rewrite mul0r monalgU0. Qed.
-
-Let fg1mulgz g1 g2 k1 k2 : k2 \notin msupp g2 ->
-  << g1@_k1 * g2@_k2 *g (k1 * k2)%M >> = 0.
-Proof. by move/mcoeff_outdom=> ->; rewrite mulr0 monalgU0. Qed.
-
 (* big_fset_incl has (op : com_law idx) as first non automatic argument *)
 Lemma fgmullw (d1 d2 : {fset K}) g1 g2 :
   msupp g1 `<=` d1 -> msupp g2 `<=` d2 ->
   fgmul g1 g2 = \sum_(k1 <- d1) \sum_(k2 <- d2) g1 *M_[k1, k2] g2.
 Proof.
-move=> le_d1 le_d2; pose F k1 := g1 *Mg_[k1] g2.
-rewrite fgmull (big_fset_incl _ le_d1) {}/F /=; last first.
-  by move=> k _ /fg1mulzg ?; rewrite big1.
-apply/eq_bigr=> k1 _; rewrite (big_fset_incl _ le_d2) //.
-by move=> x _ /fg1mulgz.
+move=> le_d1 le_d2; rewrite fgmull (big_fset_incl _ le_d1) /=.
+  apply/eq_bigr=> k1 _; apply/big_fset_incl => // k _ /mcoeff_outdom ->.
+  by rewrite mulr0 monalgU0.
+move=> k _ /mcoeff_outdom g1k.
+by rewrite big1 => // k' _; rewrite g1k mul0r monalgU0.
 Qed.
 
 Lemma fgmulrw (d1 d2 : {fset K}) g1 g2 : msupp g1 `<=` d1 -> msupp g2 `<=` d2
@@ -627,145 +590,88 @@ Definition fgmullwl (d1 : {fset K}) {g1 g2} (le : msupp g1 `<=` d1) :=
 Definition fgmulrwl (d2 : {fset K}) {g1 g2} (le : msupp g2 `<=` d2) :=
   @fgmulrw _ _ g1 g2 (fsubset_refl _) le.
 
-Lemma fgmulElw (d1 d2 : {fset K}) g1 g2 k :
-    msupp g1 `<=` d1 -> msupp g2 `<=` d2
-  -> (fgmul g1 g2)@_k = \sum_(k1 <- d1) \sum_(k2 <- d2)
-        (g1@_k1 * g2@_k2) *+ ((k1 * k2)%M == k).
+Lemma fgmul0g : left_zero 0 fgmul.
+Proof. by move=> g; rewrite fgmull msupp0 big_seq_fset0. Qed.
+
+Lemma fgmulg0 : right_zero 0 fgmul.
+Proof. by move=> g; rewrite fgmulr msupp0 big_seq_fset0. Qed.
+
+Lemma fgmulUg c k g :
+  fgmul << c *g k >> g = \sum_(k' <- msupp g) << c * g@_k' *g k * k' >>.
 Proof.
-move=> le1 le2; rewrite (fgmullw le1 le2) raddf_sum /=.
-apply/eq_bigr=> k1 _; rewrite raddf_sum /=; apply/eq_bigr=> k2 _.
-by rewrite mcoeffsE.
+rewrite (fgmullw msuppU_le (fsubset_refl _)) big_seq_fset1.
+by apply/eq_bigr => k' _; rewrite mcoeffUU.
 Qed.
 
-Lemma fgmulErw (d1 d2 : {fset K}) g1 g2 k : msupp g1 `<=` d1 -> msupp g2 `<=` d2
-  -> (fgmul g1 g2)@_k = \sum_(k2 <- d2) \sum_(k1 <- d1)
-        (g1@_k1 * g2@_k2) *+ ((k1 * k2)%M == k).
-Proof. by move=> le1 le2; rewrite (fgmulElw _ le1 le2); rewrite exchange_big. Qed.
-
-Lemma fgmul0g g : fgmul 0 g = 0.
-Proof. by rewrite fgmull msupp0 big_seq_fset0. Qed.
-
-Lemma fgmulg0 g : fgmul g 0 = 0.
-Proof. by rewrite fgmulr msupp0 big_seq_fset0. Qed.
-
-Lemma fgmulUg (d : {fset K}) c k g : msupp g `<=` d ->
- fgmul << c *g k >> g = \sum_(k' <- d) << c * g@_k' *g (k * k')%M >>.
+Lemma fgmulgU c k g :
+  fgmul g << c *g k >> = \sum_(k' <- msupp g) << g@_k' * c *g k' * k >>.
 Proof.
-move=> le; rewrite (fgmullw msuppU_le le) big_seq_fset1 /=.
-by apply/eq_bigr=> /= k' _; rewrite mcoeffUU.
-Qed.
-
-Lemma fgmulgU (d : {fset K}) c k g : msupp g `<=` d ->
- fgmul g << c *g k >> = \sum_(k' <- d) << g@_k' * c *g (k' * k)%M >>.
-Proof.
-move=> le; rewrite (fgmulrw le msuppU_le) big_seq_fset1 /=.
-by apply/eq_bigr=> /= k' _; rewrite mcoeffUU.
+rewrite (fgmulrw (fsubset_refl _) msuppU_le) big_seq_fset1.
+by apply/eq_bigr=> k' _; rewrite mcoeffUU.
 Qed.
 
 Lemma fgmulUU c1 c2 k1 k2 :
-  fgmul << c1 *g k1 >> << c2 *g k2 >> = << c1 * c2 *g (k1 * k2)%M >>.
-Proof. by rewrite (fgmullw msuppU_le msuppU_le) !big_seq_fset1 /= !mcoeffUU. Qed.
+  fgmul << c1 *g k1 >> << c2 *g k2 >> = << c1 * c2 *g k1 * k2 >>.
+Proof. by rewrite (fgmulrw msuppU_le msuppU_le) !big_seq_fset1 !mcoeffUU. Qed.
 
-Lemma fgmulEl1w (d1 : {fset K}) {g1 g2}  :
-  msupp g1 `<=` d1 -> fgmul g1 g2 = \sum_(k1 <- d1) fgmul << g1@_k1 *g k1 >> g2.
-Proof.
-move=> le; rewrite (fgmullwl le); apply/eq_bigr=> /= k _.
-by rewrite -fgmulUg // fsubset_refl.
-Qed.
+Lemma fgmulEl1 g1 g2 :
+  fgmul g1 g2 = \sum_(k1 <- msupp g1) fgmul << g1@_k1 *g k1 >> g2.
+Proof. by apply/eq_bigr=> k _; rewrite fgmulUg. Qed.
 
-Lemma fgmulEr1w (d2 : {fset K}) {g1 g2} :
-  msupp g2 `<=` d2 -> fgmul g1 g2 = \sum_(k2 <- d2) fgmul g1 << g2@_k2 *g k2 >>.
-Proof.
-move=> le; rewrite (fgmulrwl le); apply/eq_bigr=> /= k _.
-by rewrite -fgmulgU // fsubset_refl.
-Qed.
-
-Lemma fgmullUg_is_additive c k : additive (fgmul << c *g k >>).
-Proof.
-move=> g1 g2 /=; pose_big_fset K E; rewrite 3?(@fgmulUg E) //.
-  rewrite -sumrB; apply/eq_bigr=> /= k' _.
-  by rewrite mcoeffB -monalgUB mulrBr.
-by close.
-Qed.
-
-Lemma fgmullgU_is_additive c k : additive (fgmul^~ << c *g k >>).
-Proof.
-move=> g1 g2 /=; pose_big_fset K E; rewrite 3?(@fgmulgU E) //.
-  rewrite -sumrB; apply/eq_bigr=> /= k' _.
-  by rewrite mcoeffB -monalgUB mulrBl.
-by close.
-Qed.
-
-Lemma fgoneE k : fgone@_k = (k == 1%M)%:R.
-Proof. by rewrite mcoeffU1 eq_sym. Qed.
-
-Lemma fgmulA : associative fgmul.
-Proof.
-move=> g1 g2 g3; pose_big_fset K E.
-  transitivity (\sum_(k1 <- E) \sum_(k2 <- E) \sum_(k3 <- E)
-    << g1@_k1 * g2@_k2 * g3@_k3 *g (k1 * k2 * k3)%M >>).
-  + rewrite (@fgmulEl1w E) //; apply/eq_bigr=> /= k1 _.
-    rewrite [X in fgmul _ X](@fgmullw E E) //.
-    pose fgmullaM := GRing.isAdditive.Build _ _ (fgmul << g1@_k1 *g k1 >>)
-                       (fgmullUg_is_additive _ _).
-    pose fgmullA : GRing.Additive.type _ _ :=
-      HB.pack (fgmul << g1@_k1 *g k1 >>) fgmullaM.
-    have /= raddf := raddf_sum fgmullA.
-    rewrite raddf; apply/eq_bigr=> /= k2 _; rewrite raddf.
-    by apply/eq_bigr=> /= k3 _; rewrite fgmulUU mulrA mulmA.
-  2: by close.
-rewrite [LHS](eq_bigr _ (fun _ _ => exchange_big _ _ _ _ _ _)) /=.
-rewrite exchange_big /=; apply/esym; rewrite (@fgmulEr1w E) //.
-apply/eq_bigr=> /= k3 _; rewrite (@fgmullw E E g1) //.
-pose fgmullaM := GRing.isAdditive.Build _ _ (fgmul^~ << g3@_k3 *g k3 >>)
-                   (fgmullgU_is_additive _ _).
-pose fgmullA : GRing.Additive.type _ _ :=
-  HB.pack (fgmul^~ << g3@_k3 *g k3 >>) fgmullaM.
-have /= raddf := raddf_sum fgmullA.
-rewrite raddf; apply/eq_bigr=> /= k1 _; rewrite raddf.
-by apply/eq_bigr=> /= k2 _; rewrite fgmulUU.
-Qed.
+Lemma fgmulEr1 g1 g2 :
+  fgmul g1 g2 = \sum_(k2 <- msupp g2) fgmul g1 << g2@_k2 *g k2 >>.
+Proof. by rewrite fgmulr; apply/eq_bigr=> k _; rewrite fgmulgU. Qed.
 
 Lemma fgmul1g : left_id fgone fgmul.
 Proof.
-move=> g; rewrite fgmull; apply/eqP/malgP=> k.
-rewrite msuppU1 big_seq_fset1 [X in _=X@__]monalgE !raddf_sum /=.
-by apply/eq_bigr=> kg _; rewrite fgoneE eqxx mul1r mul1m.
+move=> g; rewrite fgmulUg [RHS]monalgE.
+by apply/eq_bigr=> kg _; rewrite mul1r mul1m.
 Qed.
 
 Lemma fgmulg1 : right_id fgone fgmul.
 Proof.
-move=> g; rewrite fgmulr; apply/eqP/malgP=> k.
-rewrite msuppU1 big_seq_fset1 [X in _=X@__]monalgE !raddf_sum /=.
-by apply/eq_bigr=> kg _; rewrite fgoneE eqxx mulr1 mulm1.
+move=> g; rewrite fgmulgU [RHS]monalgE.
+by apply/eq_bigr=> k _; rewrite mulr1 mulm1.
 Qed.
+
 
 Lemma fgmulgDl : left_distributive fgmul +%R.
 Proof.
-move=> g1 g2 g; apply/esym; rewrite
-  (fgmullwl (fsubsetUl _ (msupp g2)))
-  (fgmullwl (fsubsetUr (msupp g1) _)).
-rewrite -big_split /= (fgmullwl (msuppD_le _ _)).
-apply/eq_bigr=> k1 _; rewrite -big_split /=; apply/eq_bigr.
-by move=> k2 _; rewrite mcoeffD mulrDl monalgUD.
+move=> g1 g2 g; rewrite [in RHS](fgmullwl (fsubsetUl _ (msupp g2))).
+rewrite [in RHS](fgmullwl (fsubsetUr (msupp g1) _)) (fgmullwl (msuppD_le _ _)).
+rewrite -big_split /=; apply/eq_bigr=> k1 _.
+rewrite -big_split /=; apply/eq_bigr=> k2 _.
+by rewrite mcoeffD mulrDl monalgUD.
 Qed.
 
 Lemma fgmulgDr : right_distributive fgmul +%R.
 Proof.
-move=> g g1 g2; apply/esym; rewrite
-  (fgmulrwl (fsubsetUl _ (msupp g2)))
-  (fgmulrwl (fsubsetUr (msupp g1) _)).
-rewrite -big_split /= (fgmulrwl (msuppD_le _ _)).
-apply/eq_bigr=> k1 _; rewrite -big_split /=; apply/eq_bigr.
-by move=> k2 _; rewrite mcoeffD mulrDr monalgUD.
+move=> g g1 g2; rewrite [in RHS](fgmulrwl (fsubsetUl _ (msupp g2))).
+rewrite [in RHS](fgmulrwl (fsubsetUr (msupp g1) _)) (fgmulrwl (msuppD_le _ _)).
+rewrite -big_split /=; apply/eq_bigr => k1 _.
+rewrite -big_split /=; apply/eq_bigr => k2 _.
+by rewrite mcoeffD mulrDr monalgUD.
+Qed.
+
+Lemma fgmulA : associative fgmul.
+Proof.
+move=> g1 g2 g3.
+rewrite [RHS](big_morph (fgmul^~ _) (fun _ _ => fgmulgDl _ _ _) (fgmul0g _)).
+rewrite fgmulEl1; apply/eq_bigr=> k1 _.
+rewrite [LHS](big_morph (fgmul _) (fun _ _ => fgmulgDr _ _ _) (fgmulg0 _)).
+rewrite [RHS](big_morph (fgmul^~ _) (fun _ _ => fgmulgDl _ _ _) (fgmul0g _)).
+apply/eq_bigr=> k2 _.
+rewrite [LHS](big_morph (fgmul _) (fun _ _ => fgmulgDr _ _ _) (fgmulg0 _)).
+by rewrite fgmulEr1; apply/eq_bigr=> k3 _; rewrite !fgmulUU mulrA mulmA.
 Qed.
 
 Lemma fgoner_eq0 : fgone != 0.
-Proof. by apply/malgP=> /(_ 1%M) /eqP; rewrite !mcoeffsE oner_eq0. Qed.
+Proof. by apply/eqP/malgP=> /(_ 1%M) /eqP; rewrite !mcoeffsE oner_eq0. Qed.
 
 HB.instance Definition _ := GRing.Zmodule_isRing.Build (malg K R)
   fgmulA fgmul1g fgmulg1 fgmulgDl fgmulgDr fgoner_eq0.
 HB.instance Definition _ := GRing.Ring.on {malg R[K]}.
+
 End MAlgRingType.
 
 (* -------------------------------------------------------------------- *)
@@ -774,63 +680,65 @@ Context (K : monomType) (R : ringType).
 
 Implicit Types (g : {malg R[K]}) (k l : K).
 
-(* -------------------------------------------------------------------- *)
 Lemma malgM_def g1 g2 : g1 * g2 = fgmul g1 g2.
 Proof. by []. Qed.
 
-(* -------------------------------------------------------------------- *)
+Lemma mcoeffU1 k k' : (<< k >> : {malg R[K]})@_k' = (k == k')%:R.
+Proof. by rewrite mcoeffU. Qed.
+
+Lemma msuppU1 k : @msupp _ R << k >> = [fset k].
+Proof. by rewrite msuppU oner_eq0. Qed.
+
 Lemma malgME g1 g2 :
   g1 * g2 = \sum_(k1 <- msupp g1) \sum_(k2 <- msupp g2)
-    << g1@_k1 * g2@_k2 *g (k1 * k2)%M >>.
+    << g1@_k1 * g2@_k2 *g k1 * k2 >>.
 Proof. by []. Qed.
 
 Lemma malgMEw (d1 d2 : {fset K}) g1 g2 :
   msupp g1 `<=` d1 -> msupp g2 `<=` d2 ->
-  g1 * g2 = \sum_(k1 <- d1) \sum_(k2 <- d2)
-    << g1@_k1 * g2@_k2 *g (k1 * k2)%M >>.
+  g1 * g2 = \sum_(k1 <- d1) \sum_(k2 <- d2) << g1@_k1 * g2@_k2 *g k1 * k2 >>.
 Proof. exact/fgmullw. Qed.
 
-(* -------------------------------------------------------------------- *)
-Lemma mcoeffMl g1 g2 k :
-  (g1 * g2)@_k = \sum_(k1 <- msupp g1) \sum_(k2 <- msupp g2)
-    (g1@_k1 * g2@_k2) *+ (k1 * k2 == k)%M.
-Proof. exact/fgmulElw/fsubset_refl. Qed.
-
-Lemma mcoeffMr g1 g2 k :
-  (g1 * g2)@_k = \sum_(k2 <- msupp g2) \sum_(k1 <- msupp g1)
-    (g1@_k1 * g2@_k2) *+ (k1 * k2 == k)%M.
-Proof. exact/fgmulErw/fsubset_refl. Qed.
-
-(* -------------------------------------------------------------------- *)
 Lemma mcoeffMlw (d1 d2 : {fset K}) g1 g2 k :
   msupp g1 `<=` d1 -> msupp g2 `<=` d2 ->
   (g1 * g2)@_k = \sum_(k1 <- d1) \sum_(k2 <- d2)
     (g1@_k1 * g2@_k2) *+ (k1 * k2 == k)%M.
-Proof. exact/fgmulElw. Qed.
+Proof.
+move=> le1 le2; rewrite (malgMEw le1 le2) raddf_sum /=.
+apply/eq_bigr=> k1 _; rewrite raddf_sum /=; apply/eq_bigr=> k2 _.
+by rewrite mcoeffsE.
+Qed.
 
 Lemma mcoeffMrw (d1 d2 : {fset K}) g1 g2 k :
   msupp g1 `<=` d1 -> msupp g2 `<=` d2 ->
   (g1 * g2)@_k = \sum_(k2 <- d2) \sum_(k1 <- d1)
     (g1@_k1 * g2@_k2) *+ (k1 * k2 == k)%M.
-Proof. exact/fgmulErw. Qed.
+Proof. by move=> le1 le2; rewrite (mcoeffMlw _ le1 le2) exchange_big. Qed.
 
-(* -------------------------------------------------------------------- *)
+Lemma mcoeffMl g1 g2 k :
+  (g1 * g2)@_k = \sum_(k1 <- msupp g1) \sum_(k2 <- msupp g2)
+    (g1@_k1 * g2@_k2) *+ (k1 * k2 == k)%M.
+Proof. exact: mcoeffMlw. Qed.
+
+Lemma mcoeffMr g1 g2 k :
+  (g1 * g2)@_k = \sum_(k2 <- msupp g2) \sum_(k1 <- msupp g1)
+    (g1@_k1 * g2@_k2) *+ (k1 * k2 == k)%M.
+Proof. exact: mcoeffMrw. Qed.
+
 Lemma mcoeff1 k : 1@_k = (k == 1%M)%:R :> R.
 Proof. by rewrite mcoeffC. Qed.
 
 Lemma mul_malgC c g : c%:MP * g = c *: g.
 Proof.
-rewrite malgM_def malgZ_def (fgmulUg _ _ (fsubset_refl _)).
-by apply/eq_bigr=> /= k _; rewrite mul1m.
+by rewrite malgM_def malgZ_def fgmulUg; apply/eq_bigr=> /= k _; rewrite mul1m.
 Qed.
 
 Lemma mcoeffCM c g k : (c%:MP * g)@_k = c * g@_k :> R.
 Proof. by rewrite mul_malgC mcoeffZ. Qed.
 
-(* -------------------------------------------------------------------- *)
 Lemma msuppM_le_finType g1 g2 k :
   k \in msupp (g1 * g2) ->
-        exists k1 : msupp g1, exists k2 : msupp g2, k = (val k1 * val k2)%M.
+        exists (k1 : msupp g1) (k2 : msupp g2), k = (val k1 * val k2)%M.
 Proof.
 move=> k_in_g1Mg2; apply/(existsPP (fun _ => exists_eqP)).
 apply/contraLR: k_in_g1Mg2=> hk; rewrite -mcoeff_eq0.
@@ -852,40 +760,28 @@ Qed.
 Lemma msuppM_incl g1 g2 :
   msupp (g1 * g2) `<=` [fset (k1 * k2)%M | k1 in msupp g1, k2 in msupp g2].
 Proof.
-have sum_neq0 f (s : seq K) (H : \sum_(i <- s) f i != 0) :
-     exists2 i, i \in s & f i != 0 :> R.
-  suff: ~~ all (fun i => f i == 0) s by move/allPn => [] i Hi Hf; exists i.
-  apply/contra: H => /allP H.
-  by rewrite big_seq; apply/eqP/big1 => i /H/eqP.
-apply/fsubsetP => k.
-rewrite -mcoeff_neq0 mcoeffMl => /sum_neq0 [k1 Hk1] /sum_neq0 [k2 Hk2] H.
-apply/imfset2P; exists k1 => //; exists k2 => //.
-by apply/esym; apply/contra_neq_eq: H => /negbTE ->; rewrite mulr0n.
+apply/fsubsetP => k /msuppM_le [k1 [k2 [k1g1 k2g2 ->]]].
+by apply/imfset2P; exists k1; last exists k2.
 Qed.
 
-(* -------------------------------------------------------------------- *)
 Lemma malgC_is_multiplicative : multiplicative (@malgC K R).
 Proof.
-by split=> // g1 g2; apply/eqP/malgP=> k; rewrite mcoeffCM !mcoeffC mulrnAr.
+by split=> // g1 g2; apply/malgP=> k; rewrite mcoeffCM !mcoeffC mulrnAr.
 Qed.
 
 HB.instance Definition _ :=
   GRing.isMultiplicative.Build R {malg R[K]} (@malgC K R)
     malgC_is_multiplicative.
 
-(* -------------------------------------------------------------------- *)
 Lemma mpolyC1E : 1%:MP = 1 :> {malg R[K]}.
 Proof. exact: rmorph1. Qed.
 
 Lemma mpolyC_nat (n : nat) : (n%:R)%:MP = n%:R :> {malg R[K]}.
-Proof.
-by apply/eqP/malgP=> i; rewrite mcoeffC mcoeffMn mcoeffC mulrnAC.
-Qed.
+Proof. by apply/malgP=> i; rewrite mcoeffC mcoeffMn mcoeffC mulrnAC. Qed.
 
 Lemma mpolyCM : {morph @malgC K R : p q / p * q}.
 Proof. exact: rmorphM. Qed.
 
-(* -------------------------------------------------------------------- *)
 Lemma mcoeff1g_is_multiplicative :
   multiplicative (mcoeff 1%M : {malg R[K]} -> R).
 Proof.
@@ -910,15 +806,6 @@ HB.instance Definition _ m :=
   GRing.isScalable.Build R {malg R[K]} R *%R (mcoeff m)
     (fun c => (mcoeffZ c)^~ m).
 
-End MAlgRingTheory.
-
-(* -------------------------------------------------------------------- *)
-Section MalgLAlgType.
-Context (K : monomType) (R : ringType).
-
-Implicit Types (g : {malg R[K]}).
-
-(* -------------------------------------------------------------------- *)
 Lemma fgscaleAl c g1 g2 : c *: (g1 * g2) = (c *: g1) * g2.
 Proof. by rewrite -!mul_malgC mulrA. Qed.
 
@@ -926,9 +813,7 @@ HB.instance Definition _ := GRing.Lmodule_isLalgebra.Build R (malg K R)
   fgscaleAl.
 HB.instance Definition _ := GRing.Lalgebra.on {malg R[K]}.
 
-(* -------------------------------------------------------------------- *)
-HB.instance Definition _ := GRing.Linear.on (@mcoeff K R 1%M).
-End MalgLAlgType.
+End MAlgRingTheory.
 
 (* -------------------------------------------------------------------- *)
 Section MalgComRingType.
@@ -936,7 +821,7 @@ Context (K : conomType) (R : comRingType).
 
 Lemma fgmulC : @commutative {malg R[K]} _ *%R.
 Proof.
-move=> g1 g2; apply/eqP/malgP=> k; rewrite mcoeffMl mcoeffMr.
+move=> g1 g2; apply/malgP=> k; rewrite mcoeffMl mcoeffMr.
 apply/eq_bigr=> /= k1 _; apply/eq_bigr=> /= k2 _.
 by rewrite mulrC [X in X==k]mulmC.
 Qed.
@@ -1198,7 +1083,7 @@ HB.mixin Record isMeasure (M : monomType) (mf : M -> nat) := {
 HB.structure Definition Measure (M : monomType) := {mf of isMeasure M mf}.
 
 Notation "[ 'measure' 'of' f ]" := (Measure.clone _ f _)
-  (at level 0, format"[ 'measure'  'of'  f ]") : form_scope.
+  (at level 0, only parsing) : form_scope.
 
 (* -------------------------------------------------------------------- *)
 Section MMeasure.
@@ -1256,7 +1141,7 @@ Qed.
 Lemma mmeasure_eq0 g : (mmeasure g == 0%N) = (g == 0).
 Proof.
 apply/idP/eqP=> [z_g|->]; last by rewrite mmeasure0.
-apply/eqP/malgP=> k; rewrite mcoeff0; apply/contraTeq: z_g.
+apply/malgP=> k; rewrite mcoeff0; apply/contraTeq: z_g.
 rewrite mcoeff_neq0 => kg; rewrite mmeasureE.
 by rewrite (big_fsetD1 k) //= -lt0n leq_max.
 Qed.
@@ -1274,8 +1159,6 @@ Context (I : choiceType).
 
 Record cmonom : predArgType := CMonom { cmonom_val : {fsfun of _ : I => 0%N} }.
 
-Definition cmonom_of (_ : phant I) := cmonom.
-
 Coercion cmonom_val : cmonom >-> fsfun.
 
 Fact cmonom_key : unit. Proof. by []. Qed.
@@ -1284,8 +1167,8 @@ Definition cmonom_of_fsfun   k := locked_with k CMonom.
 Canonical  cmonom_unlockable k := [unlockable fun cmonom_of_fsfun k].
 End CmonomDef.
 
-Notation "{ 'cmonom' I }" := (@cmonom_of _ (Phant I)) : type_scope.
-Notation "''X_{1..' n '}'" :=  {cmonom 'I_n} : type_scope.
+Notation "{ 'cmonom' I }" := (cmonom I) : type_scope.
+Notation "''X_{1..' n '}'" :=  (cmonom 'I_n) : type_scope.
 Notation "{ 'mpoly' R [ n ] }" := {malg R['X_{1..n}]} : type_scope.
 
 Notation mkcmonom := (cmonom_of_fsfun cmonom_key).
@@ -1300,10 +1183,9 @@ Context (I : choiceType).
 
 HB.instance Definition _ := [isNew for @cmonom_val I].
 HB.instance Definition _ := [Choice of cmonom I by <:].
-HB.instance Definition _ := [Choice of {cmonom I} by <:].
 
 (* -------------------------------------------------------------------- *)
-Implicit Types (m : {cmonom I}).
+Implicit Types (m : cmonom I).
 
 Lemma cmE (f : {fsfun of _ : I => 0%N}) : mkcmonom f =1 CMonom f.
 Proof. by rewrite unlock. Qed.
@@ -1311,16 +1193,16 @@ Proof. by rewrite unlock. Qed.
 Lemma cmP m1 m2 : reflect (forall i, m1 i = m2 i) (m1 == m2).
 Proof. by apply: (iffP eqP) => [->//|eq]; apply/val_inj/fsfunP. Qed.
 
-Definition onecm : {cmonom I} := mkcmonom [fsfun of _ => 0%N].
+Definition onecm : cmonom I := mkcmonom [fsfun of _ => 0%N].
 
-Definition ucm (i : I) : {cmonom I} := [cmonom 1 | _ in fset1 i]%M.
+Definition ucm (i : I) : cmonom I := [cmonom 1 | _ in fset1 i]%M.
 
-Definition mulcm m1 m2 : {cmonom I} :=
+Definition mulcm m1 m2 : cmonom I :=
   [cmonom m1 i + m2 i | i in finsupp m1 `|` finsupp m2]%M.
 
-Definition divcm m1 m2 : {cmonom I} := [cmonom m1 i - m2 i | i in finsupp m1]%M.
+Definition divcm m1 m2 : cmonom I := [cmonom m1 i - m2 i | i in finsupp m1]%M.
 
-Definition expcmn m n : {cmonom I} := iterop n mulcm m onecm.
+Definition expcmn m n : cmonom I := iterop n mulcm m onecm.
 
 Lemma onecmE i : onecm i = 0%N.
 Proof. by rewrite cmE fsfun_ffun insubF. Qed.
@@ -1356,28 +1238,28 @@ move: m1 m2; have gen m1 m2 : mulcm m1 m2 = onecm -> m1 = onecm.
 by move=> m1 m2 h; split; move: h; last rewrite mulcmC; apply/gen.
 Qed.
 
-HB.instance Definition _ := Choice_isMonomialDef.Build {cmonom I}
+HB.instance Definition _ := Choice_isMonomialDef.Build (cmonom I)
   mulcmA mul0cm mulcm0 mulcm_eq0.
-HB.instance Definition _ := MonomialDef_isConomialDef.Build {cmonom I} mulcmC.
+HB.instance Definition _ := MonomialDef_isConomialDef.Build (cmonom I) mulcmC.
 End CmonomCanonicals.
 
 (* -------------------------------------------------------------------- *)
-Definition mdeg {I : choiceType} (m : {cmonom I}) :=
+Definition mdeg {I : choiceType} (m : cmonom I) :=
   (\sum_(k <- finsupp m) m k)%N.
 
-Definition mnmwgt {n} (m : {cmonom 'I_n}) :=
+Definition mnmwgt {n} (m : cmonom 'I_n) :=
   (\sum_i m i * i.+1)%N.
 
 (* -------------------------------------------------------------------- *)
 Section CmonomTheory.
 Context {I : choiceType}.
 
-Implicit Types (m : {cmonom I}) (i : I).
+Implicit Types (m : cmonom I) (i : I).
 
 Local Notation "'U_(' i )" := (@ucm I i) : monom_scope.
 Local Notation mdeg := (@mdeg I).
 
-Lemma cm1 i : (1%M : {cmonom I}) i = 0%N.
+Lemma cm1 i : (1%M : cmonom I) i = 0%N.
 Proof. exact/onecmE. Qed.
 
 Lemma cmU i j : U_(i)%M j = (i == j) :> nat.
@@ -1402,7 +1284,7 @@ Variant mdom_spec m (i : I) : bool -> nat -> Type :=
 Lemma mdomP m i : mdom_spec m i (i \in finsupp m) (m i).
 Proof. by case: finsuppP=> h; constructor. Qed.
 
-Lemma mdom1 : finsupp (1 : {cmonom I})%M = fset0 :> {fset I}.
+Lemma mdom1 : finsupp (1 : cmonom I)%M = fset0 :> {fset I}.
 Proof. by apply/fsetP=> i; rewrite in_fset0 -cmE_neq0 cm1 eqxx. Qed.
 
 Lemma mdomU i : finsupp U_(i)%M = [fset i].
@@ -1438,7 +1320,7 @@ rewrite
 by rewrite -big_split /=; apply/eq_bigr=> /= i _; rewrite cmM.
 Qed.
 
-Lemma mdeg_prod (T : Type) r P (F : T -> {cmonom I}) :
+Lemma mdeg_prod (T : Type) r P (F : T -> cmonom I) :
     mdeg (\big[mmul/1%M]_(x <- r | P x) (F x))
   = (\sum_(x <- r | P x) (mdeg (F x)))%N.
 Proof. exact/big_morph/mdeg1/mdegM. Qed.
@@ -1450,7 +1332,7 @@ by case: mdomP=> // ki /eqP; rewrite (big_fsetD1 i) //= addn_eq0 => /andP[/eqP].
 Qed.
 
 (* -------------------------------------------------------------------- *)
-#[hnf] HB.instance Definition _ := isMeasure.Build {cmonom I}
+#[hnf] HB.instance Definition _ := isMeasure.Build (cmonom I)
   mdeg mdeg1 mdegM mdeg_eq0I.
 
 Lemma mdeg_eq0 m : (mdeg m == 0%N) = (m == 1%M).
@@ -1484,7 +1366,7 @@ rewrite mnmwgtE (bigD1 i) //= cmUU mul1n big1 ?addn0 //.
 by move=> j ne_ij; rewrite cmU eq_sym (negbTE ne_ij).
 Qed.
 
-Lemma mnmwgtM : {morph mnmwgt: m1 m2 / (m1 * m2)%M >->  (m1 + m2)%N}.
+Lemma mnmwgtM : {morph mnmwgt: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N}.
 Proof.
 move=> m1 m2 /=; rewrite !mnmwgtE -big_split /=.
 by apply/eq_bigr=> i _; rewrite cmM mulnDl.
@@ -1506,13 +1388,13 @@ Proof. exact/mf_eq0. Qed.
 End MWeight.
 
 (* -------------------------------------------------------------------- *)
-Notation msize := (@mmeasure _ _ [measure of mdeg]).
-Notation mweight := (@mmeasure _ _ [measure of mnmwgt]).
+Notation msize := (@mmeasure _ _ mdeg).
+Notation mweight := (@mmeasure _ _ mnmwgt).
 
 Section MSize.
 Context (I : choiceType) (G : zmodType).
 
-Implicit Types (m : {cmonom I}) (g : {malg G[{cmonom I}]}).
+Implicit Types (m : cmonom I) (g : {malg G[cmonom I]}).
 
 Local Notation mdeg := (@mdeg I).
 
@@ -1525,13 +1407,13 @@ Proof. exact/mmeasure_mnm_lt. Qed.
 Lemma msize_mdeg_ge g m : (msize g <= mdeg m)%N -> m \notin msupp g.
 Proof. exact/mmeasure_mnm_ge. Qed.
 
-Definition msize0       := @mmeasure0       _ G [measure of mdeg].
-Definition msizeC       := @mmeasureC       _ G [measure of mdeg].
-Definition msizeD_le    := @mmeasureD_le    _ G [measure of mdeg].
-Definition msize_sum    := @mmeasure_sum    _ G [measure of mdeg].
-Definition msizeN       := @mmeasureN       _ G [measure of mdeg].
-Definition msize_eq0    := @mmeasure_eq0    _ G [measure of mdeg].
-Definition msize_msupp0 := @mmeasure_msupp0 _ G [measure of mdeg].
+Definition msize0       := @mmeasure0       _ G mdeg.
+Definition msizeC       := @mmeasureC       _ G mdeg.
+Definition msizeD_le    := @mmeasureD_le    _ G mdeg.
+Definition msize_sum    := @mmeasure_sum    _ G mdeg.
+Definition msizeN       := @mmeasureN       _ G mdeg.
+Definition msize_eq0    := @mmeasure_eq0    _ G mdeg.
+Definition msize_msupp0 := @mmeasure_msupp0 _ G mdeg.
 End MSize.
 
 (* -------------------------------------------------------------------- *)
@@ -1539,8 +1421,6 @@ Section FmonomDef.
 Context (I : choiceType).
 
 Record fmonom : predArgType := FMonom { fmonom_val : seq I }.
-
-Definition fmonom_of (_ : phant I) := fmonom.
 
 Coercion fmonom_val : fmonom >-> seq.
 
@@ -1550,7 +1430,7 @@ Definition fmonom_of_seq     k := locked_with k FMonom.
 Canonical  fmonom_unlockable k := [unlockable fun fmonom_of_seq k].
 End FmonomDef.
 
-Notation "{ 'fmonom' I }" := (@fmonom_of _ (Phant I)) : type_scope.
+Notation "{ 'fmonom' I }" := (fmonom I) : type_scope.
 
 Local Notation mkfmonom s := (fmonom_of_seq fmonom_key s).
 
@@ -1560,10 +1440,9 @@ Context (I : choiceType).
 
 HB.instance Definition _ := [isNew for @fmonom_val I].
 HB.instance Definition _ := [Choice of fmonom I by <:].
-HB.instance Definition _ := [Choice of {fmonom I} by <:].
 
 (* -------------------------------------------------------------------- *)
-Implicit Types (m : {fmonom I}).
+Implicit Types (m : fmonom I).
 
 Lemma fmE (s : seq I) : mkfmonom s = FMonom s.
 Proof. by rewrite unlock. Qed.
@@ -1574,9 +1453,9 @@ Proof. by rewrite val_eqE. Qed.
 Lemma fmK m : FMonom m = m.
 Proof. exact/innew_val. Qed.
 
-Definition fmone : {fmonom I} := mkfmonom [::].
-Definition fmu i : {fmonom I} := mkfmonom [:: i].
-Definition fmmul m1 m2 : {fmonom I} := mkfmonom (m1 ++ m2).
+Definition fmone : fmonom I := mkfmonom [::].
+Definition fmu i : fmonom I := mkfmonom [:: i].
+Definition fmmul m1 m2 : fmonom I := mkfmonom (m1 ++ m2).
 
 Lemma fmoneE : fmone = FMonom [::].
 Proof. by apply/eqP; rewrite fmP /fmone fmE. Qed.
@@ -1603,22 +1482,21 @@ Proof. by case: m1 m2 => [[|? ?]] [[|? ?]]; rewrite !fmE. Qed.
 
 HB.instance Definition _ := Choice_isMonomialDef.Build (fmonom I)
   fmmulA fmmul1m fmmulm1 fmmul_eq1.
-HB.instance Definition _ := MonomialDef.on {fmonom I}.
 End FmonomCanonicals.
 
 (* -------------------------------------------------------------------- *)
-Definition fdeg (I : choiceType) (m : {fmonom I}) := size m.
+Definition fdeg (I : choiceType) (m : fmonom I) := size m.
 
 (* -------------------------------------------------------------------- *)
 Section FmonomTheory.
 Context {I : choiceType}.
 
-Implicit Types (m : {fmonom I}).
+Implicit Types (m : fmonom I).
 
 Local Notation "'U_(' i )" := (@fmu I i).
 Local Notation fdeg := (@fdeg I).
 
-Lemma fm1 : (1%M : {fmonom I}) = [::] :> seq I.
+Lemma fm1 : (1%M : fmonom I) = [::] :> seq I.
 Proof. by rewrite /mone /one /= fmoneE. Qed.
 
 Lemma fmU i : U_(i) = [:: i] :> seq I.
@@ -1639,7 +1517,7 @@ Proof. by rewrite fdegE fmU. Qed.
 Lemma fdegM : {morph fdeg: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N }.
 Proof. by move=> m1 m2; rewrite !fdegE fmM size_cat. Qed.
 
-Lemma fdeg_prod (T : Type) r P (F : T -> {fmonom I}) :
+Lemma fdeg_prod (T : Type) r P (F : T -> fmonom I) :
     fdeg (\big[mmul/1%M]_(x <- r | P x) (F x))
   = (\sum_(x <- r | P x) (fdeg (F x)))%N.
 Proof. by apply/big_morph; [apply/fdegM|apply/fdeg1]. Qed.
@@ -1651,7 +1529,7 @@ by rewrite -val_eqE /= z_m fm1.
 Qed.
 
 (* -------------------------------------------------------------------- *)
-#[hnf] HB.instance Definition _ := isMeasure.Build {fmonom I}
+#[hnf] HB.instance Definition _ := isMeasure.Build (fmonom I)
   fdeg fdeg1 fdegM fdeg_eq0I.
 
 Lemma fdeg_eq0 m : (fdeg m == 0%N) = (m == 1%M).
