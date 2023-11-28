@@ -2,7 +2,16 @@
  (name mathcomp.multinomials)
  ;coq-native-disabled; (mode native)
  (package coq-mathcomp-multinomials)
- (flags -w -ambiguous-paths
-        -w -notation-overridden
-        -w -redundant-canonical-projection
-        -w -projection-no-head-constant))
+ (flags
+  -w -ambiguous-paths
+  -w -notation-overridden
+  -w -redundant-canonical-projection
+  -w -projection-no-head-constant)
+ (theories
+  elpi
+  HB
+  mathcomp.ssreflect
+  mathcomp.fingroup
+  mathcomp.algebra
+  mathcomp.bigenough
+  mathcomp.finmap))
