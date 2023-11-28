@@ -6,7 +6,6 @@ dev-repo: "git+https://github.com/math-comp/multinomials.git"
 license: "CECILL-B"
 authors: ["Pierre-Yves Strub"]
 build: [
-  [ "bash" "./configure" ]
   [ "dune" "build" "-p" name "-j" jobs ]
 ]
 depends: [

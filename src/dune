@@ -1,6 +1,5 @@
 (coq.theory
  (name mathcomp.multinomials)
- ;coq-native-disabled; (mode native)
  (package coq-mathcomp-multinomials)
  (flags
   -w -ambiguous-paths
