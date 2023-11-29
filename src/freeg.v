@@ -305,7 +305,7 @@ Section FreegTheory.
 
   Lemma fglift_Freeg s : fglift [freeg s] = prelift s.
   Proof.
-    unlock Freeg; unlock fglift; rewrite !piE /lift.
+    unlock Freeg; unlock fglift; rewrite ?piE /lift.
     rewrite (prelift_perm_eq (perm_eq_fgrepr _)) /=.
     exact: prelift_reduce.
   Qed.
@@ -493,7 +493,7 @@ Module FreegZmodType.
 
     Lemma pi_fgadd : {morph \pi : D1 D2 / fgadd_r D1 D2 >-> fgadd D1 D2}.
     Proof.
-      case=> [D1 redD1] [D2 redD2]; unlock fgadd; rewrite !piE.
+      case=> [D1 redD1] [D2 redD2]; unlock fgadd; rewrite ?piE.
       apply/eqmodP/freegequivP => k /=.
       by rewrite !precoeff_reduce !precoeff_cat !precoeff_repr.
     Qed.
@@ -506,7 +506,7 @@ Module FreegZmodType.
 
     Lemma pi_fgopp : {morph \pi : D / fgopp_r D >-> fgopp D}.
     Proof.
-      case=> [D redD]; unlock fgopp; rewrite !piE.
+      case=> [D redD]; unlock fgopp; rewrite ?piE.
       apply/eqmodP/freegequivP => k /=.
       by rewrite !precoeff_reduce !precoeff_opp !precoeff_repr.
     Qed.
@@ -516,14 +516,14 @@ Module FreegZmodType.
     Lemma addmA : associative fgadd.
     Proof.
       elim/quotW=> [D1]; elim/quotW=> [D2]; elim/quotW=> [D3].
-      unlock fgadd; rewrite !piE; apply/eqmodP/freegequivP => k /=.
+      unlock fgadd; rewrite ?piE; apply/eqmodP/freegequivP => k /=.
       by rewrite !(precoeff_reduce, precoeff_cat, precoeff_repr) addrA.
     Qed.
 
     Lemma addmC : commutative fgadd.
     Proof.
       elim/quotW=> [D1]; elim/quotW=> [D2].
-      unlock fgadd; rewrite !piE; apply/eqmodP/freegequivP => k /=.
+      unlock fgadd; rewrite ?piE; apply/eqmodP/freegequivP => k /=.
       by rewrite !(precoeff_reduce, precoeff_cat, precoeff_repr) addrC.
     Qed.
 
@@ -572,7 +572,7 @@ Section FreegZmodTypeTheory.
     Lemma lift_is_additive : additive (fglift f).
     Proof.
       elim/quotW=> [[D1 /= H1]]; elim/quotW=> [[D2 /= H2]].
-      unlock fglift; rewrite !piE [_ + _]piE /lift /=.
+      unlock fglift; rewrite ?piE [_ + _]piE /lift /=.
       rewrite !prelift_repr /fgadd_r /fgopp_r /=.
       by rewrite !(prelift_reduce, prelift_cat, prelift_opp).
     Qed.
