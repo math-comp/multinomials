@@ -255,8 +255,8 @@ Local Notation "m1 + m2"   := (mnm_add m1 m2) : multi_scope.
 Local Notation "m1 - m2"   := (mnm_sub m1 m2) : multi_scope.
 Local Notation "x *+ n"    := (mnm_muln x n) : multi_scope.
 
-Local Notation "+%MM" := (@mnm_add) : fun_scope.
-Local Notation "-%MM" := (@mnm_sub) : fun_scope.
+Local Notation "+%MM" := (@mnm_add) : function_scope.
+Local Notation "-%MM" := (@mnm_sub) : function_scope.
 
 Local Notation "m1 <= m2" := (lem m1 m2) : multi_scope.
 Local Notation "m1 < m2"  := (ltm m1 m2) : multi_scope.
