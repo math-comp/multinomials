@@ -87,7 +87,7 @@ Notation mone := one.
 Notation mmul := mul.
 
 Local Notation "1" := (@mone _) : monom_scope.
-Local Notation "*%M" := (@mmul _) : fun_scope.
+Local Notation "*%M" := (@mmul _) : function_scope.
 Local Notation "x * y" := (mmul x y) : monom_scope.
 
 (* -------------------------------------------------------------------- *)
@@ -215,7 +215,7 @@ Notation "<< k >>" := << 1 *g k >> : ring_scope.
 
 Notation malgC := (mkmalgU 1).
 Notation "@ 'malgC' K G" := (@mkmalgU K G 1)
-  (at level 10, K at level 8, G at level 8, only parsing) : fun_scope.
+  (at level 10, K at level 8, G at level 8, only parsing) : function_scope.
 Notation "c %:MP" := (malgC c) : ring_scope.
 
 (* -------------------------------------------------------------------- *)
