@@ -244,7 +244,7 @@ Implicit Type (r : seq T).
 Hypothesis letot : @total U <=%O.
 
 Variant bigjoin_spec r : U -> Type :=
-  | BigJoinEmpty : nilp r -> bigjoin_spec r 0%O
+  | BigJoinEmpty : nilp r -> bigjoin_spec r \bot%O
   | BigJoinNonempty i : i \in r -> bigjoin_spec r (F i).
 
 Lemma bigjoinP r : bigjoin_spec r (\join_(i <- r) F i).
@@ -261,7 +261,7 @@ Lemma eq_bigjoin r :
 Proof. by case: r => // x r _; case: bigjoinP => // y y_in_r; exists y. Qed.
 
 Variant bigjoin_cond_spec r : U -> Type :=
-  | BigJoinCondEmpty : all (xpredC P) r -> bigjoin_cond_spec r 0%O
+  | BigJoinCondEmpty : all (xpredC P) r -> bigjoin_cond_spec r \bot%O
   | BigJoinCondNonempty i : i \in r -> P i -> bigjoin_cond_spec r (F i).
 
 Lemma bigjoinPcond r : bigjoin_cond_spec r (\join_(i <- r | P i) F i).
