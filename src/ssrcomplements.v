@@ -16,6 +16,17 @@ Unset Printing Implicit Defensive.
 Import Order.Theory GRing.Theory.
 
 (* -------------------------------------------------------------------- *)
+(* Compatibility layer for Order.disp_t introduced in MathComp 2.3      *)
+(* TODO: remove when we drop the support for MathComp 2.2               *)
+Module Order.
+Import Order.
+Definition disp_t : Set.
+Proof. exact: disp_t || exact: unit. Defined.
+Definition default_display : disp_t.
+Proof. exact: tt || exact: Disp tt tt. Defined.
+End Order.
+
+(* -------------------------------------------------------------------- *)
 Lemma lreg_prod (T : eqType) (R : ringType) (r : seq T) (P : pred T) (F : T -> R):
       (forall x, x \in r -> P x -> GRing.lreg (F x))
    -> GRing.lreg (\prod_(x <- r | P x) F x).
@@ -235,7 +246,7 @@ Qed.
 
 (* -------------------------------------------------------------------- *)
 Section LatticeMisc.
-Context {T : eqType} {disp : unit} {U : bDistrLatticeType disp}.
+Context {T : eqType} {disp : Order.disp_t} {U : bDistrLatticeType disp}.
 Context (P : pred T) (F : T -> U).
 
 Implicit Type (r : seq T).
@@ -275,7 +286,7 @@ End LatticeMisc.
 
 (* -------------------------------------------------------------------- *)
 Section WF.
-Context {disp : unit} {T : porderType disp}.
+Context {disp : Order.disp_t} {T : porderType disp}.
 
 Hypothesis wf: forall (P : T -> Type),
      (forall x, (forall y, y < x -> P y) -> P x)
