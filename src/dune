@@ -8,6 +8,7 @@
   -w -projection-no-head-constant)
  (theories
   elpi
+  elpi_elpi
   HB
   mathcomp.ssreflect
   mathcomp.fingroup
