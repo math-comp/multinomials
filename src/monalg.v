@@ -127,8 +127,8 @@ Module Exports. HB.reexport. End Exports.
 Export Exports.
 
 (* -------------------------------------------------------------------- *)
-Definition mmorphism (M : monomType) (S : ringType) (f : M -> S) :=
-  {morph f : x y / (x * y)%M >-> (x * y)%R} * (f 1%M = 1) : Prop.
+Definition mmorphism (M : monomType) (S : ringType) (f : M -> S) : Prop :=
+  (f 1%M = 1) * {morph f : x y / (x * y)%M >-> (x * y)%R}.
 
 HB.mixin Record isMultiplicative
     (M : monomType) (S : ringType) (apply : M -> S) := {
@@ -155,10 +155,10 @@ Section MMorphismTheory.
 Variables (M : monomType) (S : ringType) (f : {mmorphism M -> S}).
 
 Lemma mmorph1 : f 1%M = 1.
-Proof. exact: mmorphism_subproof.2. Qed.
+Proof. exact: mmorphism_subproof.1. Qed.
 
 Lemma mmorphM : {morph f : x y / (x * y)%M >-> (x * y)%R}.
-Proof. exact: mmorphism_subproof.1. Qed.
+Proof. exact: mmorphism_subproof.2. Qed.
 End MMorphismTheory.
 
 (* -------------------------------------------------------------------- *)
