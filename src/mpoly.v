@@ -77,7 +77,7 @@
 (* -------------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-From Coq Require Import Setoid.
+From Corelib Require Import Setoid.
 From HB Require Import structures.
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path.
 From mathcomp Require Import choice fintype tuple finfun bigop finset binomial.
