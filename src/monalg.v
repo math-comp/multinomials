@@ -127,16 +127,16 @@ Module Exports. HB.reexport. End Exports.
 Export Exports.
 
 (* -------------------------------------------------------------------- *)
-Definition mmorphism (M : monomType) (S : ringType) (f : M -> S) :=
+Definition mmorphism (M : monomType) (S : pzRingType) (f : M -> S) :=
   {morph f : x y / (x * y)%M >-> (x * y)%R} * (f 1%M = 1) : Prop.
 
 HB.mixin Record isMultiplicative
-    (M : monomType) (S : ringType) (apply : M -> S) := {
+    (M : monomType) (S : pzRingType) (apply : M -> S) := {
   mmorphism_subproof : mmorphism apply;
 }.
 
 #[mathcomp(axiom="multiplicative")]
-HB.structure Definition MMorphism (M : monomType) (S : ringType) :=
+HB.structure Definition MMorphism (M : monomType) (S : pzRingType) :=
   {f of isMultiplicative M S f}.
 
 Module MMorphismExports.
@@ -152,7 +152,7 @@ Export MMorphismExports.
 
 (* -------------------------------------------------------------------- *)
 Section MMorphismTheory.
-Variables (M : monomType) (S : ringType) (f : {mmorphism M -> S}).
+Variables (M : monomType) (S : pzRingType) (f : {mmorphism M -> S}).
 
 Lemma mmorph1 : f 1%M = 1.
 Proof. exact: mmorphism_subproof.2. Qed.
@@ -198,10 +198,10 @@ Definition msupp (g : {malg G[K]}) : {fset K} := finsupp (malg_val g).
 
 End MalgBaseOp.
 
-Arguments mcoeff  {K G} x%monom_scope g%ring_scope.
+Arguments mcoeff  {K G} x%_monom_scope g%_ring_scope.
 Arguments mkmalg  {K G} _.
-Arguments mkmalgU {K G} k%monom_scope x%ring_scope.
-Arguments msupp   {K G} g%ring_scope.
+Arguments mkmalgU {K G} k%_monom_scope x%_ring_scope.
+Arguments msupp   {K G} g%_ring_scope.
 
 (* -------------------------------------------------------------------- *)
 Notation "g @_ k" := (mcoeff k g).
@@ -463,7 +463,7 @@ End MalgMonomTheory.
 
 (* -------------------------------------------------------------------- *)
 Section MAlgLMod.
-Context (K : choiceType) (R : ringType).
+Context (K : choiceType) (R : pzRingType).
 
 Definition fgscale c g : {malg R[K]} := \sum_(k <- msupp g) << c * g@_k *g k >>.
 
@@ -494,7 +494,7 @@ End MAlgLMod.
 
 (* -------------------------------------------------------------------- *)
 Section MAlgLModTheory.
-Context {K : choiceType} {R : ringType}.
+Context {K : choiceType} {R : pzRingType}.
 
 Implicit Types (g : {malg R[K]}).
 
@@ -539,7 +539,7 @@ Definition mcoeffsE :=
 
 (* -------------------------------------------------------------------- *)
 Section MAlgRingType.
-Context (K : monomType) (R : ringType).
+Context (K : monomType) (R : pzRingType).
 
 Implicit Types (g : {malg R[K]}) (k l : K).
 
@@ -665,18 +665,28 @@ rewrite [LHS](big_morph (fgmul _) (fun _ _ => fgmulgDr _ _ _) (fgmulg0 _)).
 by rewrite fgmulEr1; apply/eq_bigr=> k3 _; rewrite !fgmulUU mulrA mulmA.
 Qed.
 
-Lemma fgoner_eq0 : fgone != 0.
-Proof. by apply/eqP/malgP=> /(_ 1%M) /eqP; rewrite !mcoeffsE oner_eq0. Qed.
-
-HB.instance Definition _ := GRing.Zmodule_isRing.Build (malg K R)
-  fgmulA fgmul1g fgmulg1 fgmulgDl fgmulgDr fgoner_eq0.
-HB.instance Definition _ := GRing.Ring.on {malg R[K]}.
+HB.instance Definition _ := GRing.Zmodule_isPzRing.Build (malg K R)
+  fgmulA fgmul1g fgmulg1 fgmulgDl fgmulgDr.
+HB.instance Definition _ := GRing.PzRing.on {malg R[K]}.
 
 End MAlgRingType.
 
+
+(* -------------------------------------------------------------------- *)
+Section MAlgNzRingType.
+Context (K : monomType) (R : nzRingType).
+
+Lemma fgoner_eq0 : fgone K R != 0.
+Proof. by apply/eqP/malgP=> /(_ 1%M) /eqP; rewrite !mcoeffsE oner_eq0. Qed.
+
+HB.instance Definition _ :=
+  GRing.PzSemiRing_isNonZero.Build (malg K R) fgoner_eq0.
+
+End MAlgNzRingType.
+
 (* -------------------------------------------------------------------- *)
 Section MAlgRingTheory.
-Context (K : monomType) (R : ringType).
+Context (K : monomType) (R : pzRingType).
 
 Implicit Types (g : {malg R[K]}) (k l : K).
 
@@ -685,9 +695,6 @@ Proof. by []. Qed.
 
 Lemma mcoeffU1 k k' : (<< k >> : {malg R[K]})@_k' = (k == k')%:R.
 Proof. by rewrite mcoeffU. Qed.
-
-Lemma msuppU1 k : @msupp _ R << k >> = [fset k].
-Proof. by rewrite msuppU oner_eq0. Qed.
 
 Lemma malgME g1 g2 :
   g1 * g2 = \sum_(k1 <- msupp g1) \sum_(k2 <- msupp g2)
@@ -809,15 +816,30 @@ HB.instance Definition _ m :=
 Lemma fgscaleAl c g1 g2 : c *: (g1 * g2) = (c *: g1) * g2.
 Proof. by rewrite -!mul_malgC mulrA. Qed.
 
-HB.instance Definition _ := GRing.Lmodule_isLalgebra.Build R (malg K R)
-  fgscaleAl.
-HB.instance Definition _ := GRing.Lalgebra.on {malg R[K]}.
-
 End MAlgRingTheory.
 
 (* -------------------------------------------------------------------- *)
+Section MAlgNzRingTheory.
+Context (K : monomType) (R : nzRingType).
+
+Implicit Types (g : {malg R[K]}) (k l : K).
+
+Lemma msuppU1 k : @msupp _ R << k >> = [fset k].
+Proof. by rewrite msuppU oner_eq0. Qed.
+
+Lemma xxfgscaleAl c g1 g2 : c *: (g1 * g2) = (c *: g1) * g2.
+Proof. by rewrite -!mul_malgC mulrA. Qed.
+
+HB.instance Definition _ := GRing.Lmodule_isLalgebra.Build R (malg K R)
+  (@fgscaleAl K R).
+HB.instance Definition _ := GRing.Lalgebra.on {malg R[K]}.
+
+End MAlgNzRingTheory.
+
+
+(* -------------------------------------------------------------------- *)
 Section MalgComRingType.
-Context (K : conomType) (R : comRingType).
+Context (K : conomType) (R : comPzRingType).
 
 Lemma fgmulC : @commutative {malg R[K]} _ *%R.
 Proof.
@@ -826,19 +848,25 @@ apply/eq_bigr=> /= k1 _; apply/eq_bigr=> /= k2 _.
 by rewrite mulrC [X in X==k]mulmC.
 Qed.
 
-HB.instance Definition _ := GRing.Ring_hasCommutativeMul.Build (malg K R)
+HB.instance Definition _ := GRing.PzRing_hasCommutativeMul.Build (malg K R)
   fgmulC.
+
+End MalgComRingType.
+
+(* -------------------------------------------------------------------- *)
+Section MalgComNzRingType.
+Context (K : conomType) (R : comNzRingType).
 
 HB.instance Definition _ := GRing.Lalgebra_isComAlgebra.Build R (malg K R).
 
 HB.instance Definition _ := GRing.ComAlgebra.on {malg R[K]}.
 
-End MalgComRingType.
+End MalgComNzRingType.
 
 (* -------------------------------------------------------------------- *)
 Section MalgMorphism.
 Section Defs.
-Context (K : choiceType) (G : zmodType) (S : ringType).
+Context (K : choiceType) (G : zmodType) (S : pzRingType).
 Context (f : G -> S) (h : K -> S).
 
 Definition mmap g := \sum_(k <- msupp g) f g@_k * h k.
@@ -850,7 +878,7 @@ End Defs.
 Local Notation "g ^[ f , h ]" := (mmap f h g).
 
 Section BaseTheory.
-Context (K : choiceType) (G : zmodType) (S : ringType).
+Context (K : choiceType) (G : zmodType) (S : pzRingType).
 Context {f : {additive G -> S}} {h : K -> S}.
 
 Lemma mmapEw (d : {fset K}) g : msupp g `<=` d ->
@@ -865,7 +893,7 @@ Proof. by rewrite (mmapEw msuppU_le) big_seq_fset1 mcoeffUU. Qed.
 End BaseTheory.
 
 Section Additive.
-Context (K : choiceType) (G : zmodType) (S : ringType).
+Context (K : choiceType) (G : zmodType) (S : pzRingType).
 Context {f : {additive G -> S}} {h : K -> S}.
 
 Lemma mmap_is_additive : additive (mmap f h).
@@ -889,7 +917,7 @@ Lemma mmapMNn n : {morph mmap: x / x *- n} . Proof. exact: raddfMNn. Qed.
 End Additive.
 
 Section CommrMultiplicative.
-Context (K : monomType) (R : ringType) (S : ringType).
+Context (K : monomType) (R : pzRingType) (S : pzRingType).
 Context {f : {rmorphism R -> S}} {h : {mmorphism K -> S}}.
 
 Implicit Types (g : {malg R[K]}).
@@ -919,7 +947,7 @@ End CommrMultiplicative.
 
 (* -------------------------------------------------------------------- *)
 Section Multiplicative.
-Context (K : monomType) (R : ringType) (S : comRingType).
+Context (K : monomType) (R : pzRingType) (S : comPzRingType).
 Context {f : {rmorphism R -> S}} {h : {mmorphism K -> S}}.
 
 Implicit Types (g : {malg R[K]}).
@@ -934,7 +962,7 @@ End Multiplicative.
 
 (* -------------------------------------------------------------------- *)
 Section Linear.
-Context (K : monomType) (R : comRingType) {h : {mmorphism K -> R}}.
+Context (K : monomType) (R : comPzRingType) {h : {mmorphism K -> R}}.
 
 Lemma mmap_is_linear : scalable_for *%R (mmap idfun h).
 Proof. by move=> /= c g; rewrite -mul_malgC rmorphM /= mmapC. Qed.
@@ -1025,7 +1053,7 @@ End MonalgOverOpp.
 
 (* -------------------------------------------------------------------- *)
 Section MonalgOverSemiring.
-Context (K : monomType) (R : ringType) (S : semiringClosed R).
+Context (K : monomType) (R : pzRingType) (S : semiringClosed R).
 
 Local Notation monalgOver := (@monalgOver K R).
 
@@ -1064,7 +1092,7 @@ Qed.
 End MonalgOverSemiring.
 
 Section MonalgOverRing.
-Context (K : monomType) (R : ringType) (ringS : subringClosed R).
+Context (K : monomType) (R : pzRingType) (ringS : subringClosed R).
 
 HB.instance Definition _ := GRing.isMulClosed.Build _ (monalgOver_pred ringS)
   (monalgOver_mulr_closed K ringS).

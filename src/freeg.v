@@ -243,7 +243,7 @@ Section FreegTheory.
 
   (* ------------------------------------------------------------------ *)
   Section ZLift.
-  Context (R : ringType) (M : lmodType R) (K : choiceType) (f : K -> M).
+  Context (R : pzRingType) (M : lmodType R) (K : choiceType) (f : K -> M).
   Implicit Types (rD : prefreeg R K) (D : {freeg K / R}) (s : seq (R * K)).
   Implicit Types (z k : R) (x y : K).
 
@@ -316,7 +316,7 @@ Section FreegTheory.
   End ZLift.
 
   (* -------------------------------------------------------------------- *)
-  Context (R : ringType) (K : choiceType).
+  Context (R : pzRingType) (K : choiceType).
   Implicit Types (rD : prefreeg R K) (D : {freeg K / R}) (s : seq (R * K)).
   Implicit Types (z k : R) (x y : K).
 
@@ -476,7 +476,7 @@ Notation "<< p >>"      := [freeg [:: (1, p)]].
 (* -------------------------------------------------------------------- *)
 Module FreegZmodType.
   Section Defs.
-    Context (R : ringType) (K : choiceType).
+    Context (R : pzRingType) (K : choiceType).
     Implicit Types (rD : prefreeg R K) (D : {freeg K / R}) (s : seq (R * K)).
     Implicit Types (z k : R) (x y : K).
 
@@ -560,7 +560,7 @@ Export FreegZmodType.Exports.
 
 (* -------------------------------------------------------------------- *)
 Section FreegZmodTypeTheory.
-  Context (R : ringType) (K : choiceType).
+  Context (R : pzRingType) (K : choiceType).
   Implicit Types (x y z : K) (k : R) (D: {freeg K / R}).
 
   Local Notation coeff := (@coeff R K).
@@ -614,10 +614,6 @@ Section FreegZmodTypeTheory.
     move=> y; rewrite mem_dom coeffU mem_seq1.
     by case: (eqVneq x); rewrite /= ?(mulr0, mulr1, eqxx).
   Qed.
-
-  (* -------------------------------------------------------------------*)
-  Lemma domU1 z : dom (<< z >> : {freeg K / R}) = [:: z].
-  Proof. by rewrite domU ?oner_eq0. Qed.
 
   (* -------------------------------------------------------------------*)
   Lemma domN D : dom (-D) =i dom D.
@@ -746,9 +742,14 @@ Section FreegZmodTypeTheory.
   Qed.
 End FreegZmodTypeTheory.
 
+(* -------------------------------------------------------------------*)
+Lemma domU1 (K : choiceType) (R : nzRingType) z :
+  dom (<< z >> : {freeg K / R}) = [:: z].
+Proof. by rewrite domU ?oner_eq0. Qed.
+
 (* -------------------------------------------------------------------- *)
 Section FreeglModType.
-  Context (R : ringType) (K : choiceType).
+  Context (R : pzRingType) (K : choiceType).
   Implicit Types (x y z : K) (c k : R) (D: {freeg K / R}).
 
   Local Notation coeff := (@coeff R K).
@@ -786,7 +787,7 @@ End FreeglModType.
 
 (* -------------------------------------------------------------------- *)
 Section FreeglModTheory.
-  Context (R : ringType) (K : choiceType).
+  Context (R : pzRingType) (K : choiceType).
   Implicit Types (x y z : K) (c k : R) (D : {freeg K / R}).
 
   Local Notation coeff := (@coeff R K).
@@ -920,7 +921,7 @@ End FreegCmpDom.
 
 (* -------------------------------------------------------------------- *)
 Section FreegMap.
-  Context (G : ringType) (K : choiceType) (P : pred K) (f : G -> G).
+  Context (G : pzRingType) (K : choiceType) (P : pred K) (f : G -> G).
   Implicit Types (D : {freeg K / G}).
 
   Definition fgmap D := \sum_(z <- dom D | P z) << f (coeff z D) *g z >>.
@@ -1091,7 +1092,7 @@ End PosFreegDeg.
 
 (* -------------------------------------------------------------------- *)
 Section FreegIndDom.
-  Context (R : ringType) (K : choiceType) (F : pred K).
+  Context (R : pzRingType) (K : choiceType) (F : pred K).
   Context (P : {freeg K / R} -> Type).
   Implicit Types (D : {freeg K / R}).
 
@@ -1149,7 +1150,7 @@ Section FreegIndDom.
   Qed.
 End FreegIndDom.
 
-Lemma freeg_ind_dom  (R : ringType) (K : choiceType) (F : pred K):
+Lemma freeg_ind_dom  (R : pzRingType) (K : choiceType) (F : pred K):
      forall (P : {freeg K / R} -> Prop),
      (forall D : {freeg K / R},
        [predI dom (G:=R) (K:=K) D & [predC F]] =1 pred0 -> P D)
@@ -1161,7 +1162,7 @@ Proof. by move=> P; apply/(@freeg_rect_dom R K F P). Qed.
 
 (* -------------------------------------------------------------------- *)
 Section FreegIndDom0.
-  Context (R : ringType) (K : choiceType) (P : {freeg K / R} -> Type).
+  Context (R : pzRingType) (K : choiceType) (P : {freeg K / R} -> Type).
   Context (H0 : P 0).
   Context (HS : forall k x D, x \notin dom D -> k != 0 ->
                               P D -> P (<< k *g x >> + D)).
@@ -1175,7 +1176,7 @@ Section FreegIndDom0.
   Qed.
 End FreegIndDom0.
 
-Lemma freeg_ind_dom0 (R : ringType) (K : choiceType):
+Lemma freeg_ind_dom0 (R : pzRingType) (K : choiceType):
   forall (P : {freeg K / R} -> Prop),
        P 0
     -> (forall (k : R) (x : K) (D : {freeg K / R}),

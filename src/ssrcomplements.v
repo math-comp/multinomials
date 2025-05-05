@@ -27,7 +27,7 @@ Proof. exact: tt || exact: Disp tt tt. Defined.
 End Order.
 
 (* -------------------------------------------------------------------- *)
-Lemma lreg_prod (T : eqType) (R : ringType) (r : seq T) (P : pred T) (F : T -> R):
+Lemma lreg_prod (T : eqType) (R : pzRingType) (r : seq T) (P : pred T) (F : T -> R):
       (forall x, x \in r -> P x -> GRing.lreg (F x))
    -> GRing.lreg (\prod_(x <- r | P x) F x).
 Proof.
@@ -214,7 +214,7 @@ End BigOpPair.
 (* -------------------------------------------------------------------- *)
 Section BigOpMulrn.
   Variable I : Type.
-  Variable R : ringType.
+  Variable R : pzRingType.
 
   Variable F : I -> R.
   Variable P : pred I.
