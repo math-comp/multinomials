@@ -41,11 +41,11 @@ Unset Printing Implicit Defensive.
 Local Notation simpm := Monoid.simpm.
 
 (* -------------------------------------------------------------------- *)
-Reserved Notation "{ 'freeg' K / G }" (at level 0, K, G at level 2, format "{ 'freeg'  K  /  G }").
-Reserved Notation "{ 'freeg' K }" (at level 0, K at level 2, format "{ 'freeg'  K }").
-Reserved Notation "[ 'freeg' S ]" (at level 0, S at level 2, format "[ 'freeg'  S ]").
-Reserved Notation "<< z *p k >>"  (at level 0, format "<< z *p k >>").
-Reserved Notation "<< k >>"  (at level 0, format "<< k >>").
+Reserved Notation "{ 'freeg' K / G }" (K at level 2, format "{ 'freeg'  K  /  G }").
+Reserved Notation "{ 'freeg' K }" (format "{ 'freeg'  K }").
+Reserved Notation "[ 'freeg' S ]" (format "[ 'freeg'  S ]").
+Reserved Notation "<< z *p k >>"  (format "<< z *p k >>").
+Reserved Notation "<< k >>"  (format "<< k >>").
 
 (* -------------------------------------------------------------------- *)
 Module FreegDefs.

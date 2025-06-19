@@ -26,42 +26,30 @@ Declare Scope monom_scope.
 Delimit Scope monom_scope with M.
 
 (* -------------------------------------------------------------------- *)
-Reserved Notation "{ 'cmonom' I }"
-  (at level 0, I at level 2, format "{ 'cmonom'  I }").
-Reserved Notation "[ 'cmonom' E | i 'in' P ]" (at level 0, i at level 99).
-Reserved Notation "[ 'cmonom' E | i : P ]" (at level 0, i at level 99).
-Reserved Notation "{ 'fmonom' I }"
-  (at level 0, I at level 2, format "{ 'fmonom'  I }").
+Reserved Notation "{ 'cmonom' I }" (format "{ 'cmonom'  I }").
+Reserved Notation "[ 'cmonom' E | i 'in' P ]" (i at level 99).
+Reserved Notation "[ 'cmonom' E | i : P ]".
+Reserved Notation "{ 'fmonom' I }" (format "{ 'fmonom'  I }").
 Reserved Notation "{ 'malg' G [ K ] }"
-  (at level 0, K, G at level 2, format "{ 'malg'  G [ K ] }").
-Reserved Notation "{ 'malg' K }"
-  (at level 0, K at level 2, format "{ 'malg'  K }").
-Reserved Notation "[ 'malg' g ]"
-  (at level 0, g at level 2, format "[ 'malg'  g ]").
+  (G at level 2, format "{ 'malg'  G [ K ] }").
+Reserved Notation "{ 'malg' K }" (format "{ 'malg'  K }").
+Reserved Notation "[ 'malg' g ]" (format "[ 'malg'  g ]").
 Reserved Notation "[ 'malg' x 'in' aT => E ]"
-  (at level 0, x ident, format "[ 'malg'  x  'in'  aT  =>  E ]").
-Reserved Notation "[ 'malg' x => E ]"
-  (at level 0, x ident, format "[ 'malg'  x  =>  E ]").
+  (x ident, format "[ 'malg'  x  'in'  aT  =>  E ]").
+Reserved Notation "[ 'malg' x => E ]" (x ident, format "[ 'malg'  x  =>  E ]").
 Reserved Notation "{ 'mpoly' T [ n ] }"
-  (at level 0, T, n at level 2, format "{ 'mpoly'  T [ n ] }").
-Reserved Notation "<< z *p k >>"
-  (at level 0, format "<< z *p k >>").
-Reserved Notation "<< k >>"
-  (at level 0, format "<< k >>").
+  (T at level 2, format "{ 'mpoly'  T [ n ] }").
+Reserved Notation "<< z *p k >>" (format "<< z *p k >>").
+Reserved Notation "<< k >>" (format "<< k >>").
 Reserved Notation "g @_ k"
   (at level 3, k at level 2, left associativity, format "g @_ k").
-Reserved Notation "c %:MP"
-  (at level 2, left associativity, format "c %:MP").
-Reserved Notation "''X_{1..' n '}'"
-  (at level 0, n at level 2).
-Reserved Notation "'U_(' n )"
-  (at level 0, n at level 2, no associativity, format "'U_(' n )").
-Reserved Notation "x ^[ f , g ]"
-  (at level 2, left associativity, format "x ^[ f , g ]").
+Reserved Notation "c %:MP" (format "c %:MP").
+Reserved Notation "''X_{1..' n '}'".
+Reserved Notation "'U_(' n )" (format "'U_(' n )").
+Reserved Notation "x ^[ f , g ]" (at level 1, format "x ^[ f , g ]").
 
 Reserved Notation "'{' 'mmorphism' M '->' S '}'"
-  (at level 0, M at level 98, S at level 99,
-   format "{ 'mmorphism'  M  ->  S }").
+  (M at level 98, format "{ 'mmorphism'  M  ->  S }").
 
 (* -------------------------------------------------------------------- *)
 HB.mixin Record Choice_isMonomialDef V of Choice V := {
