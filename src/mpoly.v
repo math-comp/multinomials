@@ -3038,7 +3038,7 @@ Qed.
 
 Lemma mpolyOverC c : (c%:MP \in mpolyOver S) = (c \in S).
 Proof.
-rewrite qualifE /= msuppC; case: eqP=> [->|] //=;
+rewrite [LHS]qualifE /= msuppC; case: eqP=> [->|] //=;
 by rewrite ?rpred0 // andbT mcoeffC eqxx mulr1.
 Qed.
 
@@ -4992,7 +4992,7 @@ rewrite [X in X \is _](_ : _ = \prod_(i <- mt) i); last first.
   rewrite comp_mpolyX (eq_bigr (tnth mt)) ?big_tuple //.
   by move=> i _ /=; rewrite !tnth_mktuple.
 rewrite [X in X.-homog](_ : _ = (\sum_(i <- dt) i)%N); last first.
-  rewrite /mnmwgt big_tuple (eq_bigr (tnth dt)) //.
+  rewrite /mnmwgt big_tuple /=(eq_bigr (tnth dt)) //.
   by move=> i _ /=; rewrite !tnth_mktuple mulnC.
 apply/dhomog_prod => i; rewrite !tnth_mktuple => {mt dt}.
 exact/dhomogMn/dhomog_mesym.
