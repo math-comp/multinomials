@@ -9,11 +9,11 @@ build: [make "-j%{jobs}%"]
 install: [make "install"]
 depends: [
   ("coq" {>= "8.20" & < "8.21~"}
-  | "rocq-core" {>= "9.0" | = "dev"})
-  "coq-mathcomp-ssreflect" {(>= "2.2" & < "2.4~") | = "dev"}
+  | "rocq-core" {>= "9.0"})
+  "coq-mathcomp-ssreflect" {>= "2.2"}
   "coq-mathcomp-algebra"
-  "coq-mathcomp-bigenough" {(>= "1.0" & < "1.1~") | = "dev"}
-  "coq-mathcomp-finmap"    {(>= "2.1" & < "2.3~") | = "dev"}
+  "coq-mathcomp-bigenough" {>= "1.0"}
+  "coq-mathcomp-finmap"    {>= "2.1"}
 ]
 tags: [
   "keyword:multinomials"
