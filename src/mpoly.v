@@ -35,7 +35,7 @@
 (*          [mpoly D] == the multivariate polynomial constructed from a free  *)
 (*                       sum in {freeg 'X_{1..n} / R}                         *)
 (*  0, 1, - p, p + q, == the usual ring operations: {mpoly R} has a canonical *)
-(* p * q, p ^+ n, ...    ringType structure, which is commutative / integral  *)
+(* p * q, p ^+ n, ...    pzRingType structure, which is commutative / integral  *)
 (*                       when R is commutative / integral, respectively.      *)
 (*       {ipoly R[n]} == the type obtained by iterating the univariate        *)
 (*                       polynomial type, with R as base ring.                *)
@@ -227,7 +227,9 @@ Definition mnm0 := [multinom 0 | _ < n].
 Definition mnm1 (c : 'I_n) := [multinom c == i | i < n].
 Definition mnm_add m1 m2 := [multinom m1 i + m2 i | i < n].
 Definition mnm_sub m1 m2 := [multinom m1 i - m2 i | i < n].
-Definition mnm_muln m i := nosimpl iterop _ i mnm_add m mnm0.
+Definition mnm_muln m i := iterop i mnm_add m mnm0.
+
+Arguments mnm_muln : simpl never.
 
 Local Notation "0"         := mnm0 : multi_scope.
 Local Notation "'U_(' n )" := (mnm1 n) : multi_scope.
@@ -349,6 +351,8 @@ by move=> lt0_mi j; rewrite mnm1E; case: eqP=> // <-.
 Qed.
 
 End MultinomMonoid.
+
+Arguments mnm_muln : simpl never.
 
 (* -------------------------------------------------------------------- *)
 Notation "+%MM" := (@mnm_add _).
@@ -722,7 +726,7 @@ End Mlcm.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyDef.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : pzRingType).
 
 Inductive mpoly := MPoly of {freeg 'X_{1..n} / R}.
 
@@ -740,7 +744,7 @@ Notation "[ 'mpoly' D ]" := (@MPoly _ _ D).
 
 (* -------------------------------------------------------------------- *)
 Section MPolyTheory.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : pzRingType).
 Implicit Types (p q r : {mpoly R[n]}) (D : {freeg 'X_{1..n} / R}).
 
 Lemma mpoly_valK D : [mpoly D] = D :> {freeg _ / _}.
@@ -775,7 +779,9 @@ Proof. by rewrite mcoeff_MPoly coeffU eq_sym. Qed.
 Lemma mpolyCK : cancel mpolyC (mcoeff 0%MM).
 Proof. by move=> c; rewrite mcoeffC eqxx mulr1. Qed.
 
-Definition msupp p : seq 'X_{1..n} := nosimpl (dom p).
+Definition msupp p : seq 'X_{1..n} := dom p.
+
+Arguments msupp : simpl never.
 
 Lemma msuppE p : msupp p = dom p :> seq _.
 Proof. by []. Qed.
@@ -795,9 +801,6 @@ Proof. by rewrite msuppE mem_dom /mcoeff negbK. Qed.
 Lemma msupp0 : msupp 0%:MP = [::].
 Proof. by rewrite msuppE /= freegU0 dom0. Qed.
 
-Lemma msupp1 : msupp 1%:MP = [:: 0%MM].
-Proof. by rewrite msuppE /= domU1. Qed.
-
 Lemma msuppC (c : R) :
   msupp c%:MP = if c == 0 then [::] else [:: 0%MM].
 Proof. by have [->|nz_c] := eqVneq; [rewrite msupp0 | rewrite msuppE domU]. Qed.
@@ -810,6 +813,22 @@ Proof. by case: p=> p; apply/mpoly_eqP; rewrite /= -{1}[p]freeg_sumE. Qed.
 
 End MPolyTheory.
 
+Arguments msupp : simpl never.
+
+(* -------------------------------------------------------------------- *)
+Section MNzPolyTheory.
+
+Context (n : nat) (R : nzRingType).
+Implicit Types (p q r : {mpoly R[n]}) (D : {freeg 'X_{1..n} / R}).
+
+Local Notation "c %:MP" := (@mpolyC n R c) : ring_scope.
+
+Lemma msupp1 : msupp 1%:MP = [:: 0%MM].
+Proof. by rewrite msuppE /= domU1. Qed.
+
+End MNzPolyTheory.
+
+
 Notation "c %:MP" := (mpolyC _ c) : ring_scope.
 Notation "c %:MP_[ n ]" := (mpolyC n c) : ring_scope.
 
@@ -819,7 +838,7 @@ Notation "p @_ i" := (mcoeff i p) : ring_scope.
 
 (* -------------------------------------------------------------------- *)
 Section NVar0.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : pzRingType).
 Implicit Types (p q r : {mpoly R[n]}).
 
 Lemma nvar0_mnmE : @all_equal_to 'X_{1..0} 0%MM.
@@ -835,7 +854,7 @@ End NVar0.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyZMod.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : pzRingType).
 Implicit Types (p q r : {mpoly R[n]}).
 
 Definition mpoly_opp p := [mpoly - mpoly_val p].
@@ -950,7 +969,7 @@ Notation "[ 'measure' 'of' f ]" := (Measure.clone _ f _)
 
 (* -------------------------------------------------------------------- *)
 Section MMeasure.
-Context (n : nat) (R : ringType) (mf : measure n).
+Context (n : nat) (R : pzRingType) (mf : measure n).
 Implicit Types (m : 'X_{1..n}) (p q : {mpoly R[n]}).
 
 Lemma mfE m : mf m = (\sum_(i < n) (m i) * mf U_(i)%MM)%N.
@@ -978,7 +997,7 @@ End MMeasure.
 
 (* -------------------------------------------------------------------- *)
 Section MSuppZMod.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : pzRingType).
 Implicit Types (p q r : {mpoly R[n]}) (D : {freeg 'X_{1..n} / R}).
 
 Lemma msuppN p : perm_eq (msupp (-p)) (msupp p).
@@ -1064,7 +1083,7 @@ End MWeight.
 Notation mweight p := (@mmeasure _ _ (Measure.clone _ mnmwgt _) p).
 
 Section MSize.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : pzRingType).
 Implicit Types (m : 'X_{1..n}) (p : {mpoly R[n]}).
 
 Lemma msizeE p : msize p = (\max_(m <- msupp p) (mdeg m).+1)%N.
@@ -1082,7 +1101,7 @@ End MSize.
 
 (* -------------------------------------------------------------------- *)
 Section MMeasureZMod.
-Context (n : nat) (R : ringType) (mf : measure n).
+Context (n : nat) (R : pzRingType) (mf : measure n).
 Implicit Types (c : R) (m : 'X_{1..n}) (p q : {mpoly R[n]}).
 
 Local Notation mmeasure := (@mmeasure n R mf).
@@ -1144,7 +1163,7 @@ Definition msize_poly_eq0 n R := @mmeasure_poly_eq0 n R mdeg.
 Definition msize_msupp0   n R := @mmeasure_msupp0 n R mdeg.
 
 (* -------------------------------------------------------------------- *)
-Definition polyn (R : ringType) :=
+Definition polyn (R : nzRingType) :=
   fix polyn n := if n is p.+1 then {poly (polyn p)} else R.
 
 Definition ipoly (T : Type) : Type := T.
@@ -1153,15 +1172,15 @@ Notation "{ 'ipoly' T [ n ] }"   := (polyn T n).
 Notation "{ 'ipoly' T [ n ] }^p" := (ipoly {ipoly T[n]}).
 
 Section IPoly.
-Context (R : ringType) (n : nat).
+Context (R : nzRingType) (n : nat).
 
-HB.instance Definition _ := GRing.Ring.on {ipoly R[n]}^p.
+HB.instance Definition _ := GRing.NzRing.on {ipoly R[n]}^p.
 
 End IPoly.
 
 (* -------------------------------------------------------------------- *)
 Section Inject.
-Context (R : ringType).
+Context (R : nzRingType).
 
 Fixpoint inject n m (p : {ipoly R[n]}) : {ipoly R[m + n]} :=
   if m is m'.+1 return {ipoly R[m + n]} then (inject m' p)%:P else p.
@@ -1262,7 +1281,7 @@ End Inject.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyRing.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : nzRingType).
 Implicit Types (p q r : {mpoly R[n]}) (m : 'X_{1..n}).
 
 Local Notation "`| p |" := (msize p) : ring_scope.
@@ -1456,9 +1475,9 @@ Qed.
 Lemma poly_oner_neq0 : 1%:MP != 0 :> {mpoly R[n]}.
 Proof. by rewrite mpolyC_eq oner_eq0. Qed.
 
-HB.instance Definition _ := GRing.Zmodule_isRing.Build (mpoly n R)
+HB.instance Definition _ := GRing.Zmodule_isNzRing.Build (mpoly n R)
   poly_mulA poly_mul1m poly_mulm1 poly_mulDl poly_mulDr poly_oner_neq0.
-HB.instance Definition _ := GRing.Ring.on {mpoly R[n]}.
+HB.instance Definition _ := GRing.NzRing.on {mpoly R[n]}.
 
 Lemma mcoeff1 m : 1@_m = (m == 0%MM)%:R.
 Proof. by rewrite mcoeffC mul1r. Qed.
@@ -1593,7 +1612,7 @@ End MPolyRing.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyVar.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : pzRingType).
 
 Definition mpolyX_def (m : 'X_{1..n}) : {mpoly R[n]} := [mpoly << m >>].
 
@@ -1604,10 +1623,12 @@ Definition mpolyX m : {mpoly R[n]} :=
 
 Canonical mpolyX_unlockable m := [unlockable of (mpolyX m)].
 
-Definition mX (k : 'I_n) : 'X_{1..n} :=
-  nosimpl [multinom (i == k : nat) | i < n].
+Definition mX (k : 'I_n) : 'X_{1..n} := [multinom (i == k : nat) | i < n].
 
 End MPolyVar.
+
+Arguments mX : simpl never.
+
 
 Notation "'X_[ R , m ]" := (@mpolyX _ R m).
 Notation "'X_[ m ]"     := (@mpolyX _ _ m).
@@ -1615,7 +1636,7 @@ Notation "'X_ i"        := (@mpolyX _ _ U_(i)).
 
 (* -------------------------------------------------------------------- *)
 Section MPolyVarTheory.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : nzRingType).
 Implicit Types (p q r : {mpoly R[n]}) (m : 'X_{1..n}).
 
 Local Notation "'X_[ m ]" := (@mpolyX n R m).
@@ -1832,7 +1853,7 @@ End MPolyVarTheory.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyLead.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : nzRingType).
 Implicit Types (p q r : {mpoly R[n]}).
 
 Definition mlead p : 'X_{1..n} := (\join_(m <- msupp p) m)%O.
@@ -2158,7 +2179,7 @@ Notation mleadc p := (p@_(mlead p)).
 
 (* -------------------------------------------------------------------- *)
 Section MPolyLast.
-Context {R : ringType} {n : nat}.
+Context {R : pzRingType} {n : nat}.
 
 Definition mlast (p : {mpoly R[n]}) : 'X_{1..n} :=
   head 0%MM (sort <=%O (msupp p)).
@@ -2205,7 +2226,7 @@ End MPolyLast.
 
 (* -------------------------------------------------------------------- *)
 Section MPoly0.
-Context (R : ringType).
+Context (R : pzRingType).
 
 Lemma mpolyKC : cancel (@mcoeff 0 R 0%MM) (@mpolyC 0 R).
 Proof.
@@ -2218,7 +2239,7 @@ End MPoly0.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyDeriv.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : nzRingType).
 Implicit Types (p q r : {mpoly R[n]}) (m : 'X_{1..n}).
 
 Definition mderiv (i : 'I_n) p :=
@@ -2547,7 +2568,7 @@ Notation "p ^`M ( i , n )" := (mderivm (U_(i) *+ n) p).
 
 (* -------------------------------------------------------------------- *)
 Section MPolyMorphism.
-Context (n : nat) (R S : ringType).
+Context (n : nat) (R S : nzRingType).
 Implicit Types (p q r : {mpoly R[n]}) (m : 'X_{1..n}).
 
 Section Defs.
@@ -2677,20 +2698,20 @@ End MPolyMorphism.
 Arguments mmapE [n R S h f p].
 
 (* -------------------------------------------------------------------- *)
-Lemma mmap1_eq n (R : ringType) (f1 f2 : 'I_n -> R) m :
+Lemma mmap1_eq n (R : nzRingType) (f1 f2 : 'I_n -> R) m :
   f1 =1 f2 -> mmap1 f1 m = mmap1 f2 m.
 Proof.
 move=> eq_f; rewrite /mmap1; apply/eq_bigr.
 by move=> /= i _; rewrite eq_f.
 Qed.
 
-Lemma mmap1_id n (R : ringType) m :
+Lemma mmap1_id n (R : nzRingType) m :
   mmap1 (fun i => 'X_i) m = 'X_[m] :> {mpoly R[n]}.
 Proof. by rewrite mpolyXE_id. Qed.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyMorphismComm.
-Context (n : nat) (R : ringType) (S : comRingType).
+Context (n : nat) (R : nzRingType) (S : comNzRingType).
 Context (h : 'I_n -> S) (f : {rmorphism R -> S}).
 Implicit Types (p q r : {mpoly R[n]}).
 
@@ -2709,7 +2730,7 @@ End MPolyMorphismComm.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyComRing.
-Context (n : nat) (R : comRingType).
+Context (n : nat) (R : comNzRingType).
 Implicit Types (p q r : {mpoly R[n]}).
 
 Lemma mpoly_mulC p q : p * q = q * p.
@@ -2718,9 +2739,9 @@ apply/mpolyP=> /= m; rewrite mcoeffM mcoeffMr.
 by apply: eq_bigr=> /= i _; rewrite mulrC.
 Qed.
 
-HB.instance Definition _ := GRing.Ring_hasCommutativeMul.Build (mpoly n R)
+HB.instance Definition _ := GRing.PzRing_hasCommutativeMul.Build (mpoly n R)
   mpoly_mulC.
-HB.instance Definition _ := GRing.ComRing.on {mpoly R[n]}.
+HB.instance Definition _ := GRing.ComNzRing.on {mpoly R[n]}.
 
 #[hnf]
 HB.instance Definition _ := GRing.Lalgebra_isComAlgebra.Build R {mpoly R[n]}.
@@ -2731,7 +2752,7 @@ End MPolyComRing.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyComp.
-Context (n : nat) (R : ringType) (k : nat).
+Context (n : nat) (R : nzRingType) (k : nat).
 Implicit Types (p q : {mpoly R[n]}) (lp lq : n.-tuple {mpoly R[k]}).
 
 Definition comp_mpoly lq p : {mpoly R[k]} := mmap (@mpolyC _ R) (tnth lq) p.
@@ -2793,7 +2814,7 @@ End MPolyComp.
 Notation "p \mPo lq" := (@comp_mpoly _ _ _ lq p).
 
 Section MPolyCompComm.
-Context (n : nat) (R : comRingType) (k : nat) (lp : n.-tuple {mpoly R[k]}).
+Context (n : nat) (R : comNzRingType) (k : nat) (lp : n.-tuple {mpoly R[k]}).
 
 Lemma comp_mpoly_is_multiplicative : multiplicative (comp_mpoly lp).
 Proof. exact: mmap_is_multiplicative. Qed.
@@ -2806,7 +2827,7 @@ End MPolyCompComm.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyCompHomo.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : nzRingType).
 Implicit Types (p q : {mpoly R[n]}).
 
 Lemma comp_mpoly_id p : p \mPo [tuple 'X_i | i < n] = p.
@@ -2821,7 +2842,7 @@ End MPolyCompHomo.
 
 (* -------------------------------------------------------------------- *)
 Section MEval.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : nzRingType).
 Implicit Types (p q r : {mpoly R[n]}) (v : 'I_n -> R).
 
 Definition meval v p := mmap idfun v p.
@@ -2873,7 +2894,7 @@ Notation "p .@[< v >]" := (@meval _ _ (nth v) p).
 
 (* -------------------------------------------------------------------- *)
 Section MEvalCom.
-Context (n k : nat) (R : comRingType).
+Context (n k : nat) (R : comNzRingType).
 Implicit Types (p q r : {mpoly R[n]}) (v : 'I_n -> R).
 
 Lemma meval_is_lrmorphism v : scalable_for *%R (meval v).
@@ -2892,7 +2913,7 @@ End MEvalCom.
 
 (* -------------------------------------------------------------------- *)
 Section MEvalComp.
-Context (n k : nat) (R : comRingType) (v : 'I_n -> R) (p : {mpoly R[k]}).
+Context (n k : nat) (R : comNzRingType) (v : 'I_n -> R) (p : {mpoly R[k]}).
 Context (lq : k.-tuple {mpoly R[n]}).
 
 Lemma comp_mpoly_meval : (p \mPo lq).@[v] = p.@[fun i => (tnth lq i).@[v]].
@@ -2907,7 +2928,7 @@ End MEvalComp.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyMap.
-Context (n : nat) (R S : ringType).
+Context (n : nat) (R S : nzRingType).
 Implicit Types (p q r : {mpoly R[n]}).
 
 Definition map_mpoly (f : R -> S) p : {mpoly S[n]} :=
@@ -2980,7 +3001,7 @@ End MPolyMap.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyMapComp.
-Context (n k : nat) (R S : ringType) (f : {rmorphism R -> S}).
+Context (n k : nat) (R S : nzRingType) (f : {rmorphism R -> S}).
 Context (lq : n.-tuple {mpoly R[k]}) (p : {mpoly R[n]}).
 
 Local Notation "p ^f" := (map_mpoly f p).
@@ -2999,7 +3020,7 @@ End MPolyMapComp.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyOver.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : nzRingType).
 
 Definition mpolyOver_pred (S : {pred R}) :=
   fun p : {mpoly R[n]} => all (mem S) [seq p@_m | m <- msupp p].
@@ -3204,7 +3225,7 @@ Qed.
 Lemma mpoly_inv_out : {in [predC mpoly_unit], mpoly_inv =1 id}.
 Proof.  by rewrite /mpoly_inv => p /negbTE /= ->. Qed.
 
-HB.instance Definition _ := GRing.ComRing_hasMulInverse.Build (mpoly n R)
+HB.instance Definition _ := GRing.ComNzRing_hasMulInverse.Build (mpoly n R)
   mpoly_mulVp mpoly_intro_unit mpoly_inv_out.
 HB.instance Definition _ := GRing.ComUnitRing.on {mpoly R[n]}.
 
@@ -3218,7 +3239,7 @@ End MPolyIdomain.
 
 (* -------------------------------------------------------------------- *)
 Section MWeightTheory.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : pzRingType).
 Implicit Types (m : 'X_{1..n}) (p : {mpoly R[n]}).
 
 Lemma leq_mdeg_mnmwgt m : mdeg m <= mnmwgt m.
@@ -3238,7 +3259,7 @@ End MWeightTheory.
 
 (* -------------------------------------------------------------------- *)
 Section MPerm.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : pzRingType).
 Implicit Types (m : 'X_{1..n}).
 
 Local Notation "m # s" := [multinom m (s i) | i < n]
@@ -3272,7 +3293,7 @@ End MPerm.
 
 (* -------------------------------------------------------------------- *)
 Section MPolySym.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : nzRingType).
 Implicit Types (p q r : {mpoly R[n]}).
 
 Definition msym (s : 'S_n) p : {mpoly R[n]} :=
@@ -3453,7 +3474,7 @@ Arguments symmetric {n R}.
 
 (* -------------------------------------------------------------------- *)
 Section MPolySymComp.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : nzRingType).
 
 Lemma mcomp_sym k (p : {mpoly R[n]}) (t : n.-tuple {mpoly R[k]}) :
   (forall i : 'I_n, t`_i \is symmetric) -> p \mPo t \is symmetric.
@@ -3468,7 +3489,7 @@ End MPolySymComp.
 
 (* -------------------------------------------------------------------- *)
 Section MPolySymCompCom.
-Context (n : nat) (R : comRingType).
+Context (n : nat) (R : comNzRingType).
 
 Local Notation "m # s" := [multinom m (s i) | i < n]
   (at level 40, left associativity, format "m # s").
@@ -3541,7 +3562,7 @@ End MPolySymUnit.
 
 (* -------------------------------------------------------------------- *)
 Section MElemPolySym.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : nzRingType).
 Implicit Types (p q r : {mpoly R[n]}) (h : {set 'I_n}).
 
 Definition mesym (k : nat) : {mpoly R[n]} :=
@@ -3826,7 +3847,7 @@ Local Notation "''s_(' n , k )" := (@mesym n _ k).
 
 (* -------------------------------------------------------------------- *)
 Section MWiden.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : nzRingType).
 
 Definition mwiden (p : {mpoly R[n]}) : {mpoly R[n.+1]} :=
   mmap (@mpolyC _ _) (fun i => 'X_(widen i)) p.
@@ -3985,7 +4006,7 @@ End MWiden.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyUni.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : nzRingType).
 Implicit Types (p q : {mpoly R[n.+1]}).
 
 Let X (i : 'I_n.+1) : {poly {mpoly R[n]}} :=
@@ -3995,7 +4016,9 @@ Let X (i : 'I_n.+1) : {poly {mpoly R[n]}} :=
   end.
 
 Definition muni (p : {mpoly R[n.+1]}) : {poly {mpoly R[n]}} :=
-  nosimpl (mmap (polyC \o @mpolyC _ _) X p).
+  mmap (polyC \o @mpolyC _ _) X p.
+
+Arguments muni : simpl never.
 
 Let XE m : mmap1 X m = 'X_[[multinom (m (widen i)) | i < n]] *: 'X^(m ord_max).
 Proof.
@@ -4065,6 +4088,8 @@ Lemma muniZ c p : muni (c *: p) = c%:MP *: muni p.
 Proof. by rewrite /muni mmapZ /= mul_polyC. Qed.
 
 End MPolyUni.
+
+Arguments muni : simpl never.
 
 (* -------------------------------------------------------------------- *)
 Section MESymViete.
@@ -4137,7 +4162,7 @@ rewrite !card_imset //= ?card_draws /=.
 by rewrite !card_ord binS.
 Qed.
 
-Lemma mesymSS (R : ringType) n k :
+Lemma mesymSS (R : nzRingType) n k :
   's_(n.+1, k.+1) = mw 's_(n, k.+1) + mw 's_(n, k) * 'X_(ord_max)
   :> {mpoly R[n.+1]}.
 Proof.
@@ -4238,7 +4263,7 @@ End MESymViete.
 
 (* -------------------------------------------------------------------- *)
 Section MESymFundamental.
-Context (n : nat) (R : comRingType).
+Context (n : nat) (R : comNzRingType).
 Implicit Types (m : 'X_{1..n}).
 
 Local Notation "m # s" := [multinom m (s i) | i < n]
@@ -4415,8 +4440,9 @@ have: p \is symmetric -> { n : nat | (symfn n p).2 = 0 }.
 by case: (p \is symmetric)=> [[]// k eq|_]; [exists k | exists 0%N].
 Qed.
 
-Definition symf (p : {mpoly R[n]}) :=
-  nosimpl (symfn (tag (symfnS p)) p).1.
+Definition symf (p : {mpoly R[n]}) := (symfn (tag (symfnS p)) p).1.
+
+Arguments symf : simpl never.
 
 Lemma symfP (p : {mpoly R[n]}) : p \is symmetric -> p = symf p \mPo S.
 Proof.
@@ -4494,25 +4520,27 @@ Qed.
 
 End MESymFundamental.
 
+Arguments symf : simpl never.
+
 (* -------------------------------------------------------------------- *)
-Definition ishomog1_pred {n} {R : ringType}
+Definition ishomog1_pred {n} {R : pzRingType}
   (d : nat) (mf : measure n) : pred {mpoly R[n]}
   := fun p => all [pred m | mf m == d] (msupp p).
 Arguments ishomog1_pred _ _ _ _ _ /.
-Definition ishomog1 {n} {R : ringType}
+Definition ishomog1 {n} {R : pzRingType}
   (d : nat) (mf : measure n) : qualifier 0 {mpoly R[n]}
   := [qualify p | ishomog1_pred d mf p].
 
 (* -------------------------------------------------------------------- *)
-Definition ishomog_pred {n} {R : ringType} mf : pred {mpoly R[n]} :=
+Definition ishomog_pred {n} {R : pzRingType} mf : pred {mpoly R[n]} :=
   fun p => p \is ishomog1 (@mmeasure _ _ mf p).-1 mf.
 Arguments ishomog_pred _ _ _ _ /.
-Definition ishomog {n} {R : ringType} mf : qualifier 0 {mpoly R[n]} :=
+Definition ishomog {n} {R : pzRingType} mf : qualifier 0 {mpoly R[n]} :=
   [qualify p | ishomog_pred mf p].
 
 (* -------------------------------------------------------------------- *)
 Section MPolyHomogTheory.
-Context (n : nat) (R : ringType) (mf : measure n).
+Context (n : nat) (R : nzRingType) (mf : measure n).
 Implicit Types (p q : {mpoly R[n]}).
 
 Local Notation "d .-homog" := (@ishomog1 _ _ d mf)
@@ -4654,7 +4682,7 @@ Notation "'homog' mf" := (@ishomog _ _ mf)
 
 (* -------------------------------------------------------------------- *)
 Section HomogNVar0.
-Context (n : nat) (R : ringType).
+Context (n : nat) (R : nzRingType).
 
 Lemma nvar0_homog (mf : measure 0%N) (p : {mpoly R[0]}) :
   p \is 0.-homog for mf.
@@ -4668,7 +4696,7 @@ End HomogNVar0.
 
 (* -------------------------------------------------------------------- *)
 Section ProjHomog.
-Context (n : nat) (R : ringType) (mf : measure n).
+Context (n : nat) (R : nzRingType) (mf : measure n).
 Implicit Types (p q r : {mpoly R[n]}) (m : 'X_{1..n}).
 
 Local Notation mfsize p := (@mmeasure _ _ mf p).
@@ -4769,7 +4797,7 @@ End ProjHomog.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyHomogType.
-Context (n : nat) (R : ringType) (d : nat).
+Context (n : nat) (R : nzRingType) (d : nat).
 
 Record dhomog :=
   DHomog { mpoly_of_dhomog :> {mpoly R[n]}; _ : mpoly_of_dhomog \is d.-homog }.
@@ -4787,14 +4815,14 @@ HB.instance Definition _ :=
 
 End MPolyHomogType.
 
-Lemma dhomog_is_dhomog n (R : ringType) d (p : dhomog n R d) :
+Lemma dhomog_is_dhomog n (R : nzRingType) d (p : dhomog n R d) :
   val p \is d.-homog.
 Proof. by case: p. Qed.
 
 #[global] Hint Extern 0 (is_true (_ \is _.-homog)) =>
   (by apply/dhomog_is_dhomog) : core.
 
-Definition indhomog n (R : ringType) d : {mpoly R[n]} -> dhomog n R d :=
+Definition indhomog n (R : nzRingType) d : {mpoly R[n]} -> dhomog n R d :=
   fun p => insubd (0 : dhomog n R d) p.
 
 Notation "[ ''dhomog_' d p ]" := (@indhomog _ _ d p)
@@ -4896,9 +4924,9 @@ by rewrite !mem_enum; apply/inj_s2m.
 Qed.
 
 (* -------------------------------------------------------------------- *)
-Context (n : nat) (R : ringType) (d : nat).
+Context (n : nat) (R : nzRingType) (d : nat).
 
-Lemma dhomog_vecaxiom: vector_axiom 'C(d + n, d) (dhomog n.+1 R d).
+Lemma dhomog_vecaxiom: Vector.axiom 'C(d + n, d) (dhomog n.+1 R d).
 Proof.
 pose b := sbasis n.+1 d.
 pose t := [tuple of nseq d (0 : 'I_n.+1)].
@@ -4950,7 +4978,7 @@ End MPolyHomogVec.
 
 (* -------------------------------------------------------------------- *)
 Section MSymHomog.
-Context (n : nat) (R : comRingType).
+Context (n : nat) (R : comNzRingType).
 Implicit Types (p q r : {mpoly R[n]}).
 
 Lemma msym_pihomog d p (s : 'S_n) :
@@ -4972,7 +5000,7 @@ End MSymHomog.
 
 (* -------------------------------------------------------------------- *)
 Section MESymFundamentalHomog.
-Context (n : nat) (R : comRingType).
+Context (n : nat) (R : comNzRingType).
 
 Local Notation S := [tuple mesym n R i.+1  | i < n].
 
