@@ -4133,9 +4133,7 @@ apply/eqP; rewrite eq_sym eqEcard; apply/andP; split.
   apply/negP=> /imsetP [/=] x _ /eqP.
   by rewrite eqE /= eq_sym ltn_eqF.
 have := disjoint_S n k; rewrite -leq_card_setU=> /eqP->.
-rewrite !card_imset //= ?card_draws /=;
-  try exact/inj_swiden; try exact/inj_mDswiden.
-  (* remove the line above once requiring Coq >= 8.17 *)
+rewrite !card_imset //= ?card_draws /=.
 by rewrite !card_ord binS.
 Qed.
 
