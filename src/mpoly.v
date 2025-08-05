@@ -40,6 +40,8 @@
 (*       {ipoly R[n]} == the type obtained by iterating the univariate        *)
 (*                       polynomial type, with R as base ring.                *)
 (*     {ipoly R[n]}^p == copy of {ipoly R[n]} with a ring canonical structure *)
+(*       mpcast Emn p == the {mpoly R[m]} p cast as a {mpoly R[n]}            *)
+(*                       using Emn : m = n                                    *)
 (*           mwiden p == the canonical injection (ring morphism) from         *)
 (*                       {mpoly R[n]} to {mpoly R[n.+1]}                      *)
 (*    mpolyC c, c%:MP == the constant multivariate polynomial c               *)
@@ -3823,6 +3825,91 @@ End MElemPolySym.
 
 Local Notation "''s_(' K , n , k )" := (@mesym n K k).
 Local Notation "''s_(' n , k )" := (@mesym n _ k).
+
+(* -------------------------------------------------------------------- *)
+Section MPCast.
+
+Definition mnmcast {m n} (eq_mn : m = n) (mn : 'X_{1..m}) : 'X_{1..n} :=
+  let: erefl in _ = n := eq_mn return 'X_{1..n} in mn.
+
+Lemma mnmcast_id {n} (eq_n : n = n) (m : 'X_{1..n}) : mnmcast eq_n m = m.
+Proof. by rewrite eq_axiomK. Qed.
+
+Lemma mnmcast_eq0 {m n} (eq_mn : m = n) mn :
+  (mnmcast eq_mn mn == 0%MM) = (mn == 0%MM).
+Proof. by move: eq_mn mn => /[dup]-> eq_mn mn; rewrite mnmcast_id. Qed.
+
+Definition mpcast {R m n} (eq_mn : m = n) (p : {mpoly R[m]}) : {mpoly R[n]} :=
+  let: erefl in _ = n := eq_mn return {mpoly R[n]} in p.
+
+Lemma mpcast_id {R n} (eq_n : n = n) (p : {mpoly R[n]}) : mpcast eq_n p = p.
+Proof. by rewrite eq_axiomK. Qed.
+
+Lemma mpcast_comp {R n1 n2 n3} (eq_n2 : n1 = n2) (eq_n3 : n2 = n3)
+    (p : {mpoly R[n1]}) :
+  mpcast eq_n3 (mpcast eq_n2 p) = mpcast (etrans eq_n2 eq_n3) p.
+Proof.
+by move: eq_n3 eq_n2 => /[dup]-> /[swap]/[dup]<- eq eq'; rewrite !mpcast_id.
+Qed.
+
+Lemma mpcastE {R m n} (eq_mn : m = n) (p : {mpoly R[m]}) (mn : 'X_{1..n}) :
+  (mpcast eq_mn p)@_mn = p@_(mnmcast (esym eq_mn) mn).
+Proof. by move: eq_mn p mn => /[dup]-> ? ? ?; rewrite mpcast_id mnmcast_id. Qed.
+
+Lemma mpcastC {R : ringType} {m n} (eq_mn : m = n) (c : R) :
+  mpcast eq_mn c%:MP = c%:MP.
+Proof. by apply/mpolyP => mn; rewrite mpcastE !mcoeffC mnmcast_eq0. Qed.
+
+Fact mpcast_is_additive {R m n} (eq_mn : m = n) : additive (@mpcast R m n eq_mn).
+Proof. by move=> p q; apply/mpolyP => mn; rewrite mcoeffB !mpcastE mcoeffB. Qed.
+
+HB.instance Definition _ R m n (eq_mn : m = n) :=
+  GRing.isAdditive.Build {mpoly R[m]} {mpoly R[n]}
+    (mpcast eq_mn) (mpcast_is_additive eq_mn).
+
+Lemma mpcast0 {R m n} eq_mn : @mpcast R m n eq_mn 0 = 0.
+Proof. exact: raddf0. Qed.
+Lemma mpcastN {R m n} eq_mn : {morph @mpcast R m n eq_mn : p / - p}.
+Proof. exact: raddfN. Qed.
+Lemma mpcastD {R m n} eq_mn : {morph @mpcast R m n eq_mn : p q / p + q}.
+Proof. exact: raddfD. Qed.
+Lemma mpcastB {R m n} eq_mn : {morph @mpcast R m n eq_mn : p q / p - q}.
+Proof. exact: raddfB. Qed.
+Lemma mpcastMn {R m n} eq_mn k : {morph @mpcast R m n eq_mn : p / p *+ k}.
+Proof. exact: raddfMn. Qed.
+Lemma mpcastMNn {R m n} eq_mn k : {morph @mpcast R m n eq_mn : p / p *- k}.
+Proof. exact: raddfMNn. Qed.
+
+Fact mpcast_is_multiplicative {R m n} (eq_mn : m = n) :
+  multiplicative (@mpcast R m n eq_mn).
+Proof.
+by (split; move: (eq_mn); rewrite eq_mn) => [? p q | ?]; rewrite !mpcast_id.
+Qed.
+
+HB.instance Definition _ R m n (eq_mn : m = n) :=
+  GRing.isMultiplicative.Build {mpoly R[m]} {mpoly R[n]}
+    (mpcast eq_mn) (mpcast_is_multiplicative eq_mn).
+
+Lemma mpcast1 {R m n} (eq_mn : m = n) : mpcast eq_mn 1 = 1 :> {mpoly R[n]}.
+Proof. exact: rmorph1. Qed.
+Lemma mpcastM {R m n} eq_mn : {morph @mpcast R m n eq_mn : p q / p * q}.
+Proof. exact: rmorphM. Qed.
+Lemma mpcastXn {R m n} eq_mn k : {morph @mpcast R m n eq_mn : p / p ^+ k}.
+Proof. exact: rmorphXn. Qed.
+
+Lemma mpcastZ {R m n} (eq_mn : m = n) c :
+  {morph @mpcast R m n eq_mn : p / c *: p}.
+Proof. by move: eq_mn => /[dup]-> eq_mn p; rewrite !mpcast_id. Qed.
+
+Lemma mpcastX {R m n} (eq_mn : m = n) mn:
+  mpcast eq_mn 'X_[R, mn] = 'X_[mnmcast eq_mn mn].
+Proof. by move: eq_mn mn => /[dup]-> eq_mn mn; rewrite !eq_axiomK. Qed.
+
+Lemma mnmcastE {m n} (eq_mn : m = n) (mn : 'X_{1..m}) i :
+  mnmcast eq_mn mn i = mn (cast_ord (esym eq_mn) i).
+Proof. by move: eq_mn i => /[dup]<-eq_mn i; rewrite mnmcast_id cast_ord_id. Qed.
+
+End MPCast.
 
 (* -------------------------------------------------------------------- *)
 Section MWiden.
