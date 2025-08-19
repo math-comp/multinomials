@@ -117,16 +117,16 @@ Module Exports. HB.reexport. End Exports.
 Export Exports.
 
 (* -------------------------------------------------------------------- *)
-Definition mmorphism (M : monomType) (S : semiRingType) (f : M -> S) : Prop :=
+Definition mmorphism (M : monomType) (S : pzSemiRingType) (f : M -> S) : Prop :=
   (f 1%M = 1) * {morph f : x y / (x * y)%M >-> (x * y)%R}.
 
 HB.mixin Record isMultiplicative
-    (M : monomType) (S : semiRingType) (apply : M -> S) := {
+    (M : monomType) (S : pzSemiRingType) (apply : M -> S) := {
   mmorphism_subproof : mmorphism apply;
 }.
 
 #[mathcomp(axiom="multiplicative")]
-HB.structure Definition MMorphism (M : monomType) (S : semiRingType) :=
+HB.structure Definition MMorphism (M : monomType) (S : pzSemiRingType) :=
   {f of isMultiplicative M S f}.
 
 Module MMorphismExports.
@@ -143,7 +143,7 @@ Export MMorphismExports.
 (* -------------------------------------------------------------------- *)
 Section MMorphismTheory.
 
-Context {M : monomType} {S : semiRingType} (f : {mmorphism M -> S}).
+Context {M : monomType} {S : pzSemiRingType} (f : {mmorphism M -> S}).
 
 Lemma mmorph1 : f 1%M = 1.
 Proof. exact: mmorphism_subproof.1. Qed.
@@ -191,10 +191,10 @@ Definition msupp (g : {malg G[K]}) : {fset K} := finsupp (malg_val g).
 
 End MalgBaseOp.
 
-Arguments mcoeff  {K G} x%monom_scope g%ring_scope.
+Arguments mcoeff  {K G} x%_monom_scope g%_ring_scope.
 Arguments mkmalg  {K G} _.
-Arguments mkmalgU {K G} k%monom_scope x%ring_scope.
-Arguments msupp   {K G} g%ring_scope.
+Arguments mkmalgU {K G} k%_monom_scope x%_ring_scope.
+Arguments msupp   {K G} g%_ring_scope.
 
 (* -------------------------------------------------------------------- *)
 Notation "g @_ k" := (mcoeff k g).
@@ -420,7 +420,7 @@ End MalgZmodTheory.
 (* -------------------------------------------------------------------- *)
 Section MalgSemiRingTheory.
 
-Context {K : choiceType} {R : semiRingType}.
+Context {K : choiceType} {R : pzSemiRingType}.
 
 Implicit Types (g : {malg R[K]}).
 
@@ -533,7 +533,7 @@ End MalgMonomTheory.
 (* -------------------------------------------------------------------- *)
 Section MalgSemiRingTheory.
 
-Context (K : monomType) (R : semiRingType).
+Context (K : monomType) (R : pzSemiRingType).
 
 Implicit Types (g : {malg R[K]}) (k l : K).
 
@@ -656,11 +656,8 @@ rewrite [LHS](big_morph (fgmul _) (fun _ _ => fgmulgDr _ _ _) (fgmulg0 _)).
 by rewrite fgmulEr1; apply/eq_bigr=> k3 _; rewrite !fgmulUU mulrA mulmA.
 Qed.
 
-Lemma fgoner_eq0 : fgone != 0.
-Proof. by apply/eqP/malgP=> /(_ 1%M) /eqP; rewrite !mcoeffsE oner_eq0. Qed.
-
-HB.instance Definition _ := GRing.Nmodule_isSemiRing.Build {malg R[K]}
-  fgmulA fgmul1g fgmulg1 fgmulgDl fgmulgDr fgmul0g fgmulg0 fgoner_eq0.
+HB.instance Definition _ := GRing.Nmodule_isPzSemiRing.Build {malg R[K]}
+  fgmulA fgmul1g fgmulg1 fgmulgDl fgmulgDr fgmul0g fgmulg0.
 
 Lemma malgM_def g1 g2 : g1 * g2 = fgmul g1 g2.
 Proof. by []. Qed.
@@ -674,14 +671,8 @@ Qed.
 Lemma fgscaleAl c g1 g2 : c *: (g1 * g2) = (c *: g1) * g2.
 Proof. by rewrite -!mul_malgC mulrA. Qed.
 
-HB.instance Definition _ :=
-  GRing.LSemiModule_isLSemiAlgebra.Build R {malg R[K]} fgscaleAl.
-
 Lemma mcoeffU1 k k' : (<< k >> : {malg R[K]})@_k' = (k == k')%:R.
 Proof. by rewrite mcoeffU. Qed.
-
-Lemma msuppU1 k : @msupp _ R << k >> = [fset k].
-Proof. by rewrite msuppU oner_eq0. Qed.
 
 Lemma malgME g1 g2 :
   g1 * g2 = \sum_(k1 <- msupp g1) \sum_(k2 <- msupp g2)
@@ -794,14 +785,26 @@ HB.instance Definition _ :=
 
 End MalgSemiRingTheory.
 
-(* FIXME: HB.saturate *)
-HB.instance Definition _ (K : monomType) (R : ringType) :=
-  GRing.SemiRing.on {malg R[K]}.
+(* -------------------------------------------------------------------- *)
+Section MalgNzSemiRingTheory.
+
+Context (K : monomType) (R : nzSemiRingType).
+
+Lemma fgoner_eq0 : 1 != 0 :> {malg R[K]}.
+Proof. by apply/eqP/malgP=> /(_ 1%M) /eqP; rewrite !mcoeffsE oner_eq0. Qed.
+
+HB.instance Definition _ :=
+  GRing.PzSemiRing_isNonZero.Build {malg R[K]} fgoner_eq0.
+
+HB.instance Definition _ :=
+  GRing.LSemiModule_isLSemiAlgebra.Build R {malg R[K]} (@fgscaleAl K R).
+
+End MalgNzSemiRingTheory.
 
 (* -------------------------------------------------------------------- *)
 Section MalgComSemiRingType.
 
-Context {K : conomType} {R : comSemiRingType}.
+Context {K : conomType} {R : comPzSemiRingType}.
 
 Lemma fgmulC : @commutative {malg R[K]} _ *%R.
 Proof.
@@ -811,25 +814,37 @@ by rewrite mulrC [X in X==k]mulmC.
 Qed.
 
 HB.instance Definition _ :=
-  GRing.SemiRing_hasCommutativeMul.Build {malg R[K]} fgmulC.
-
-HB.instance Definition _ :=
-  GRing.LSemiAlgebra_isComSemiAlgebra.Build R {malg R[K]}.
+  GRing.PzSemiRing_hasCommutativeMul.Build {malg R[K]} fgmulC.
 
 End MalgComSemiRingType.
 
+(* -------------------------------------------------------------------- *)
+Section MalgNzComSemiRingType.
+
+Context {K : conomType} {R : comNzSemiRingType}.
+
+HB.instance Definition _ := GRing.ComPzSemiRing.on {malg R[K]}.
+HB.instance Definition _ :=
+  GRing.LSemiAlgebra_isComSemiAlgebra.Build R {malg R[K]}.
+
+End MalgNzComSemiRingType.
+
 (* FIXME: HB.saturate *)
-HB.instance Definition _ (K : monomType) (R : ringType) :=
-  GRing.Lmodule.on {malg R[K]}.
-HB.instance Definition _ (K : conomType) (R : comRingType) :=
-  GRing.Lmodule.on {malg R[K]}.
+HB.instance Definition _ (K : monomType) (R : pzRingType) :=
+  GRing.PzSemiRing.on {malg R[K]}.
+HB.instance Definition _ (K : monomType) (R : nzRingType) :=
+  GRing.NzSemiRing.on {malg R[K]}.
+HB.instance Definition _ (K : conomType) (R : comPzRingType) :=
+  GRing.ComPzSemiRing.on {malg R[K]}.
+HB.instance Definition _ (K : conomType) (R : comNzRingType) :=
+  GRing.ComNzSemiRing.on {malg R[K]}.
 (* /FIXME *)
 
 (* -------------------------------------------------------------------- *)
 Section MalgMorphism.
 Section Defs.
 
-Context {K : choiceType} {G : nmodType} {S : semiRingType}.
+Context {K : choiceType} {G : nmodType} {S : pzSemiRingType}.
 Context (f : G -> S) (h : K -> S).
 
 Definition mmap g := \sum_(k <- msupp g) f g@_k * h k.
@@ -843,7 +858,7 @@ Local Notation "g ^[ f , h ]" := (mmap f h g).
 
 Section SemiAdditive.
 
-Context {K : choiceType} {G : nmodType} {S : semiRingType}.
+Context {K : choiceType} {G : nmodType} {S : pzSemiRingType}.
 
 Lemma mmapEw (d : {fset K}) g : msupp g `<=` d ->
   forall (f : {additive G -> S}) (h : K -> S),
@@ -879,7 +894,7 @@ End SemiAdditive.
 
 Section Additive.
 
-Context {K : choiceType} {G : zmodType} {S : ringType}.
+Context {K : choiceType} {G : zmodType} {S : pzRingType}.
 Context (f : {additive G -> S}) (h : K -> S).
 
 Lemma mmapN     : {morph mmap f h: x / - x}    . Proof. exact: raddfN. Qed.
@@ -890,7 +905,7 @@ End Additive.
 
 Section CommrMultiplicative.
 
-Context {K : monomType} {R S : semiRingType}.
+Context {K : monomType} {R S : pzSemiRingType}.
 Context (f : {rmorphism R -> S}) (h : {mmorphism K -> S}).
 
 Implicit Types (c : R) (g : {malg R[K]}).
@@ -922,7 +937,7 @@ End CommrMultiplicative.
 (* -------------------------------------------------------------------- *)
 Section Multiplicative.
 
-Context {K : monomType} {R : semiRingType} {S : comSemiRingType}.
+Context {K : monomType} {R : pzSemiRingType} {S : comPzSemiRingType}.
 Context (f : {rmorphism R -> S}) (h : {mmorphism K -> S}).
 
 Lemma mmap_is_multiplicative : multiplicative (mmap f h).
@@ -937,7 +952,7 @@ End Multiplicative.
 (* -------------------------------------------------------------------- *)
 Section Linear.
 
-Context {K : monomType} {R : comSemiRingType} (h : {mmorphism K -> R}).
+Context {K : monomType} {R : comPzSemiRingType} (h : {mmorphism K -> R}).
 
 Lemma mmap_is_linear : scalable_for *%R (mmap idfun h).
 Proof. by move=> /= c g; rewrite -mul_malgC rmorphM /= mmapC. Qed.
@@ -1037,7 +1052,7 @@ End MonalgOverOpp.
 (* -------------------------------------------------------------------- *)
 Section MonalgOverSemiring.
 
-Context (K : monomType) (R : semiRingType) (S : semiringClosed R).
+Context (K : monomType) (R : pzSemiRingType) (S : semiringClosed R).
 
 Local Notation monalgOver := (@monalgOver K R).
 
