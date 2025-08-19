@@ -246,13 +246,10 @@ Qed.
 
 (* -------------------------------------------------------------------- *)
 Section LatticeMisc.
-Context {T : eqType} {disp : Order.disp_t} {U : bDistrLatticeType disp}.
+Context {T : eqType} {disp : Order.disp_t} {U : bOrderType disp}.
 Context (P : pred T) (F : T -> U).
 
 Implicit Type (r : seq T).
-
-(* FIXME: introducing bOrderType improves the statement of the lemmas below. *)
-Hypothesis letot : @total U <=%O.
 
 Variant bigjoin_spec r : U -> Type :=
   | BigJoinEmpty : nilp r -> bigjoin_spec r \bot%O
@@ -263,8 +260,7 @@ Proof.
 elim: r => [|i r]; first by rewrite big_nil; constructor.
 rewrite big_cons; case=> [|j jr].
   by case: r => // _; rewrite joinx0; constructor; rewrite mem_head.
-by case: lcomparableP (letot (F i) (F j)) => //= _ _;
-  constructor; rewrite ?mem_head // in_cons jr orbT.
+by case: ltgtP => //= _; constructor; rewrite ?mem_head // in_cons jr orbT.
 Qed.
 
 Lemma eq_bigjoin r :

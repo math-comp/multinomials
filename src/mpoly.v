@@ -1875,8 +1875,8 @@ Proof. by rewrite /mlead msuppX big_seq1. Qed.
 
 Lemma mlead_supp p : p != 0 -> mlead p \in msupp p.
 Proof.
-rewrite -msupp_eq0 /mlead => nz_p; case: bigjoinP => //; first exact: le_total.
-by case: (msupp p) nz_p.
+rewrite -msupp_eq0 /mlead => nz_p.
+by case: bigjoinP => //; case: (msupp p) nz_p.
 Qed.
 
 Lemma mlead_deg p : p != 0 -> (mdeg (mlead p)).+1 = msize p.
@@ -1955,8 +1955,7 @@ pose Q i := P (nth p r i); rewrite !(big_nth p) -!(big_filter _ Q).
 set itg := [seq _ <- _ | _]; have [/size0nil->|nz_szr] := eqVneq (size itg) 0%N.
   by rewrite !big_nil joinx0 addr0.
 move: {ih}(ih uq_ml); rewrite !(big_nth p) -!(big_filter _ Q) -/itg.
-move=> ih; rewrite mleadD ih //.
-case: bigjoinP; [exact: le_total | by rewrite /nilp; case: eqP nz_szr |].
+move=> ih; rewrite mleadD ih //; case: bigjoinP; first by case: (itg) nz_szr.
 move=> /= x; rewrite mem_filter => /andP[Px].
 rewrite mem_iota add0n subn0 => /andP[_ lt_x_szr].
 apply/contra: Fp_ml=> /eqP-> {Q itg uq_ml nz_szr ih}.
@@ -4500,7 +4499,7 @@ rewrite comp_mpolyEX mlead_sum ?filter_predT; last first.
   exact: (can_in_inj (nthK _ _)).
 rewrite big_seq (eq_bigr _ h) -big_seq.
 case: (eq_bigjoin (fun m => mlead (XS m)) _ (r := msupp t)).
-  exact/le_total. by rewrite msupp_eq0.
+  by rewrite msupp_eq0.
 move=> /= m m_in_t /eqP/esym; rewrite -/S=> lmm.
 rewrite -lmm raddf_sum /= (bigD1_seq m) //= mcoeffZ.
 rewrite mleadc_XS mulr1 big_seq_cond big1.
