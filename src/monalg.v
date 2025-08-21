@@ -790,7 +790,7 @@ Section MalgNzSemiRingTheory.
 
 Context (K : monomType) (R : nzSemiRingType).
 
-Lemma fgoner_eq0 : 1 != 0 :> {malg R[K]}.
+Fact fgoner_eq0 : 1 != 0 :> {malg R[K]}.
 Proof. by apply/eqP/malgP=> /(_ 1%M) /eqP; rewrite !mcoeffsE oner_eq0. Qed.
 
 HB.instance Definition _ :=
@@ -802,11 +802,29 @@ HB.instance Definition _ :=
 End MalgNzSemiRingTheory.
 
 (* -------------------------------------------------------------------- *)
-Section MalgComSemiRingType.
+Section MalgComNzSemiRingTheory.
+
+Context (K : monomType) (R : comNzSemiRingType).
+
+Fact fgscaleAr c (g1 g2 : {malg R[K]}) : c *: (g1 * g2) = g1 * (c *: g2).
+Proof.
+apply/malgP => k; rewrite linearZ/= mcoeffMl mulr_sumr.
+rewrite (mcoeffMlw _ (fsubset_refl _) (msuppZ_le _ _)).
+apply/eq_bigr=> /= k1 _; rewrite mulr_sumr.
+by apply/eq_bigr=> /= k2 _; rewrite linearZ/= mulrnAr mulrCA.
+Qed.
+
+HB.instance Definition _ :=
+  GRing.LSemiAlgebra_isSemiAlgebra.Build R {malg R[K]} fgscaleAr.
+
+End MalgComNzSemiRingTheory.
+
+(* -------------------------------------------------------------------- *)
+Section MalgComPzSemiRingTheory.
 
 Context {K : conomType} {R : comPzSemiRingType}.
 
-Lemma fgmulC : @commutative {malg R[K]} _ *%R.
+Fact fgmulC : @commutative {malg R[K]} _ *%R.
 Proof.
 move=> g1 g2; apply/malgP=> k; rewrite mcoeffMl mcoeffMr.
 apply/eq_bigr=> /= k1 _; apply/eq_bigr=> /= k2 _.
@@ -816,28 +834,21 @@ Qed.
 HB.instance Definition _ :=
   GRing.PzSemiRing_hasCommutativeMul.Build {malg R[K]} fgmulC.
 
-End MalgComSemiRingType.
-
-(* -------------------------------------------------------------------- *)
-Section MalgNzComSemiRingType.
-
-Context {K : conomType} {R : comNzSemiRingType}.
-
-HB.instance Definition _ := GRing.ComPzSemiRing.on {malg R[K]}.
-HB.instance Definition _ :=
-  GRing.LSemiAlgebra_isComSemiAlgebra.Build R {malg R[K]}.
-
-End MalgNzComSemiRingType.
+End MalgComPzSemiRingTheory.
 
 (* FIXME: HB.saturate *)
+HB.instance Definition _ (K : conomType) (R : comNzSemiRingType) :=
+  GRing.NzSemiRing.on {malg R[K]}.
 HB.instance Definition _ (K : monomType) (R : pzRingType) :=
   GRing.PzSemiRing.on {malg R[K]}.
 HB.instance Definition _ (K : monomType) (R : nzRingType) :=
   GRing.NzSemiRing.on {malg R[K]}.
 HB.instance Definition _ (K : conomType) (R : comPzRingType) :=
-  GRing.ComPzSemiRing.on {malg R[K]}.
+  GRing.PzSemiRing.on {malg R[K]}.
+HB.instance Definition _ (K : monomType) (R : comNzRingType) :=
+  GRing.NzSemiRing.on {malg R[K]}.
 HB.instance Definition _ (K : conomType) (R : comNzRingType) :=
-  GRing.ComNzSemiRing.on {malg R[K]}.
+  GRing.NzSemiRing.on {malg R[K]}.
 (* /FIXME *)
 
 (* -------------------------------------------------------------------- *)
