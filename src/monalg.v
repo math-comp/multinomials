@@ -61,14 +61,12 @@ HB.mixin Record Choice_isMonomialDef V of Choice V := {
   unitm : forall x y, mul x y = one -> x = one /\ y = one
 }.
 
+#[short(type="monomType")]
 HB.structure Definition MonomialDef :=
   { V of Choice V & Choice_isMonomialDef V }.
 
-Module MonomialDefExports.
 Bind Scope monom_scope with MonomialDef.sort.
-Notation monomType := MonomialDef.type.
-End MonomialDefExports.
-Export MonomialDefExports.
+Bind Scope type_scope with monomType.
 
 (* -------------------------------------------------------------------- *)
 Notation mone := one.
@@ -83,14 +81,50 @@ HB.mixin Record MonomialDef_isConomialDef V of MonomialDef V := {
   mulmC : commutative (@mul V)
 }.
 
+#[short(type="conomType")]
 HB.structure Definition ConomialDef :=
   { V of MonomialDef V & MonomialDef_isConomialDef V }.
 
-Module ConomialDefExports.
 Bind Scope monom_scope with ConomialDef.sort.
-Notation conomType := ConomialDef.type.
-End ConomialDefExports.
-Export ConomialDefExports.
+Bind Scope type_scope with conomType.
+
+(* -------------------------------------------------------------------- *)
+Section ProdMonom.
+
+Context (K1 K2 : monomType).
+
+Let one : K1 * K2 := (1, 1)%M.
+Let mul (m1 m2 : K1 * K2) := (m1.1 * m2.1, m1.2 * m2.2)%M.
+
+Fact mulpA : associative mul.
+Proof. by move=> ? ? ?; rewrite /mul !mulmA. Qed.
+
+Fact mul1p : left_id one mul.
+Proof. by move=> [? ?]; rewrite /mul !mul1m. Qed.
+
+Fact mulp1 : right_id one mul.
+Proof. by move=> [? ?]; rewrite /mul !mulm1. Qed.
+
+Fact unitp m1 m2 : mul m1 m2 = one -> m1 = one /\ m2 = one.
+Proof. by case: m1 m2 => [? ?] [? ?] [/unitm[-> ->] /unitm[-> ->]]. Qed.
+
+HB.instance Definition _ :=
+  Choice_isMonomialDef.Build (K1 * K2)%type mulpA mul1p mulp1 unitp.
+
+End ProdMonom.
+
+(* -------------------------------------------------------------------- *)
+Section ProdConom.
+
+Context (K1 K2 : conomType).
+
+Fact mulpC : @commutative (K1 * K2) _ mul.
+Proof. move=> ? ?; congr pair; apply: mulmC. Qed.
+
+HB.instance Definition _ :=
+  MonomialDef_isConomialDef.Build (K1 * K2)%type mulpC.
+
+End ProdConom.
 
 (* -------------------------------------------------------------------- *)
 Section Monomial.
@@ -170,7 +204,7 @@ HB.instance Definition _ := [Choice of malg by <:].
 
 End MalgDef.
 
-(* -------------------------------------------------------------------- *)
+Arguments malg K%_type_scope G%_type_scope.
 Bind Scope ring_scope with malg.
 
 Notation "{ 'malg' G [ K ] }" := (@malg K G) : type_scope.
@@ -369,7 +403,103 @@ apply/fsubsetP=> k; rewrite -!mcoeff_neq0 mcoeffMn.
 by apply/contra_neq => ->; rewrite mul0rn.
 Qed.
 
+Lemma msupp_eq0 (g : {malg G[K]}) : (msupp g == fset0) = (g == 0).
+Proof.
+apply/eqP/eqP=> [/fsetP z_g|->]; last exact: msupp0.
+by apply/malgP=> i; rewrite mcoeff0 mcoeff_outdom // z_g.
+Qed.
+
 End MalgNmodTheory.
+
+(* -------------------------------------------------------------------- *)
+Section MalgProdNmodTheory.
+
+Context {K1 K2 : choiceType} {G : nmodType}.
+
+Definition mcurry (g : {malg G[K1 * K2]}) : {malg {malg G[K2]}[K1]} :=
+  \sum_(k <- msupp g) << << g@_k *g k.2 >> *g k.1 >>.
+
+Definition muncurry (g : {malg {malg G[K2]}[K1]}) : {malg G[K1 * K2]} :=
+  \sum_(x <- msupp g) \sum_(y <- msupp g@_x) << g@_x@_y *g (x, y) >>.
+
+Lemma mcurryE (g : {malg G[K1 * K2]}) (k1 : K1) (k2 : K2) :
+  (mcurry g)@_k1@_k2 = g@_(k1, k2).
+Proof.
+rewrite !raddf_sum/=; case: msuppP => kg; last first.
+  apply: big1_fset => /= -[k1' k2'] kg' _; rewrite mcoeffU raddfMn/= mcoeffU.
+  by move: kg' kg; do 2 case: eqP; move=> // -> -> ->.
+rewrite (big_fsetD1 _ kg)/= !mcoeffUU big1_fset ?addr0// => k.
+rewrite in_fsetD1 negb_and/= => /andP[+ _] _.
+by rewrite mcoeffU raddfMn/= mcoeffU; do 2 case: eqP.
+Qed.
+
+Lemma msupp_curryl (g : {malg G[K1 * K2]}) : msupp (mcurry g) = fst @` msupp g.
+Proof.
+apply/fsetP => k1; rewrite -mcoeff_neq0 -msupp_eq0; apply/fset0Pn/idP.
+  case=> k2; rewrite -mcoeff_neq0 mcurryE mcoeff_neq0 => kg.
+  by apply/imfsetP; exists (k1, k2).
+move/imfsetP => [[_ k2]/= /[swap] <-] kg; exists k2.
+by rewrite -mcoeff_neq0 mcurryE mcoeff_neq0.
+Qed.
+
+Lemma msupp_curryr (g : {malg G[K1 * K2]}) (k1 : K1) :
+  msupp (mcurry g)@_k1 = [fset k.2 | k in msupp g & k.1 == k1].
+Proof.
+apply/fsetP => k2; rewrite -mcoeff_neq0 mcurryE.
+apply/idP/imfsetP => /=[gk_neq0|[[k1' k2']/=]].
+  by exists (k1, k2); rewrite // inE /= -mcoeff_neq0 gk_neq0 eqxx.
+by rewrite inE -mcoeff_neq0 => /= /andP[+ /eqP <-] ->.
+Qed.
+
+Lemma muncurryE (g : {malg {malg G[K2]}[K1]}) (k : K1 * K2) :
+  (muncurry g)@_k = g@_k.1@_k.2.
+Proof.
+rewrite raddf_sum/=; under eq_bigr => x _.
+  rewrite raddf_sum/=; under eq_bigr => y _ do rewrite mcoeffU /eq_op/=.
+over.
+case: (msuppP g) => k1g; last first.
+  rewrite raddf0; apply: big1_fset => x xg _.
+  by apply: big1_fset => y _ _; case: eqP xg k1g => //= -> ->.
+rewrite (big_fsetD1 _ k1g)/= [s in _ + s]big1_fset; last first.
+  move=> k1; rewrite !inE => /andP[k1neq _] _.
+  by apply: big1_fset => k2 _ _; rewrite (negPf k1neq).
+rewrite eqxx/= addr0; case: (msuppP g@_k.1) => k2g; last first.
+  by apply: big1_fset=> y yg _; case: eqP yg k2g => // -> ->.
+rewrite (big_fsetD1 _ k2g)/= eqxx/= big1_fset ?addr0 //.
+by move=> k2; rewrite !inE => /andP[] /negPf->.
+Qed.
+
+Lemma mcurryK : cancel mcurry muncurry.
+Proof. by move=> g; apply/malgP => -[k1 k2]; rewrite muncurryE mcurryE. Qed.
+
+Lemma muncurryK : cancel muncurry mcurry.
+Proof.
+by move=> g; apply/malgP => k1; apply/malgP => k2; rewrite mcurryE muncurryE.
+Qed.
+
+Fact mcurry_is_semi_additive : semi_additive mcurry.
+Proof.
+split => [|g1 g2]; apply/malgP => k1; apply/malgP => k2.
+  by rewrite mcurryE !mcoeff0.
+by rewrite !(mcurryE, mcoeffD).
+Qed.
+
+HB.instance Definition _ :=
+  GRing.isSemiAdditive.Build {malg G[K1 * K2]} {malg {malg G[K2]}[K1]} mcurry
+    mcurry_is_semi_additive.
+
+Fact muncurry_is_semi_additive : semi_additive muncurry.
+Proof.
+split => [|g1 g2]; apply/malgP => k.
+  by rewrite muncurryE !mcoeff0.
+by rewrite !(muncurryE, mcoeffD).
+Qed.
+
+HB.instance Definition _ :=
+  GRing.isSemiAdditive.Build {malg {malg G[K2]}[K1]} {malg G[K1 * K2]} muncurry
+    muncurry_is_semi_additive.
+
+End MalgProdNmodTheory.
 
 (* -------------------------------------------------------------------- *)
 Section MalgZmodTheory.
@@ -521,12 +651,6 @@ Proof. exact: can_inj malgCK. Qed.
 
 Lemma malgC_eq (c1 c2 : G) : (c1%:MP == c2%:MP :> {malg G[K]}) = (c1 == c2).
 Proof. by apply/eqP/eqP => [/malgC_inj|->//]. Qed.
-
-Lemma msupp_eq0 (g : {malg G[K]}) : (msupp g == fset0) = (g == 0).
-Proof.
-apply/eqP/eqP=> [/fsetP z_g|->]; last exact: msupp0.
-by apply/malgP=> i; rewrite mcoeff0 mcoeff_outdom // z_g.
-Qed.
 
 End MalgMonomTheory.
 
@@ -784,6 +908,46 @@ HB.instance Definition _ :=
     mcoeff1g_is_multiplicative.
 
 End MalgSemiRingTheory.
+
+(* -------------------------------------------------------------------- *)
+Section MalgProdMonomSemiRingTheory.
+
+Context {K1 K2 : monomType} {G : pzSemiRingType}.
+
+Fact mcurry_is_multiplicative : multiplicative (@mcurry K1 K2 G).
+Proof.
+split => /=[g1 g2|]; apply/malgP => k1; apply/malgP => k2; last first.
+  rewrite mcurryE !mcoeff1 -pair_eqE/=.
+  by case: eqP => //=; rewrite (mcoeff1, mcoeff0).
+rewrite mcurryE !mcoeffMl raddf_sum/=.
+rewrite (partition_big_imfset _ fst)/= msupp_curryl; apply/eq_bigr => k1l _.
+rewrite exchange_big (partition_big_imfset _ fst) raddf_sum msupp_curryl/=.
+apply/eq_bigr => k1r _; rewrite exchange_big raddfMn/= mcoeffMl -sumrMnl.
+rewrite (* SLOW *)msupp_curryr big_imfset/=; last first.
+  by move=> [? ?] [? ?] /andP[/= _ /eqP ->] /andP[/= _ /eqP ->] ->.
+rewrite big_filter; apply/eq_bigr => -[_ k2l]/= /eqP ->.
+rewrite -sumrMnl msupp_curryr big_imfset/=; last first.
+  by move=> [? ?] [? ?] /andP[/= _ /eqP ->] /andP[/= _ /eqP ->] ->.
+rewrite big_filter; apply/eq_bigr => -[_ k2r]/= /eqP ->.
+by rewrite !mcurryE -mulrnA mulnb andbC.
+Qed.
+
+HB.instance Definition _ :=
+  GRing.isMultiplicative.Build {malg G[K1 * K2]} {malg {malg G[K2]}[K1]}
+    (@mcurry K1 K2 G) mcurry_is_multiplicative.
+
+Fact muncurry_is_multiplicative : multiplicative (@muncurry K1 K2 G).
+Proof.
+split => /=[g1 g2|]; apply/eqP; rewrite (can2_eq muncurryK mcurryK); apply/eqP.
+  by rewrite rmorphM/= !muncurryK.
+by rewrite rmorph1.
+Qed.
+
+HB.instance Definition _ :=
+  GRing.isMultiplicative.Build {malg {malg G[K2]}[K1]} {malg G[K1 * K2]}
+    (@muncurry K1 K2 G) muncurry_is_multiplicative.
+
+End MalgProdMonomSemiRingTheory.
 
 (* -------------------------------------------------------------------- *)
 Section MalgNzSemiRingTheory.
