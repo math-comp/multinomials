@@ -44,7 +44,7 @@ Reserved Notation "<< k >>" (format "<< k >>").
 Reserved Notation "g @_ k"
   (at level 3, k at level 2, left associativity, format "g @_ k").
 Reserved Notation "c %:MP" (format "c %:MP").
-Reserved Notation "''X_{1..' n '}'".
+Reserved Notation "''X_{1..' n '}'" (n at level 2).
 Reserved Notation "'U_(' n )" (format "'U_(' n )").
 Reserved Notation "x ^[ f , g ]" (at level 1, format "x ^[ f , g ]").
 
@@ -982,6 +982,9 @@ HB.instance Definition _ :=
 HB.instance Definition _ :=
   GRing.LSemiModule_isLSemiAlgebra.Build R {malg R[K]} (@fgscaleAl K R).
 
+(* FIXME: HB.saturate *)
+HB.instance Definition _ := GRing.RMorphism.on (mcoeff 1 : {malg R[K]} -> R).
+
 End MalgNzSemiRingTheory.
 
 (* -------------------------------------------------------------------- *)
@@ -1290,7 +1293,7 @@ Arguments monalgOver_pred _ _ _ _ /.
 
 (* -------------------------------------------------------------------- *)
 HB.mixin Record isMeasure (M : monomType) (mf : M -> nat) := {
-  mf0 : mf 1%M = 0%N;
+  mf1 : mf 1%M = 0%N;
   mfM : {morph mf : m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N};
   mf_eq0I : forall m, mf m = 0%N -> m = 1%M
 }.
@@ -1310,7 +1313,7 @@ Context (M : monomType) (G : nmodType) (mf : measure M).
 Implicit Types (g : {malg G[M]}).
 
 Lemma mf_eq0 m : (mf m == 0%N) = (m == 1%M).
-Proof. by apply/eqP/eqP=> [|->]; rewrite ?mf0 // => /mf_eq0I. Qed.
+Proof. by apply/eqP/eqP=> [|->]; rewrite ?mf1 // => /mf_eq0I. Qed.
 
 Definition mmeasure g := (\max_(m <- msupp g) (mf m).+1)%N.
 
@@ -1332,7 +1335,7 @@ Proof. by apply/contraTN=> /mmeasure_mnm_lt; rewrite leqNgt ltnS. Qed.
 Lemma mmeasureC c : mmeasure c%:MP = (c != 0%R) :> nat.
 Proof.
 rewrite mmeasureE msuppC; case: (_ == 0)=> /=.
-by rewrite big_nil. by rewrite big_seq_fset1 mf0.
+by rewrite big_nil. by rewrite big_seq_fset1 mf1.
 Qed.
 
 Lemma mmeasureD_le g1 g2 :
@@ -1389,6 +1392,8 @@ Canonical  cmonom_unlockable k := [unlockable fun cmonom_of_fsfun k].
 
 End CmonomDef.
 
+Bind Scope monom_scope with cmonom.
+
 Notation "{ 'cmonom' I }" := (cmonom I) : type_scope.
 Notation "''X_{1..' n '}'" :=  (cmonom 'I_n) : type_scope.
 Notation "{ 'mpoly' R [ n ] }" := {malg R['X_{1..n}]} : type_scope.
@@ -1413,7 +1418,7 @@ Implicit Types (m : cmonom I).
 Lemma cmE (f : {fsfun of _ : I => 0%N}) : mkcmonom f =1 CMonom f.
 Proof. by rewrite unlock. Qed.
 
-Lemma cmP m1 m2 : reflect (forall i, m1 i = m2 i) (m1 == m2).
+Lemma cmP m1 m2 : reflect (m1 =1 m2) (m1 == m2).
 Proof. by apply: (iffP eqP) => [->//|eq]; apply/val_inj/fsfunP. Qed.
 
 Definition onecm : cmonom I := mkcmonom [fsfun of _ => 0%N].
@@ -1464,6 +1469,8 @@ HB.instance Definition _ := Choice_isMonomialDef.Build (cmonom I)
 HB.instance Definition _ := MonomialDef_isConomialDef.Build (cmonom I) mulcmC.
 
 End CmonomCanonicals.
+
+HB.instance Definition _ (I : countType) := [Countable of cmonom I by <:].
 
 (* -------------------------------------------------------------------- *)
 Definition mdeg {I : choiceType} (m : cmonom I) :=
@@ -1659,6 +1666,8 @@ Canonical  fmonom_unlockable k := [unlockable fun fmonom_of_seq k].
 
 End FmonomDef.
 
+Bind Scope monom_scope with fmonom.
+
 Notation "{ 'fmonom' I }" := (fmonom I) : type_scope.
 
 Local Notation mkfmonom s := (fmonom_of_seq fmonom_key s).
@@ -1714,6 +1723,8 @@ HB.instance Definition _ := Choice_isMonomialDef.Build (fmonom I)
   fmmulA fmmul1m fmmulm1 fmmul_eq1.
 
 End FmonomCanonicals.
+
+HB.instance Definition _ (I : countType) := [Countable of fmonom I by <:].
 
 (* -------------------------------------------------------------------- *)
 Definition fdeg (I : choiceType) (m : fmonom I) := size m.
