@@ -136,10 +136,26 @@ Local Open Scope monom_scope.
 #[export]
 HB.instance Definition _ := Monoid.isLaw.Build M 1 mmul mulmA mul1m mulm1.
 
+Definition expmn (x : M) (n : nat) : M := iterop n *%M x 1%M.
+
+Arguments expmn : simpl never.
+
 Lemma unitmP (x y : M) : reflect (x == 1 /\ y == 1) (x * y == 1).
 Proof.
 by apply: (iffP eqP)=> [/unitm[-> ->]|[/eqP-> /eqP->]] //; rewrite mulm1.
 Qed.
+
+Lemma expmnS (x : M) (n : nat) : expmn x n.+1 = x * expmn x n.
+Proof. by rewrite /expmn !Monoid.iteropE iterS. Qed.
+
+Lemma expmnD (x : M) (n m : nat) : expmn x (n + m) = expmn x n * expmn x m.
+Proof.
+elim: n => [|n IHn]; first by rewrite mul1m.
+by rewrite addSn !expmnS IHn mulmA.
+Qed.
+
+Lemma expmnSr (x : M) (n : nat) : expmn x n.+1 = expmn x n * x.
+Proof. by rewrite -addn1 expmnD. Qed.
 
 End Monomial.
 
@@ -1418,8 +1434,6 @@ Definition mulcm m1 m2 : cmonom I :=
   [cmonom m1 i + m2 i | i in finsupp m1 `|` finsupp m2]%M.
 
 Definition divcm m1 m2 : cmonom I := [cmonom m1 i - m2 i | i in finsupp m1]%M.
-
-Definition expcmn m n : cmonom I := iterop n mulcm m onecm.
 
 Lemma onecmE i : onecm i = 0%N.
 Proof. by rewrite fsfun_ffun insubF. Qed.
