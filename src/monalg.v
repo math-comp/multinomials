@@ -44,7 +44,7 @@ Reserved Notation "<< k >>" (format "<< k >>").
 Reserved Notation "g @_ k"
   (at level 3, k at level 2, left associativity, format "g @_ k").
 Reserved Notation "c %:MP" (format "c %:MP").
-Reserved Notation "''X_{1..' n '}'".
+Reserved Notation "''X_{1..' n '}'" (n at level 2).
 Reserved Notation "'U_(' n )" (format "'U_(' n )").
 Reserved Notation "x ^[ f , g ]" (at level 1, format "x ^[ f , g ]").
 
@@ -244,11 +244,12 @@ Definition mcoeff (x : K) (g : {malg G[K]}) : G := malg_val g x.
 #[deprecated(since="multinomials 2.5.0", note="Use Malg instead")]
 Definition mkmalg : {fsfun K -> G with 0} -> {malg G[K]} := @Malg K G.
 
-Definition mkmalgU (k : K) (x : G) := [malg y in [fset k] => x].
-
 Definition msupp (g : {malg G[K]}) : {fset K} := finsupp (malg_val g).
 
 End MalgBaseOp.
+
+HB.lock Definition mkmalgU (K : choiceType) (G : nmodType) (k : K) (x : G) :=
+  [malg y in [fset k] => x].
 
 Arguments mcoeff  {K G} x%_monom_scope g%_ring_scope.
 #[warning="-deprecated-reference"]
@@ -350,7 +351,7 @@ Lemma mcoeffD   k   : {morph mcoeff k: x y / x + y}. Proof. exact: raddfD. Qed.
 Lemma mcoeffMn  k n : {morph mcoeff k: x / x *+ n} . Proof. exact: raddfMn. Qed.
 
 Lemma mcoeffU k x k' : << x *g k >>@_k' = x *+ (k == k').
-Proof. by rewrite [LHS]fsfunE inE mulrb eq_sym. Qed.
+Proof. by rewrite unlock [LHS]fsfunE inE mulrb eq_sym. Qed.
 
 Lemma mcoeffUU k x : << x *g k >>@_k = x.
 Proof. by rewrite mcoeffU eqxx. Qed.
@@ -986,6 +987,9 @@ HB.instance Definition _ :=
 HB.instance Definition _ :=
   GRing.LSemiModule_isLSemiAlgebra.Build R {malg R[K]} (@fgscaleAl K R).
 
+(* FIXME: HB.saturate *)
+HB.instance Definition _ := GRing.RMorphism.on (mcoeff 1 : {malg R[K]} -> R).
+
 End MalgNzSemiRingTheory.
 
 (* -------------------------------------------------------------------- *)
@@ -1294,7 +1298,7 @@ Arguments monalgOver_pred _ _ _ _ /.
 
 (* -------------------------------------------------------------------- *)
 HB.mixin Record isMeasure (M : monomType) (mf : M -> nat) := {
-  mf0 : mf 1%M = 0%N;
+  mf1 : mf 1%M = 0%N;
   mfM : {morph mf : m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N};
   mf_eq0I : forall m, mf m = 0%N -> m = 1%M
 }.
@@ -1314,7 +1318,7 @@ Context (M : monomType) (G : nmodType) (mf : measure M).
 Implicit Types (g : {malg G[M]}).
 
 Lemma mf_eq0 m : (mf m == 0%N) = (m == 1%M).
-Proof. by apply/eqP/eqP=> [|->]; rewrite ?mf0 // => /mf_eq0I. Qed.
+Proof. by apply/eqP/eqP=> [|->]; rewrite ?mf1 // => /mf_eq0I. Qed.
 
 Definition mmeasure g := (\max_(m <- msupp g) (mf m).+1)%N.
 
@@ -1336,7 +1340,7 @@ Proof. by apply/contraTN=> /mmeasure_mnm_lt; rewrite leqNgt ltnS. Qed.
 Lemma mmeasureC c : mmeasure c%:MP = (c != 0%R) :> nat.
 Proof.
 rewrite mmeasureE msuppC; case: (_ == 0)=> /=.
-by rewrite big_nil. by rewrite big_seq_fset1 mf0.
+by rewrite big_nil. by rewrite big_seq_fset1 mf1.
 Qed.
 
 Lemma mmeasureD_le g1 g2 :
@@ -1395,6 +1399,9 @@ Canonical  cmonom_unlockable k := [unlockable fun cmonom_of_fsfun k].
 
 End CmonomDef.
 
+Arguments cmonom_val : simpl never.
+Bind Scope monom_scope with cmonom.
+
 Notation "{ 'cmonom' I }" := (cmonom I) : type_scope.
 Notation "''X_{1..' n '}'" :=  (cmonom 'I_n) : type_scope.
 Notation "{ 'mpoly' R [ n ] }" := {malg R['X_{1..n}]} : type_scope.
@@ -1412,8 +1419,8 @@ Section CmonomCanonicals.
 
 Context (I : choiceType).
 
-HB.instance Definition _ := [isNew for @cmonom_val I].
-HB.instance Definition _ := [Choice of cmonom I by <:].
+#[hnf] HB.instance Definition _ := [isNew for @cmonom_val I].
+#[hnf] HB.instance Definition _ := [Choice of cmonom I by <:].
 
 (* -------------------------------------------------------------------- *)
 Implicit Types (m : cmonom I).
@@ -1426,7 +1433,7 @@ Proof.
 by rewrite [mkcmonom]unlock.
 Qed.
 
-Lemma cmP m1 m2 : reflect (forall i, m1 i = m2 i) (m1 == m2).
+Lemma cmP m1 m2 : reflect (m1 =1 m2) (m1 == m2).
 Proof. by apply: (iffP eqP) => [->//|eq]; apply/val_inj/fsfunP. Qed.
 
 Definition onecm : cmonom I := CMonom [fsfun of _ => 0%N].
@@ -1472,11 +1479,15 @@ move: m1 m2; have gen m1 m2 : mulcm m1 m2 = onecm -> m1 = onecm.
 by move=> m1 m2 h; split; move: h; last rewrite mulcmC; apply/gen.
 Qed.
 
+#[hnf]
 HB.instance Definition _ := Choice_isMonomialDef.Build (cmonom I)
   mulcmA mul0cm mulcm0 mulcm_eq0.
+#[hnf]
 HB.instance Definition _ := MonomialDef_isConomialDef.Build (cmonom I) mulcmC.
 
 End CmonomCanonicals.
+
+HB.instance Definition _ (I : countType) := [Countable of cmonom I by <:].
 
 (* -------------------------------------------------------------------- *)
 Definition mdeg {I : choiceType} (m : cmonom I) :=
@@ -1672,6 +1683,8 @@ Canonical  fmonom_unlockable k := [unlockable fun fmonom_of_seq k].
 
 End FmonomDef.
 
+Bind Scope monom_scope with fmonom.
+
 Notation "{ 'fmonom' I }" := (fmonom I) : type_scope.
 
 Local Notation mkfmonom s := (fmonom_of_seq fmonom_key s).
@@ -1727,6 +1740,8 @@ HB.instance Definition _ := Choice_isMonomialDef.Build (fmonom I)
   fmmulA fmmul1m fmmulm1 fmmul_eq1.
 
 End FmonomCanonicals.
+
+HB.instance Definition _ (I : countType) := [Countable of fmonom I by <:].
 
 (* -------------------------------------------------------------------- *)
 Definition fdeg (I : choiceType) (m : fmonom I) := size m.
