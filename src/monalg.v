@@ -145,6 +145,9 @@ Proof.
 by apply: (iffP eqP)=> [/unitm[-> ->]|[/eqP-> /eqP->]] //; rewrite mulm1.
 Qed.
 
+Lemma mulm_eq1 (x y : M) : (x * y == 1) = (x == 1) && (y == 1).
+Proof. exact/unitmP/andP. Qed.
+
 Lemma expmnS (x : M) (n : nat) : expmn x n.+1 = x * expmn x n.
 Proof. by rewrite /expmn !Monoid.iteropE iterS. Qed.
 
@@ -1571,9 +1574,6 @@ Qed.
 Lemma mdeg_eq0 m : (mdeg m == 0%N) = (m == 1%M).
 Proof. exact/mf_eq0. Qed.
 
-Lemma cmM_eq1 m1 m2 : (m1 * m2 == 1)%M = (m1 == 1%M) && (m2 == 1%M).
-Proof. by rewrite -!mdeg_eq0 mdegM addn_eq0. Qed.
-
 Lemma cm1_eq1 i : (U_(i) == 1)%M = false.
 Proof. by rewrite -mdeg_eq0 mdegU. Qed.
 
@@ -1779,9 +1779,6 @@ Qed.
 
 Lemma fdeg_eq0 m : (fdeg m == 0%N) = (m == 1%M).
 Proof. exact/mf_eq0. Qed.
-
-Lemma fmM_eq1 m1 m2 : (m1 * m2 == 1)%M = (m1 == 1%M) && (m2 == 1%M).
-Proof. by rewrite -!fdeg_eq0 fdegM addn_eq0. Qed.
 
 Lemma fm1_eq1 i : (U_(i) == 1)%M = false.
 Proof. by rewrite -fdeg_eq0 fdegU. Qed.
