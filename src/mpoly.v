@@ -77,7 +77,6 @@
 (* -------------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-From Corelib Require Import Setoid.
 From HB Require Import structures.
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path.
 From mathcomp Require Import choice fintype tuple finfun bigop finset binomial.
@@ -163,7 +162,7 @@ Record multinom : predArgType := Multinom { multinom_val :> n.-tuple nat }.
 
 HB.instance Definition _ := [isNew for multinom_val].
 
-Definition fun_of_multinom M (i : 'I_n) := tnth (multinom_val M) i.
+Definition fun_of_multinom M := tnth (multinom_val M).
 
 Coercion fun_of_multinom : multinom >-> Funclass.
 
@@ -558,12 +557,11 @@ case: (ltngtP (mdeg m1) (mdeg m2)) => [lt|lt|].
 + by rewrite !lt_mdeg_ltmc // !mdegD ltn_add2l.
 + rewrite !ltNge !le_eqVlt !lt_mdeg_ltmc ?orbT //.
   by rewrite !mdegD ltn_add2l.
-move=> eq; have eqD: mdeg (m + m1) = mdeg (m + m2).
-  by rewrite !mdegD (rwP eqP) eqn_add2l eq.
+move=> eq; have eqD: mdeg (m + m1) = mdeg (m + m2) by rewrite !mdegD eq.
 apply/ltmcP/ltmcP => // {eq eqD} -[i eq lt]; exists i.
-+ by move=> j /eq /eqP; rewrite !mnmDE (rwP eqP) eqn_add2l.
++ by move=> j /eq; rewrite !mnmDE => /addnI.
 + by move: lt; rewrite !mnmDE ltn_add2l.
-+ by move=> j /eq /eqP; rewrite !mnmDE (rwP eqP) eqn_add2l.
++ by move=> j /eq; rewrite !mnmDE => ->.
 + by rewrite !mnmDE ltn_add2l.
 Qed.
 
