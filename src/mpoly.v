@@ -1621,12 +1621,10 @@ Definition mpolyX m : {mpoly R[n]} :=
 
 Canonical mpolyX_unlockable m := [unlockable of (mpolyX m)].
 
-Definition mX (k : 'I_n) : 'X_{1..n} := [multinom (i == k : nat) | i < n].
-
 End MPolyVar.
 
-Arguments mX : simpl never.
-
+#[deprecated(since="multinomials 2.5.0", note="Use mnm1 instead.")]
+Notation mX := mnm1.
 
 Notation "'X_[ R , m ]" := (@mpolyX _ R m).
 Notation "'X_[ m ]"     := (@mpolyX _ _ m).
