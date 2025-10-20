@@ -196,7 +196,9 @@ Record malg : predArgType := Malg { malg_val : {fsfun K -> G with 0} }.
 
 Fact malg_key : unit. Proof. by []. Qed.
 
+#[deprecated(since="multinomials 2.5.0", note="Use Malg instead")]
 Definition malg_of_fsfun   k := locked_with k Malg.
+#[warning="-deprecated-reference"]
 Canonical  malg_unlockable k := [unlockable fun malg_of_fsfun k].
 
 HB.instance Definition _ := [isNew for @malg_val].
@@ -209,6 +211,9 @@ Bind Scope ring_scope with malg.
 
 Notation "{ 'malg' G [ K ] }" := (@malg K G) : type_scope.
 Notation "{ 'malg' K }" := {malg int[K]} : type_scope.
+Notation "[ 'malg' x 'in' aT => E ]" :=
+  (Malg [fsfun[malg_key] x in aT => E]) : ring_scope.
+Notation "[ 'malg' x => E ]" := (Malg [fsfun[malg_key] x => E]) : ring_scope.
 
 (* -------------------------------------------------------------------- *)
 Section MalgBaseOp.
@@ -217,15 +222,17 @@ Context {K : choiceType} {G : nmodType}.
 
 Definition mcoeff (x : K) (g : {malg G[K]}) : G := malg_val g x.
 
+#[deprecated(since="multinomials 2.5.0", note="Use Malg instead")]
 Definition mkmalg : {fsfun K -> G with 0} -> {malg G[K]} := @Malg K G.
 
-Definition mkmalgU (k : K) (x : G) := mkmalg [fsfun y => [fmap].[k <- x] y].
+Definition mkmalgU (k : K) (x : G) := [malg y in [fset k] => x].
 
 Definition msupp (g : {malg G[K]}) : {fset K} := finsupp (malg_val g).
 
 End MalgBaseOp.
 
 Arguments mcoeff  {K G} x%_monom_scope g%_ring_scope.
+#[warning="-deprecated-reference"]
 Arguments mkmalg  {K G} _.
 Arguments mkmalgU {K G} k%_monom_scope x%_ring_scope.
 Arguments msupp   {K G} g%_ring_scope.
@@ -233,10 +240,7 @@ Arguments msupp   {K G} g%_ring_scope.
 (* -------------------------------------------------------------------- *)
 Notation "g @_ k" := (mcoeff k g).
 
-Notation "[ 'malg' g ]" := (mkmalg g) : ring_scope.
-Notation "[ 'malg' x 'in' aT => E ]" :=
-  (mkmalg [fsfun x in aT => E]) : ring_scope.
-Notation "[ 'malg' x => E ]" := (mkmalg [fsfun x => E]) : ring_scope.
+Notation "[ 'malg' g ]" := (Malg g) : ring_scope.
 Notation "<< z *g k >>" := (mkmalgU k z) : ring_scope.
 Notation "<< k >>" := << 1 *g k >> : ring_scope.
 
@@ -252,7 +256,7 @@ Context {K : choiceType} {G : nmodType}.
 
 Implicit Types (g : {malg G[K]}) (k : K) (x y : G).
 
-Lemma mkmalgK (g : {fsfun K -> G with 0}) : malg_val (mkmalg g) = g.
+Lemma mkmalgK (g : {fsfun K -> G with 0}) : malg_val (Malg g) = g.
 Proof. by []. Qed.
 
 Lemma malgP (g1 g2 : {malg G[K]}) : (forall k, g1@_k = g2@_k) <-> g1 = g2.
@@ -327,7 +331,7 @@ Lemma mcoeffD   k   : {morph mcoeff k: x y / x + y}. Proof. exact: raddfD. Qed.
 Lemma mcoeffMn  k n : {morph mcoeff k: x / x *+ n} . Proof. exact: raddfMn. Qed.
 
 Lemma mcoeffU k x k' : << x *g k >>@_k' = x *+ (k == k').
-Proof. by rewrite mcoeff_fnd fnd_set fnd_fmap0; case: eqVneq. Qed.
+Proof. by rewrite [LHS]fsfunE inE mulrb eq_sym. Qed.
 
 Lemma mcoeffUU k x : << x *g k >>@_k = x.
 Proof. by rewrite mcoeffU eqxx. Qed.
@@ -1365,7 +1369,9 @@ Coercion cmonom_val : cmonom >-> fsfun.
 
 Fact cmonom_key : unit. Proof. by []. Qed.
 
+#[deprecated(since="multinomials 2.5.0", note="Use CMonom instead")]
 Definition cmonom_of_fsfun   k := locked_with k CMonom.
+#[warning="-deprecated-reference"]
 Canonical  cmonom_unlockable k := [unlockable fun cmonom_of_fsfun k].
 
 End CmonomDef.
@@ -1374,11 +1380,13 @@ Notation "{ 'cmonom' I }" := (cmonom I) : type_scope.
 Notation "''X_{1..' n '}'" :=  (cmonom 'I_n) : type_scope.
 Notation "{ 'mpoly' R [ n ] }" := {malg R['X_{1..n}]} : type_scope.
 
+#[deprecated(since="multinomials 2.5.0", note="Use CMonom instead"),
+  warning="-deprecated-reference"]
 Notation mkcmonom := (cmonom_of_fsfun cmonom_key).
 Notation "[ 'cmonom' E | i 'in' P ]" :=
-  (mkcmonom [fsfun i in P%fset => E%N | 0%N]) : monom_scope.
+  (CMonom [fsfun[cmonom_key] i in P%fset => E%N | 0%N]) : monom_scope.
 Notation "[ 'cmonom' E | i : P ]" :=
-  (mkcmonom [fsfun i : P%fset => E%N | 0%N]) : monom_scope.
+  (CMonom [fsfun[cmonom_key] i : P%fset => E%N | 0%N]) : monom_scope.
 
 (* -------------------------------------------------------------------- *)
 Section CmonomCanonicals.
@@ -1391,13 +1399,18 @@ HB.instance Definition _ := [Choice of cmonom I by <:].
 (* -------------------------------------------------------------------- *)
 Implicit Types (m : cmonom I).
 
+#[deprecated(since="multinomials 2.5.0", note="Use CMonom instead of mkcmonom"),
+  warning="-deprecated-syntactic-definition"]
 Lemma cmE (f : {fsfun of _ : I => 0%N}) : mkcmonom f =1 CMonom f.
-Proof. by rewrite unlock. Qed.
+Proof.
+#[warning="-deprecated-syntactic-definition"]
+by rewrite [mkcmonom]unlock.
+Qed.
 
 Lemma cmP m1 m2 : reflect (forall i, m1 i = m2 i) (m1 == m2).
 Proof. by apply: (iffP eqP) => [->//|eq]; apply/val_inj/fsfunP. Qed.
 
-Definition onecm : cmonom I := mkcmonom [fsfun of _ => 0%N].
+Definition onecm : cmonom I := CMonom [fsfun of _ => 0%N].
 
 Definition ucm (i : I) : cmonom I := [cmonom 1 | _ in fset1 i]%M.
 
@@ -1409,18 +1422,18 @@ Definition divcm m1 m2 : cmonom I := [cmonom m1 i - m2 i | i in finsupp m1]%M.
 Definition expcmn m n : cmonom I := iterop n mulcm m onecm.
 
 Lemma onecmE i : onecm i = 0%N.
-Proof. by rewrite cmE fsfun_ffun insubF. Qed.
+Proof. by rewrite fsfun_ffun insubF. Qed.
 
 Lemma ucmE i j : ucm i j = (i == j) :> nat.
-Proof. by rewrite cmE fsfun_fun in_fsetE; case: eqVneq. Qed.
+Proof. by rewrite fsfun_fun in_fsetE; case: eqVneq. Qed.
 
 Lemma mulcmE m1 m2 i : mulcm m1 m2 i = (m1 i + m2 i)%N.
 Proof.
-by rewrite cmE fsfun_fun in_fsetE; case: (finsuppP m1); case: (finsuppP m2).
+by rewrite fsfun_fun in_fsetE; case: (finsuppP m1); case: (finsuppP m2).
 Qed.
 
 Lemma divcmE m1 m2 i : divcm m1 m2 i = (m1 i - m2 i)%N.
-Proof. by rewrite cmE fsfun_fun; case: finsuppP. Qed.
+Proof. by rewrite fsfun_fun; case: finsuppP. Qed.
 
 Lemma mulcmA : associative mulcm.
 Proof. by move=> m1 m2 m3; apply/eqP/cmP=> i; rewrite !mulcmE addnA. Qed.
