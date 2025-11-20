@@ -306,3 +306,33 @@ Qed.
 
 End WFTuple.
 End WF.
+
+(* TODO: add to fintype.v *)
+Lemma rshiftDn {n n' m} (i : 'I_m) :
+  rshift (n + n') i = cast_ord (addnA _ _ _) (rshift n (rshift n' i)).
+Proof. by apply: val_inj => /=; rewrite addnA. Qed.
+
+(* TODO: add to fintype.v *)
+Lemma lshiftDn {m n n'} (i : 'I_m) :
+  lshift (n + n') i = cast_ord (esym (addnA _ _ _)) (lshift n' (lshift n i)).
+Proof. exact: val_inj. Qed.
+
+(* TODO: add to fintype.v *)
+Lemma lshift_lshift {m n n'} (i : 'I_m) :
+  lshift n' (lshift n i) = cast_ord (addnA _ _ _) (lshift (n + n') i).
+Proof. exact: val_inj. Qed.
+
+(* TODO: add to fintype.v *)
+Lemma rshift_rshift {n n' m} (i : 'I_m) :
+  rshift n (rshift n' i) = cast_ord (esym (addnA _ _ _)) (rshift (n + n') i).
+Proof. by apply: val_inj => /=; rewrite addnA. Qed.
+
+(* TODO: add to fintype.v *)
+Lemma lshift_rshift {m n n'} (i : 'I_n) :
+  lshift n' (rshift m i) = cast_ord (addnA _ _ _) (rshift m (lshift n' i)).
+Proof. exact: val_inj. Qed.
+
+(* TODO: add to fintype.v *)
+Lemma rshift_lshift {m n n'} (i : 'I_n) : rshift m (lshift n' i)
+  = cast_ord (esym (addnA _ _ _)) (lshift n' (rshift m i)).
+Proof. exact: val_inj. Qed.
