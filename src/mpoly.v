@@ -40,8 +40,12 @@
 (*       {ipoly R[n]} == the type obtained by iterating the univariate        *)
 (*                       polynomial type, with R as base ring.                *)
 (*     {ipoly R[n]}^p == copy of {ipoly R[n]} with a ring canonical structure *)
+(*       mpcast Emn p == the {mpoly R[m]} p cast as a {mpoly R[n]}            *)
+(*                       using Emn : m = n                                    *)
 (*           mwiden p == the canonical injection (ring morphism) from         *)
 (*                       {mpoly R[n]} to {mpoly R[n.+1]}                      *)
+(*        mrshift m p == the injection (ring morphism) from {mpoly R[n]}      *)
+(*                       to {mpoly R[m+n]} that maps each 'X_i to 'X_(i+m)    *)
 (*    mpolyC c, c%:MP == the constant multivariate polynomial c               *)
 (*               'X_i == the variable i, for i : 'I_n                         *)
 (*             'X_[m] == the monomial m as a multivariate polynomial          *)
@@ -3841,6 +3845,91 @@ Local Notation "''s_(' K , n , k )" := (@mesym n K k).
 Local Notation "''s_(' n , k )" := (@mesym n _ k).
 
 (* -------------------------------------------------------------------- *)
+Section MPCast.
+
+Definition mnmcast {m n} (eq_mn : m = n) (mn : 'X_{1..m}) : 'X_{1..n} :=
+  let: erefl in _ = n := eq_mn return 'X_{1..n} in mn.
+
+Lemma mnmcast_id {n} (eq_n : n = n) (m : 'X_{1..n}) : mnmcast eq_n m = m.
+Proof. by rewrite eq_axiomK. Qed.
+
+Lemma mnmcast_eq0 {m n} (eq_mn : m = n) mn :
+  (mnmcast eq_mn mn == 0%MM) = (mn == 0%MM).
+Proof. by move: eq_mn mn => /[dup]-> eq_mn mn; rewrite mnmcast_id. Qed.
+
+Definition mpcast {R m n} (eq_mn : m = n) (p : {mpoly R[m]}) : {mpoly R[n]} :=
+  let: erefl in _ = n := eq_mn return {mpoly R[n]} in p.
+
+Lemma mpcast_id {R n} (eq_n : n = n) (p : {mpoly R[n]}) : mpcast eq_n p = p.
+Proof. by rewrite eq_axiomK. Qed.
+
+Lemma mpcast_comp {R n1 n2 n3} (eq_n2 : n1 = n2) (eq_n3 : n2 = n3)
+    (p : {mpoly R[n1]}) :
+  mpcast eq_n3 (mpcast eq_n2 p) = mpcast (etrans eq_n2 eq_n3) p.
+Proof.
+by move: eq_n3 eq_n2 => /[dup]-> /[swap]/[dup]<- eq eq'; rewrite !mpcast_id.
+Qed.
+
+Lemma mpcastE {R m n} (eq_mn : m = n) (p : {mpoly R[m]}) (mn : 'X_{1..n}) :
+  (mpcast eq_mn p)@_mn = p@_(mnmcast (esym eq_mn) mn).
+Proof. by move: eq_mn p mn => /[dup]-> ? ? ?; rewrite mpcast_id mnmcast_id. Qed.
+
+Lemma mpcastC {R : ringType} {m n} (eq_mn : m = n) (c : R) :
+  mpcast eq_mn c%:MP = c%:MP.
+Proof. by apply/mpolyP => mn; rewrite mpcastE !mcoeffC mnmcast_eq0. Qed.
+
+Fact mpcast_is_additive {R m n} (eq_mn : m = n) : additive (@mpcast R m n eq_mn).
+Proof. by move=> p q; apply/mpolyP => mn; rewrite mcoeffB !mpcastE mcoeffB. Qed.
+
+HB.instance Definition _ R m n (eq_mn : m = n) :=
+  GRing.isAdditive.Build {mpoly R[m]} {mpoly R[n]}
+    (mpcast eq_mn) (mpcast_is_additive eq_mn).
+
+Lemma mpcast0 {R m n} eq_mn : @mpcast R m n eq_mn 0 = 0.
+Proof. exact: raddf0. Qed.
+Lemma mpcastN {R m n} eq_mn : {morph @mpcast R m n eq_mn : p / - p}.
+Proof. exact: raddfN. Qed.
+Lemma mpcastD {R m n} eq_mn : {morph @mpcast R m n eq_mn : p q / p + q}.
+Proof. exact: raddfD. Qed.
+Lemma mpcastB {R m n} eq_mn : {morph @mpcast R m n eq_mn : p q / p - q}.
+Proof. exact: raddfB. Qed.
+Lemma mpcastMn {R m n} eq_mn k : {morph @mpcast R m n eq_mn : p / p *+ k}.
+Proof. exact: raddfMn. Qed.
+Lemma mpcastMNn {R m n} eq_mn k : {morph @mpcast R m n eq_mn : p / p *- k}.
+Proof. exact: raddfMNn. Qed.
+
+Fact mpcast_is_multiplicative {R m n} (eq_mn : m = n) :
+  multiplicative (@mpcast R m n eq_mn).
+Proof.
+by (split; move: (eq_mn); rewrite eq_mn) => [? p q | ?]; rewrite !mpcast_id.
+Qed.
+
+HB.instance Definition _ R m n (eq_mn : m = n) :=
+  GRing.isMultiplicative.Build {mpoly R[m]} {mpoly R[n]}
+    (mpcast eq_mn) (mpcast_is_multiplicative eq_mn).
+
+Lemma mpcast1 {R m n} (eq_mn : m = n) : mpcast eq_mn 1 = 1 :> {mpoly R[n]}.
+Proof. exact: rmorph1. Qed.
+Lemma mpcastM {R m n} eq_mn : {morph @mpcast R m n eq_mn : p q / p * q}.
+Proof. exact: rmorphM. Qed.
+Lemma mpcastXn {R m n} eq_mn k : {morph @mpcast R m n eq_mn : p / p ^+ k}.
+Proof. exact: rmorphXn. Qed.
+
+Lemma mpcastZ {R m n} (eq_mn : m = n) c :
+  {morph @mpcast R m n eq_mn : p / c *: p}.
+Proof. by move: eq_mn => /[dup]-> eq_mn p; rewrite !mpcast_id. Qed.
+
+Lemma mpcastX {R m n} (eq_mn : m = n) mn:
+  mpcast eq_mn 'X_[R, mn] = 'X_[mnmcast eq_mn mn].
+Proof. by move: eq_mn mn => /[dup]-> eq_mn mn; rewrite !eq_axiomK. Qed.
+
+Lemma mnmcastE {m n} (eq_mn : m = n) (mn : 'X_{1..m}) i :
+  mnmcast eq_mn mn i = mn (cast_ord (esym eq_mn) i).
+Proof. by move: eq_mn i => /[dup]<-eq_mn i; rewrite mnmcast_id cast_ord_id. Qed.
+
+End MPCast.
+
+(* -------------------------------------------------------------------- *)
 Section MWiden.
 Context (n : nat) (R : nzRingType).
 
@@ -3998,6 +4087,203 @@ Lemma mpwidenZ c p : mpwiden (c *: p) = mwiden c *: (mpwiden p).
 Proof. by rewrite /mpwiden map_polyZ. Qed.
 
 End MWiden.
+
+(* -------------------------------------------------------------------- *)
+Section MRshift.
+Context {R : ringType} {n : nat}.
+
+Definition mrshift (m : nat) (p : {mpoly R[n]}) : {mpoly R[m + n]} :=
+  mmap (@mpolyC _ _) (fun i => 'X_(rshift m i)) p.
+
+Definition mnmrshift (m : nat) (mn : 'X_{1..n}) : 'X_{1..m + n} :=
+  [multinom of nseq m 0%N ++ mn].
+
+Lemma mnmrshift_l m mn (i : 'I_m) : mnmrshift m mn (lshift n i) = 0%N.
+Proof.
+by case: mn => mn; rewrite (mnm_nth 0%N)/= nth_cat size_nseq nth_nseq ltn_ord.
+Qed.
+
+Lemma mnmrshift_r m mn (i : 'I_n) : mnmrshift m mn (rshift m i) = mn i.
+Proof.
+case: mn => mn; rewrite !(mnm_nth 0%N)/=.
+by rewrite nth_cat size_nseq ltnNge leq_addr addKn.
+Qed.
+
+Lemma mnmrshift0 m : mnmrshift m 0 = 0%MM.
+Proof.
+apply/mnmP => i; rewrite mnmE (mnm_nth 0%N)/= nth_cat size_nseq.
+case: ltnP => im; first by rewrite nth_nseq; case: ifP.
+case: n i im => [|n'] i im; first by rewrite enum_ord0 nth_nil.
+by rewrite (nth_map 0)// size_enum_ord ltn_psubLR.
+Qed.
+
+Lemma mnmrshiftD m mn1 mn2 :
+  mnmrshift m (mn1 + mn2) = (mnmrshift m mn1 + mnmrshift m mn2)%MM.
+Proof.
+apply/mnmP => i; rewrite mnmDE !multinomE !(tnth_nth 0%N) !nth_cat size_nseq /=.
+case: ltnP => im; first by rewrite nth_nseq im.
+case: n mn1 mn2 i im => [|n'] mn1 mn2 i im.
+  by rewrite enum_ord0 tuple0 !nth_nil tuple0 nth_nil.
+have imn' : (i - m < n'.+1)%N by rewrite ltn_psubLR.
+by rewrite (nth_map 0) ?mnm_tnth ?(tnth_nth 0%N) ?nth_enum_ord ?size_enum_ord.
+Qed.
+
+Lemma mnmrshift_sum m (I : Type) (r : seq I) P F :
+  mnmrshift m (\sum_(x <- r | P x) (F x))
+  = (\sum_(x <- r | P x) (mnmrshift m (F x)))%MM.
+Proof. exact/big_morph/mnmrshift0/mnmrshiftD. Qed.
+
+Lemma mnmrshift1 m i : (mnmrshift m U_(i) = U_(rshift m i))%MM.
+Proof.
+apply/mnmP => j; rewrite /mnmrshift !mnmE multinomE (tnth_nth 0%N)/=.
+rewrite nth_cat size_nseq; case: ltnP => jm; apply/esym/eqP.
+  by rewrite nth_nseq jm eqb0; apply: contra_ltnN jm => /eqP<-; apply: leq_addr.
+case: n i j jm => [[]//|n'] i j jm; rewrite (nth_map 0); last first.
+  by rewrite ltn_subLR// size_enum_ord ltn_ord.
+apply/eqP; congr (nat_of_bool _); apply/eqP/eqP.
+- by move=> <-; rewrite addKn nth_ord_enum.
+- move=> ->; apply/val_inj; rewrite /= nth_enum_ord ?subnKC//.
+  by rewrite ltn_subLR ?ltn_ord.
+Qed.
+
+Lemma inj_mnmrshift m : injective (mnmrshift m).
+Proof.
+move=> m1 m2 /mnmP h; apply/mnmP => i.
+by move: (h (rshift m i)); rewrite !mnmrshift_r.
+Qed.
+
+Lemma mrshift0n (p : {mpoly R[n]}) : mrshift 0 p = p.
+Proof.
+rewrite [RHS]mpolyE; apply: eq_bigr => m _.
+by rewrite mul_mpolyC; congr (_ *: _); rewrite mpolyXE_id.
+Qed.
+
+Lemma mrshift_is_additive m : additive (mrshift m).
+Proof. exact/mmap_is_additive. Qed.
+
+Lemma mrshift0 m : mrshift m 0 = 0. Proof. exact: raddf0. Qed.
+Lemma mrshiftN m : {morph mrshift m: x / - x}. Proof. exact: raddfN. Qed.
+Lemma mrshiftD m : {morph mrshift m: x y / x + y}. Proof. exact: raddfD. Qed.
+Lemma mrshiftB m : {morph mrshift m: x y / x - y}. Proof. exact: raddfB. Qed.
+Lemma mrshiftMn m k : {morph mrshift m: x / x *+ k}. Proof. exact: raddfMn. Qed.
+Lemma mrshiftMNn m k : {morph mrshift m: x / x *- k}.
+Proof. exact: raddfMNn. Qed.
+
+HB.instance Definition _ m :=
+  GRing.isAdditive.Build {mpoly R[n]} {mpoly R[m + n]} (mrshift m)
+    (mrshift_is_additive m).
+
+Lemma mrshift_is_multiplicative m : multiplicative (mrshift m).
+Proof.
+apply/commr_mmap_is_multiplicative=> [i p|p mn mn']; first exact/commr_mpolyX.
+rewrite /= /mmap1; elim/big_rec: _ => /= [|i q _]; first exact/commr1.
+exact/commrM/commrX/commr_mpolyX.
+Qed.
+
+HB.instance Definition _ m :=
+  GRing.isMultiplicative.Build {mpoly R[n]} {mpoly R[m + n]} (mrshift m)
+    (mrshift_is_multiplicative m).
+
+Lemma mrshift1 m : mrshift m 1 = 1.
+Proof. exact: rmorph1. Qed.
+
+Lemma mrshiftM m : {morph mrshift m: x y / x * y}.
+Proof. exact: rmorphM. Qed.
+
+Lemma mrshiftC m c : mrshift m c%:MP = c%:MP.
+Proof. by rewrite /mrshift mmapC. Qed.
+
+Lemma mrshiftN1 m : mrshift m (-1) = -1.
+Proof. by rewrite raddfN /= mrshiftC. Qed.
+
+Lemma mrshiftX m mn : mrshift m 'X_[mn] = 'X_[mnmrshift m mn].
+Proof.
+rewrite /mrshift mmapX /mmap1 /= (mpolyXE _ 1); apply/esym.
+rewrite (eq_bigr (fun i => 'X_i ^+ (mnmrshift m mn i))); last first.
+  by move=> i _; rewrite perm1.
+rewrite big_split_ord/=; under eq_bigr => i _ do rewrite mnmrshift_l expr0.
+by rewrite prodr_const expr1n mul1r; apply: eq_bigr => i _; rewrite mnmrshift_r.
+Qed.
+
+Lemma mrshiftZ m c p : mrshift m (c *: p) = c *: mrshift m p.
+Proof. by rewrite /mrshift mmapZ /= mul_mpolyC. Qed.
+
+Lemma mrshiftE m (p : {mpoly R[n]}) (k : nat) : msize p <= k ->
+  mrshift m p = \sum_(mn : 'X_{1..n < k}) (p@_mn *: 'X_[mnmrshift m mn]).
+Proof.
+move=> h; rewrite {1}[p](mpolywE (k := k)) //.
+rewrite raddf_sum /=; apply/eq_bigr => mn _.
+by rewrite mrshiftZ mrshiftX.
+Qed.
+
+Lemma mrshift_mnmrshift m p mn : (mrshift m p)@_(mnmrshift m mn) = p@_mn.
+Proof.
+rewrite (mrshiftE m (k := msize p)) // raddf_sum /=.
+rewrite [X in _=X@__](mpolywE (k := msize p)) //.
+rewrite raddf_sum /=; apply/eq_bigr=> i _.
+by rewrite !mcoeffZ !mcoeffX inj_eq //; apply/inj_mnmrshift.
+Qed.
+
+Lemma inj_mrshift m : injective (mrshift m).
+Proof.
+move=> m1 m2 /mpolyP h; apply/mpolyP => mn.
+by move: (h (mnmrshift m mn)); rewrite !mrshift_mnmrshift.
+Qed.
+
+Definition mprshift m (p : {poly {mpoly R[n]}}) : {poly {mpoly R[m + n]}} :=
+  map_poly (mrshift m) p.
+
+Lemma mprshift_is_additive m : additive (mprshift m).
+Proof. exact: map_poly_is_additive. Qed.
+
+HB.instance Definition _ m :=
+  GRing.isAdditive.Build {poly {mpoly R[n]}} {poly {mpoly R[m + n]}}
+    (mprshift m) (mprshift_is_additive m).
+
+Lemma mprshift_is_multiplicative m : multiplicative (mprshift m).
+Proof. exact: map_poly_is_multiplicative. Qed.
+
+HB.instance Definition _ m :=
+  GRing.isMultiplicative.Build {poly {mpoly R[n]}} {poly {mpoly R[m + n]}}
+    (mprshift m) (mprshift_is_multiplicative m).
+
+Lemma mprshiftX m : mprshift m 'X = 'X.
+Proof. by rewrite /mprshift map_polyX. Qed.
+
+Lemma mprshiftC m c : mprshift m c%:P = (mrshift m c)%:P.
+Proof. by rewrite /mprshift map_polyC. Qed.
+
+Lemma mprshiftZ m c p : mprshift m (c *: p) = mrshift m c *: (mprshift m p).
+Proof. by rewrite /mprshift map_polyZ. Qed.
+
+End MRshift.
+
+Lemma mnmrshiftDn {m n n'} (mn : 'X_{1..m}) : mnmrshift (n + n') mn
+  = mnmcast (addnA n n' m) (mnmrshift n (mnmrshift n' mn)).
+Proof.
+apply/mnmP => i; rewrite mnmcastE.
+case: (split_ordP i) => {}i ->; last first.
+  by rewrite mnmrshift_r rshiftDn cast_ord_comp cast_ord_id !mnmrshift_r.
+rewrite mnmrshift_l; case: (split_ordP i) => {}i ->; last first.
+  by rewrite lshift_rshift cast_ord_comp cast_ord_id mnmrshift_r mnmrshift_l.
+by rewrite -lshiftDn mnmrshift_l.
+Qed.
+
+Lemma mrshiftDn {R m n n'} (p : {mpoly R[m]}) :
+  mrshift (n + n') p = mpcast (addnA _ _ _) (mrshift n (mrshift n' p)).
+Proof.
+rewrite [p]mpolyE rmorph_sum/= !(rmorph_sum (mrshift n'))/=.
+rewrite (rmorph_sum (mrshift n)) (rmorph_sum (mpcast _))/=.
+apply: eq_bigr => mn _; rewrite !mrshiftZ !mrshiftX mpcastZ mpcastX.
+by rewrite mnmrshiftDn.
+Qed.
+
+Lemma mpcast_mrshiftDn {R m n1 n2 n3}
+    (eq_n' : n1 + (n2 + m) = n3) (eq_n : n1 + n2 + m = n3) (p : {mpoly R[m]}) :
+  mpcast eq_n (mrshift (n1 + n2) p) = mpcast eq_n' (mrshift n1 (mrshift n2 p)).
+Proof.
+by rewrite mrshiftDn mpcast_comp [etrans _ _](nat_irrelevance _ eq_n').
+Qed.
 
 (* -------------------------------------------------------------------- *)
 Section MPolyUni.
