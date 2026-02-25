@@ -1,0 +1,97 @@
+---
+fullname: A Multivariate polynomial Library for the Mathematical Components Library
+shortname: multinomials
+opam_name: coq-mathcomp-multinomials
+organization: math-comp
+action: true
+
+synopsis: >-
+  A Multivariate polynomial Library for the Mathematical Components Library
+
+description: |-
+  This library provides a library for monomial algebra, for multivariate
+  polynomials over ring structures and an extended theory for polynomials whose
+  coefficients range over commutative rings and integral domains.
+
+authors:
+- name: Pierre-Yves Strub
+  initial: true
+
+opam-file-maintainer: pierre-yves@strub.nu
+
+license:
+  fullname: CeCILL-B Free Software License Agreement
+  identifier: CECILL-B
+  file: CeCILL-B
+
+supported_coq_versions:
+  text: 8.20 or later
+  opam: '{>= "8.20"}'
+
+tested_coq_nix_versions:
+
+tested_coq_opam_versions:
+- version: '2.4.0-coq-8.20'
+  repo: 'mathcomp/mathcomp'
+- version: '2.4.0-rocq-prover-9.0'
+  repo: 'mathcomp/mathcomp'
+- version: '2.4.0-rocq-prover-9.1'
+  repo: 'mathcomp/mathcomp'
+- version: '2.5.0-coq-8.20'
+  repo: 'mathcomp/mathcomp'
+- version: '2.5.0-rocq-prover-9.0'
+  repo: 'mathcomp/mathcomp'
+- version: '2.5.0-rocq-prover-9.1'
+  repo: 'mathcomp/mathcomp'
+- version: 'rocq-prover-9.0'
+  repo: 'mathcomp/mathcomp-dev'
+- version: 'rocq-prover-9.1'
+  repo: 'mathcomp/mathcomp-dev'
+- version: 'rocq-prover-dev'
+  repo: 'mathcomp/mathcomp-dev'
+
+dependencies:
+- opam:
+    name: coq-mathcomp-ssreflect
+    version: '{>= "2.4"}'
+  description: |-
+    [MathComp](https://math-comp.github.io) ssreflect 2.4 or later
+- opam:
+    name: coq-mathcomp-algebra
+  description: |-
+    [MathComp](https://math-comp.github.io) algebra
+- opam:
+    name: coq-mathcomp-bigenough
+  description: |-
+    [MathComp bigenough](https://github.com/math-comp/bigenough)
+- opam:
+    name: coq-mathcomp-finmap
+  description: |-
+    [MathComp finmap](https://github.com/math-comp/finmap)
+
+namespace: mathcomp.multinomials
+
+keywords:
+- name: multinomials
+- name: monoid algebra
+
+categories:
+- name: Mathematics/Algebra/Multinomials
+- name: Mathematics/Algebra/Monoid algebra
+
+documentation: |-
+
+  ## Credits
+
+  Contributors:
+
+  - [Florent Hivert](https://www.lri.fr/~hivert/)
+  - [Laurent Thery](https://www-sop.inria.fr/marelle/personnel/Laurent.Thery/moi.html)
+
+  This library is also the result of discussions with:
+
+  - Sophie Bernard
+  - [Cyril Cohen](http://www.cyrilcohen.fr/)
+  - [Laurence Rideau](http://www-sop.inria.fr/members/Laurence.Rideau/)
+
+---
