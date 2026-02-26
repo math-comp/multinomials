@@ -83,6 +83,7 @@ From mathcomp Require Import choice fintype tuple finfun bigop finset binomial.
 From mathcomp Require Import order fingroup perm ssralg zmodp poly ssrint.
 From mathcomp Require Import matrix vector.
 From mathcomp Require Import bigenough.
+Set SsrOldRewriteGoalsOrder.  (* change Set to Unset when porting the file, then remove the line when requiring MathComp >= 2.6 *)
 
 Require Import ssrcomplements freeg.
 
