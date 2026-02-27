@@ -92,7 +92,7 @@ Module FreegDefs.
     Canonical prefreeg_equiv_direct := defaultEncModRel equiv.
 
     Definition type := {eq_quot equiv}.
-    Definition type_of of phant G & phant K := type.
+    Definition type_of & phant G & phant K := type.
 
     Notation "{ 'freeg' K / G }" := (type_of (Phant G) (Phant K)).
 
