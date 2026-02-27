@@ -1082,65 +1082,41 @@ Lemma mmapMNn n : {morph mmap f h: x / x *- n} . Proof. exact: raddfMNn. Qed.
 
 End Additive.
 
-Section CommrMultiplicative.
+Section Multiplicative.
 
-Context {K : monomType} {R S : pzSemiRingType}.
-Context (f : {rmorphism R -> S}) (h : {mmorphism K -> S}).
+Context {K : monomType} {R : pzSemiRingType} {S : pzSemiAlgType R}.
+Context (h : {mmorphism K -> S}).
 
 Implicit Types (c : R) (g : {malg R[K]}).
 
-Lemma mmapZ c g : (c *: g)^[f,h] = f c * g^[f,h].
-Proof.
-rewrite (mmapEw (msuppZ_le _ _)) mmapE big_distrr /=.
-by apply/eq_bigr=> k _; rewrite linearZ rmorphM /= mulrA.
-Qed.
+Local Notation "g ^[ h ]" := (g ^[GRing.in_alg S, h]).
 
-Lemma mmapC c : c%:MP^[f,h] = f c.
+Lemma mmapC c : c%:MP^[h] = c%:A.
 Proof. by rewrite mmapU mmorph1 mulr1. Qed.
 
-Lemma mmap1 : 1^[f,h] = 1.
-Proof. by rewrite mmapC rmorph1. Qed.
+Lemma mmap1 : 1^[h] = 1.
+Proof. by rewrite mmapC scale1r. Qed.
 
-Hypothesis commr_f: forall g m m', GRing.comm (f g@_m) (h m').
-
-Lemma commr_mmap_is_multiplicative: multiplicative (mmap f h).
+Lemma mmap_is_multiplicative: multiplicative (mmap (GRing.in_alg S) h).
 Proof.
 split => [g1 g2|]; last by rewrite mmap1.
 rewrite malgME raddf_sum mulr_suml /=; apply: eq_bigr=> i _.
 rewrite raddf_sum mulr_sumr /=; apply: eq_bigr=> j _.
-by rewrite mmapU /= rmorphM mmorphM -mulrA [X in _*X=_]mulrA commr_f !mulrA.
+by rewrite mmapU/= !mulr_algl -!(scalerAl, scalerCA) scalerA -mmorphM.
 Qed.
 
-End CommrMultiplicative.
-
-(* -------------------------------------------------------------------- *)
-Section Multiplicative.
-
-Context {K : monomType} {R : pzSemiRingType} {S : comPzSemiRingType}.
-Context (f : {rmorphism R -> S}) (h : {mmorphism K -> S}).
-
-Lemma mmap_is_multiplicative : multiplicative (mmap f h).
-Proof. by apply/commr_mmap_is_multiplicative=> g m m'; apply/mulrC. Qed.
-
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build {malg R[K]} S (mmap f h)
+  GRing.isMultiplicative.Build {malg R[K]} S (mmap (GRing.in_alg S) h)
     mmap_is_multiplicative.
 
-End Multiplicative.
-
-(* -------------------------------------------------------------------- *)
-Section Linear.
-
-Context {K : monomType} {R : comPzSemiRingType} (h : {mmorphism K -> R}).
-
-Lemma mmap_is_linear : scalable_for *%R (mmap idfun h).
-Proof. by move=> /= c g; rewrite -mul_malgC rmorphM /= mmapC. Qed.
+Lemma mmapZ : scalable (mmap (@GRing.in_alg _ _) h).
+Proof. by move=> /= c g; rewrite -mul_malgC rmorphM/= mmapC mulr_algl. Qed.
 
 HB.instance Definition _ :=
-  GRing.isScalable.Build R {malg R[K]} R *%R (mmap idfun h)
-    mmap_is_linear.
+  GRing.isScalable.Build R {malg R[K]} S *:%R (mmap (GRing.in_alg S) h)
+    mmapZ.
 
-End Linear.
+End Multiplicative.
 End MalgMorphism.
 
 (* -------------------------------------------------------------------- *)
