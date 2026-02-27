@@ -52,7 +52,7 @@ Reserved Notation "'{' 'mmorphism' M '->' S '}'"
   (M at level 98, format "{ 'mmorphism'  M  ->  S }").
 
 (* -------------------------------------------------------------------- *)
-HB.mixin Record Choice_isMonomialDef V of Choice V := {
+HB.mixin Record Choice_isMonomialDef V & Choice V := {
   one : V;
   mul : V -> V -> V;
   mulmA : associative mul;
@@ -77,7 +77,7 @@ Local Notation "*%M" := (@mmul _) : function_scope.
 Local Notation "x * y" := (mmul x y) : monom_scope.
 
 (* -------------------------------------------------------------------- *)
-HB.mixin Record MonomialDef_isConomialDef V of MonomialDef V := {
+HB.mixin Record MonomialDef_isConomialDef V & MonomialDef V := {
   mulmC : commutative (@mul V)
 }.
 
