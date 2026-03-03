@@ -27,6 +27,7 @@ From HB Require Import structures.
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
 From mathcomp Require Import fintype bigop order generic_quotient.
 From mathcomp Require Import ssralg ssrnum ssrint.
+Set SsrOldRewriteGoalsOrder.  (* change Set to Unset when porting the file, then remove the line when requiring MathComp >= 2.6 *)
 
 Import Order.Theory GRing.Theory Num.Theory.
 

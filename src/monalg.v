@@ -9,6 +9,7 @@ From HB Require Import structures.
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
 From mathcomp Require Import seq path choice finset fintype finfun.
 From mathcomp Require Import tuple bigop ssralg ssrint ssrnum.
+Set SsrOldRewriteGoalsOrder.  (* change Set to Unset when porting the file, then remove the line when requiring MathComp >= 2.6 *)
 
 Require Import xfinmap.
 
