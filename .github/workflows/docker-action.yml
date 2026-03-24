@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: coq-community/docker-coq-action@v1
         with:
-          opam_file: 'coq-mathcomp-multinomials.opam'
+          opam_file: 'rocq-mathcomp-multinomials.opam'
           custom_image: ${{ matrix.image }}
 
 

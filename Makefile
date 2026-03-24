@@ -6,10 +6,12 @@ KNOWNTARGETS := Makefile.coq
 # on them always get rebuilt
 KNOWNFILES   := Makefile _CoqProject
 
+COQMAKEFILE?=$(shell command -v coq_makefile || echo "$(COQBIN)rocq makefile")
+
 .DEFAULT_GOAL := invoke-coqmakefile
 
 Makefile.coq: Makefile _CoqProject
-	$(COQBIN)coq_makefile -f _CoqProject -o Makefile.coq
+	$(COQMAKEFILE) -f _CoqProject -o Makefile.coq
 
 invoke-coqmakefile: Makefile.coq
 	$(MAKE) --no-print-directory -f Makefile.coq $(filter-out $(KNOWNTARGETS),$(MAKECMDGOALS))
