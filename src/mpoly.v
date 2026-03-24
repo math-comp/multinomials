@@ -503,7 +503,7 @@ apply/esym; rewrite andbC /mnmc_lt /mnmc_le lt_def lexi_cons eqseq_cons.
 by case: ltgtP; rewrite //= 1?andbC //; apply/contra_ltN => /eqP ->.
 Qed.
 
-HB.instance Definition _ := Order.isPOrder.Build Order.default_display 'X_{1..n}
+HB.instance Definition _ := Order.isPOrder.Build (Order.Disp tt tt) 'X_{1..n}
   ltmc_def lemc_refl lemc_anti lemc_trans.
 
 Lemma leEmnm m1 m2 : (m1 <= m2)%O = (mdeg m1 :: val m1 <= mdeg m2 :: val m2)%O.
@@ -513,7 +513,7 @@ Lemma ltEmnm m m' : (m < m')%O = (mdeg m :: m < mdeg m' :: m')%O.
 Proof. by []. Qed.
 
 HB.instance Definition _ :=
-  Order.POrder_isTotal.Build Order.default_display 'X_{1..n} lemc_total.
+  Order.POrder_isTotal.Build (Order.Disp tt tt) 'X_{1..n} lemc_total.
 
 Lemma le0m m : (0%MM <= m)%O.
 Proof.
@@ -523,7 +523,7 @@ by rewrite -lt0n mdeg0 lexi_cons leEnat; case: ltngtP.
 Qed.
 
 HB.instance Definition _ :=
-  Order.hasBottom.Build Order.default_display 'X_{1..n} le0m.
+  Order.hasBottom.Build (Order.Disp tt tt) 'X_{1..n} le0m.
 
 Lemma ltmcP m1 m2 : mdeg m1 = mdeg m2 -> reflect
   (exists2 i : 'I_n, forall (j : 'I_n), j < i -> m1 j = m2 j & m1 i < m2 i)
