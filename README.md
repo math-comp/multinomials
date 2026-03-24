@@ -21,7 +21,7 @@ coefficients range over commutative rings and integral domains.
 - Author(s):
   - Pierre-Yves Strub (initial)
 - License: [CeCILL-B Free Software License Agreement](CeCILL-B)
-- Compatible Rocq/Coq versions: 8.20 or later
+- Compatible Rocq/Coq versions: 9.0 or later
 - Additional dependencies:
   - [MathComp](https://math-comp.github.io) ssreflect 2.4 or later
   - [MathComp](https://math-comp.github.io) algebra
@@ -37,7 +37,7 @@ is via [OPAM](https://opam.ocaml.org/doc/Install.html):
 
 ```shell
 opam repo add rocq-released https://rocq-prover.org/opam/released
-opam install coq-mathcomp-multinomials
+opam install rocq-mathcomp-multinomials
 ```
 
 To instead build and install manually, you need to make sure that all the

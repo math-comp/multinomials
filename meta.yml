@@ -1,7 +1,7 @@
 ---
 fullname: A Multivariate polynomial Library for the Mathematical Components Library
 shortname: multinomials
-opam_name: coq-mathcomp-multinomials
+opam_name: rocq-mathcomp-multinomials
 organization: math-comp
 action: true
 
@@ -25,19 +25,15 @@ license:
   file: CeCILL-B
 
 supported_coq_versions:
-  text: 8.20 or later
-  opam: '{>= "8.20"}'
+  text: 9.0 or later
+  opam: '{>= "9.0"}'
 
 tested_coq_nix_versions:
 
 tested_coq_opam_versions:
-- version: '2.4.0-coq-8.20'
-  repo: 'mathcomp/mathcomp'
 - version: '2.4.0-rocq-prover-9.0'
   repo: 'mathcomp/mathcomp'
 - version: '2.4.0-rocq-prover-9.1'
-  repo: 'mathcomp/mathcomp'
-- version: '2.5.0-coq-8.20'
   repo: 'mathcomp/mathcomp'
 - version: '2.5.0-rocq-prover-9.0'
   repo: 'mathcomp/mathcomp'
@@ -52,12 +48,12 @@ tested_coq_opam_versions:
 
 dependencies:
 - opam:
-    name: coq-mathcomp-ssreflect
+    name: rocq-mathcomp-ssreflect
     version: '{>= "2.4"}'
   description: |-
     [MathComp](https://math-comp.github.io) ssreflect 2.4 or later
 - opam:
-    name: coq-mathcomp-algebra
+    name: rocq-mathcomp-algebra
   description: |-
     [MathComp](https://math-comp.github.io) algebra
 - opam:
