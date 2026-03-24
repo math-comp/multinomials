@@ -27,7 +27,7 @@ From HB Require Import structures.
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice.
 From mathcomp Require Import fintype bigop order generic_quotient.
 From mathcomp Require Import ssralg ssrnum ssrint.
-Set SsrOldRewriteGoalsOrder.  (* change Set to Unset when porting the file, then remove the line when requiring MathComp >= 2.6 *)
+Unset SsrOldRewriteGoalsOrder.  (* remove the line when requiring MathComp >= 2.6 *)
 
 Import Order.Theory GRing.Theory Num.Theory.
 
@@ -331,8 +331,8 @@ Section FreegTheory.
   Lemma precoeffE x : precoeff x =1 prelift (fun y => (y == x)%:R : R^o).
   Proof.
     move=> s; rewrite [RHS](bigID [pred kx | kx.2 == x]) /= addrC big1.
-      by rewrite add0r; apply: eq_bigr => i /eqP ->; rewrite eqxx [_ *: _]mulr1.
-    by move=> i /negbTE ->; rewrite scaler0.
+      by move=> i /negbTE ->; rewrite scaler0.
+    by rewrite add0r; apply: eq_bigr => i /eqP ->; rewrite eqxx [_ *: _]mulr1.
   Qed.
 
   Lemma precoeff_nil x : precoeff x [::] = 0.
@@ -442,7 +442,7 @@ Section FreegTheory.
      uniq (predom s) -> kz \in s -> precoeff kz.2 s = kz.1.
   Proof.
     move=> uniq_dom_s kz_in_s; have uniq_s := map_uniq uniq_dom_s.
-    rewrite precoeff_uniqE // (nth_map kz); last first.
+    rewrite precoeff_uniqE // (nth_map kz).
       by rewrite -(size_map (@snd _ _)) index_mem map_f.
     rewrite nth_index_map // => {kz kz_in_s} kz1 kz2 kz1_in_s kz2_in_s eq.
     apply/eqP.
@@ -460,7 +460,7 @@ Section FreegTheory.
     case/andP: rD => uniqD /allP /= rD; rewrite precoeff_uniqE //.
     apply/idP/idP; last apply: contra_neqT; move=> x_in_D; last first.
       by rewrite nth_default // memNindex // !size_map.
-    rewrite (nth_map (0, x)); last first.
+    rewrite (nth_map (0, x)).
       by rewrite -(size_map (@snd _ _)) index_mem x_in_D.
     by apply/rD/mem_nth; rewrite -(size_map (@snd _ _)) index_mem.
   Qed.
@@ -735,8 +735,8 @@ Section FreegZmodTypeTheory.
     apply/eqP/freeg_eqP=> x /=; rewrite raddf_sum /=.
     case x_in_dom: (x \in dom D); last rewrite coeff_outdom ?x_in_dom //.
     + rewrite (bigD1_seq x) ?uniq_dom //= big1 ?addr0.
-      * by rewrite coeffU eqxx mulr1.
       * by move=> z ne_z_x; rewrite coeffU (negbTE ne_z_x) mulr0.
+      * by rewrite coeffU eqxx mulr1.
     + rewrite big_seq big1 // => z z_notin_dom; rewrite coeffU.
       have ->: (z == x)%:R = 0 :> R; last by rewrite mulr0.
       by case: (z =P x)=> //= eq_zx; rewrite eq_zx x_in_dom in z_notin_dom.
@@ -916,7 +916,7 @@ Section FreegCmpDom.
     0 <=g D1 -> 0 <=g D2 -> dom (D1 + D2) =i dom D1 ++ dom D2.
   Proof.
     move=> pos_D1 pos_D2 z; rewrite mem_cat !mem_dom coeffD.
-    by rewrite paddr_eq0; first 1 [rewrite negb_and] || apply/fgposP.
+    by rewrite paddr_eq0; last 1 [rewrite negb_and] || apply/fgposP.
   Qed.
 End FreegCmpDom.
 
@@ -931,7 +931,7 @@ Section FreegMap.
     z \in dom D -> coeff z (fgmap D) = f (coeff z D) *+ P z.
   Proof.
     move=> zD; rewrite /fgmap raddf_sum /= -big_filter; case Pz: (P z).
-    + rewrite (bigD1_seq z) ?(filter_uniq, uniq_dom) //=; last first.
+    + rewrite (bigD1_seq z) ?(filter_uniq, uniq_dom) //=.
         by rewrite mem_filter Pz.
       rewrite coeffU eqxx mulr1 big1 ?addr0 //.
       by move=> z' ne_z'z; rewrite coeffU (negbTE ne_z'z) mulr0.
@@ -1045,13 +1045,12 @@ Section PosFreegDeg.
   Lemma fgpos_eq0P (D : {freeg K}) : 0 <=g D -> deg D = 0 -> D = 0.
   Proof.
     move=> posD; rewrite -{1}[D]freeg_sumE raddf_sum /=.
-    rewrite (eq_bigr (fun z => coeff z D)); last first.
+    rewrite (eq_bigr (fun z => coeff z D)).
       by move=> i _; rewrite degU.
-    move/eqP; rewrite psumr_eq0; last by move=> i _; apply/fgposP.
+    move/eqP; rewrite psumr_eq0; first by move=> i _; apply/fgposP.
     move/allP=> zD; apply/eqP; apply/freeg_eqP=> z; rewrite coeff0.
-    case z_in_D: (z \in dom D); last first.
-      by rewrite coeff_outdom // z_in_D.
-    exact/eqP/zD.
+    case z_in_D: (z \in dom D); first exact/eqP/zD.
+    by rewrite coeff_outdom // z_in_D.
   Qed.
 
   Lemma fgneg_eq0P (D : {freeg K}) : D <=g 0 -> deg D = 0 -> D = 0.
@@ -1076,7 +1075,7 @@ Section PosFreegDeg.
       case: (p =P q) =>[<-/=|]; last first.
         by move=> _; rewrite subr0; apply/fgposP.
       by rewrite subr_ge0.
-    move/fgpos_eq0P=> ->; first by rewrite add0r; exists p.
+    move/fgpos_eq0P=> ->; last by rewrite add0r; exists p.
     by rewrite degB degU degD_eq1 subrr.
   Qed.
 
@@ -1108,7 +1107,7 @@ Section FreegIndDom.
       move=> p /=; rewrite !inE; apply/negP=> /andP [].
       rewrite /DR => /dom_sum_subset /flattenP.
       case=> [ps /mapP [q]]; rewrite mem_filter => /andP [].
-      move=> Rq q_in_D ->; rewrite domU ?mem_seq1; last first.
+      move=> Rq q_in_D ->; rewrite domU ?mem_seq1.
         by rewrite -(mem_dom D q).
       by move/eqP=> ->; move: Rq; rewrite /in_mem /= => ->.
     move: DR => DR domDR; rewrite addrC -big_filter.
@@ -1135,7 +1134,7 @@ Section FreegIndDom.
         move/perm_filter=> /(_ [pred q | ~~ (F q)]) /=.
         rewrite NRp; rewrite perm_sym; move/perm_trans => /(_ _ DE).
         rewrite perm_cons => domD'; rewrite big_seq.
-        rewrite (eq_bigr (fun q => << coeff q D' *g q >>)); last first.
+        rewrite (eq_bigr (fun q => << coeff q D' *g q >>)).
           move=> q q_in_ps; rewrite /D' coeffB coeffU; case: (p =P q).
           - by move=> eq_pq; move: p_notin_ps; rewrite eq_pq q_in_ps.
           - by move=> _; rewrite mulr0 subr0.
@@ -1143,7 +1142,7 @@ Section FreegIndDom.
       * apply/negP=> /domD_subset; rewrite mem_cat; case/orP; last first.
           by move=> p_in_DR; move/(_ p): domDR; rewrite !inE NRp p_in_DR.
         move/dom_sum_subset; rewrite filter_predT => /flattenP [qs].
-        move/mapP => [q q_in_ps ->]; rewrite domU; last first.
+        move/mapP => [q q_in_ps ->]; rewrite domU.
           move/perm_mem/(_ q): DE; rewrite !inE q_in_ps orbT.
           by rewrite mem_filter => /andP [_]; rewrite mem_dom.
         rewrite mem_seq1 => /eqP pq_eq; move: p_notin_ps.

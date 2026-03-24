@@ -9,7 +9,7 @@ From HB Require Import structures.
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat.
 From mathcomp Require Import seq path choice finset fintype finfun.
 From mathcomp Require Import tuple bigop ssralg ssrint ssrnum.
-Set SsrOldRewriteGoalsOrder.  (* change Set to Unset when porting the file, then remove the line when requiring MathComp >= 2.6 *)
+Unset SsrOldRewriteGoalsOrder.  (* remove the line when requiring MathComp >= 2.6 *)
 
 Require Import xfinmap.
 
@@ -465,7 +465,7 @@ over.
 case: (msuppP g) => k1g; last first.
   rewrite raddf0; apply: big1_fset => x xg _.
   by apply: big1_fset => y _ _; case: eqP xg k1g => //= -> ->.
-rewrite (big_fsetD1 _ k1g)/= [s in _ + s]big1_fset; last first.
+rewrite (big_fsetD1 _ k1g)/= [s in _ + s]big1_fset.
   move=> k1; rewrite !inE => /andP[k1neq _] _.
   by apply: big1_fset => k2 _ _; rewrite (negPf k1neq).
 rewrite eqxx/= addr0; case: (msuppP g@_k.1) => k2g; last first.
@@ -688,7 +688,7 @@ Lemma fgmullw (d1 d2 : {fset K}) g1 g2 :
   msupp g1 `<=` d1 -> msupp g2 `<=` d2 ->
   fgmul g1 g2 = \sum_(k1 <- d1) \sum_(k2 <- d2) g1 *M_[k1, k2] g2.
 Proof.
-move=> le_d1 le_d2; rewrite -(big_fset_incl _ le_d1)/=; last first.
+move=> le_d1 le_d2; rewrite -(big_fset_incl _ le_d1)/=.
   by move=> k _ /mcoeff_outdom g1k; apply/big1 => ?; rewrite g1k mul0r monalgU0.
 apply/eq_bigr=> k1 _; apply/big_fset_incl => // k _ /mcoeff_outdom ->.
 by rewrite mulr0 monalgU0.
@@ -903,9 +903,9 @@ rewrite (@malgMEw E E) // (big_fsetD1 1%M) //=. 2: by close.
 rewrite (big_fsetD1 1%M) //= mulm1 2!mcoeffD mcoeffUU.
 rewrite ![\sum_(i <- E `\ 1%M) _]big_seq.
 rewrite !raddf_sum !big1 ?addr0 //= => k; rewrite in_fsetD1 => /andP [ne1_k _].
-  rewrite raddf_sum big1 ?mcoeff0 //= => k'; rewrite mcoeffU.
-  by case: eqP=> // /eqP /unitmP []; rewrite (negbTE ne1_k).
-by rewrite mcoeffU mul1m (negbTE ne1_k).
+  by rewrite mcoeffU mul1m (negbTE ne1_k).
+rewrite raddf_sum big1 ?mcoeff0 //= => k'; rewrite mcoeffU.
+by case: eqP=> // /eqP /unitmP []; rewrite (negbTE ne1_k).
 Qed.
 
 HB.instance Definition _ :=
@@ -928,10 +928,10 @@ rewrite mcurryE !mcoeffMl raddf_sum/=.
 rewrite (partition_big_imfset _ fst)/= msupp_curryl; apply/eq_bigr => k1l _.
 rewrite exchange_big (partition_big_imfset _ fst) raddf_sum msupp_curryl/=.
 apply/eq_bigr => k1r _; rewrite exchange_big raddfMn/= mcoeffMl -sumrMnl.
-rewrite (* SLOW *)msupp_curryr big_imfset/=; last first.
+rewrite (* SLOW *)msupp_curryr big_imfset/=.
   by move=> [? ?] [? ?] /andP[/= _ /eqP ->] /andP[/= _ /eqP ->] ->.
 rewrite big_filter; apply/eq_bigr => -[_ k2l]/= /eqP ->.
-rewrite -sumrMnl msupp_curryr big_imfset/=; last first.
+rewrite -sumrMnl msupp_curryr big_imfset/=.
   by move=> [? ?] [? ?] /andP[/= _ /eqP ->] /andP[/= _ /eqP ->] ->.
 rewrite big_filter; apply/eq_bigr => -[_ k2r]/= /eqP ->.
 by rewrite !mcurryE -mulrnA mulnb andbC.

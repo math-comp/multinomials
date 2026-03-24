@@ -8,7 +8,7 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path.
 From mathcomp Require Import choice fintype tuple finfun bigop finset order.
 From mathcomp Require Import ssralg.
-Set SsrOldRewriteGoalsOrder.  (* change Set to Unset when porting the file, then remove the line when requiring MathComp >= 2.6 *)
+Unset SsrOldRewriteGoalsOrder.  (* remove the line when requiring MathComp >= 2.6 *)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -46,7 +46,7 @@ Proof.
   rewrite leq_eqVlt => /predU1P[<- h|]; first by rewrite big_geq // subnn.
   rewrite -subn_gt0=> gt0_k2Bk1 h; rewrite -{1}[k1]add0n big_addn.
   case k1Bk2E: (k2 - k1)  gt0_k2Bk1 h => [|n] // _ h.
-  rewrite big_nat sumnB -?big_nat; last first.
+  rewrite big_nat sumnB -?big_nat.
     move=> i /andP[_]; rewrite ltnS -addSn => le_in.
     by apply/h; rewrite leqnSn /= !ltnS.
   rewrite big_nat_recl ?big_nat_recr //= subnDA addnK.
@@ -68,14 +68,14 @@ Lemma sumn_wgt_range (k : nat) (c : nat -> nat):
   -> \sum_(i < k) (c i - c i.+1) * i.+1 = \sum_(i < k) c i - k * c k.
 Proof.
   pose F i := c i * i.+1 - c i.+1 * i.+1.
-  rewrite (eq_bigr (F \o val)) /=; first last.
+  rewrite (eq_bigr (F \o val)) /=.
     by move=> i _; rewrite mulnBl.
   rewrite [k * _]mulnC; elim: k=> [|k ih] h.
     by rewrite !big_ord0 muln0 subn0.
-  rewrite !big_ord_recr /= ih; last first.
+  rewrite !big_ord_recr /= ih.
     by move=> i j /andP[le_ij lt_jSk]; rewrite h // le_ij leqW.
-  rewrite {ih}/F addnBA ?leq_mul //; last by apply/h; rewrite leqnn ltnW.
-  congr subn; rewrite addnC addnBA 1?addnC -?addnBA.
+  rewrite {ih}/F addnBA ?leq_mul //; first by apply/h; rewrite leqnn ltnW.
+  congr subn; rewrite addnC addnBA 1?addnC -?addnBA; last first.
   + by rewrite -mulnBr subSnn muln1.
   + by rewrite leq_mul.
   elim: k h => [|k ih] h; first by rewrite muln0.
