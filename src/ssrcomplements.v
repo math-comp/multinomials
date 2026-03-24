@@ -17,17 +17,6 @@ Unset Printing Implicit Defensive.
 Import Order.Theory GRing.Theory.
 
 (* -------------------------------------------------------------------- *)
-(* Compatibility layer for Order.disp_t introduced in MathComp 2.3      *)
-(* TODO: remove when we drop the support for MathComp 2.2               *)
-Module Order.
-Import Order.
-Definition disp_t : Set.
-Proof. exact: disp_t || exact: unit. Defined.
-Definition default_display : disp_t.
-Proof. exact: tt || exact: Disp tt tt. Defined.
-End Order.
-
-(* -------------------------------------------------------------------- *)
 Lemma lreg_prod (T : eqType) (R : pzRingType) (r : seq T) (P : pred T) (F : T -> R):
       (forall x, x \in r -> P x -> GRing.lreg (F x))
    -> GRing.lreg (\prod_(x <- r | P x) F x).
