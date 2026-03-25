@@ -1,3 +1,6 @@
+# This file was generated from `meta.yml`, please do not edit manually.
+# Follow the instructions on https://github.com/coq-community/templates to regenerate.
+
 opam-version: "2.0"
 maintainer: "pierre-yves@strub.nu"
 version: "dev"
@@ -16,10 +19,9 @@ coefficients range over commutative rings and integral domains."""
 build: [make "-j%{jobs}%"]
 install: [make "install"]
 depends: [
-  ("coq" {>= "8.20" & < "8.21~"}
-  | "rocq-core" {>= "9.0"})
-  "coq-mathcomp-ssreflect" {>= "2.4"}
-  "coq-mathcomp-algebra" 
+  "rocq-core" {>= "9.0"}
+  "rocq-mathcomp-ssreflect" {>= "2.4"}
+  "rocq-mathcomp-algebra" 
   "coq-mathcomp-bigenough" 
   "coq-mathcomp-finmap" 
 ]
