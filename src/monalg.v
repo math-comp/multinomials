@@ -1705,6 +1705,51 @@ End MSize.
 Definition msizeN (I : choiceType) (G : zmodType) :=
   @mmeasureN (cmonom I) G mdeg.
 
+Section CMMap.
+
+Context (I : choiceType) (R : pzSemiRingType) (f : I -> R).
+
+Definition cmmap (m : cmonom I) := \prod_(k <- finsupp m) f k ^+ m k.
+
+Context (f_comm : forall i j, GRing.comm (f i) (f j)).
+
+Lemma cmmapw (d : {fset I}) (m : {cmonom I}) :
+  finsupp m `<=` d -> cmmap m = \prod_(k <- d) f k ^+ m k.
+Proof.
+move=> md; apply: big_fset_incl' md _ _ => /=[x xd|i j Hi Hj].
+  by rewrite -cmE_eq0 => /eqP->.
+by apply/commrX/commr_sym/commrX.
+Qed.
+
+Lemma cmmapM (m1 m2 : {cmonom I}) : cmmap (m1 * m2) = cmmap m1 * cmmap m2.
+Proof.
+rewrite [cmmap m1](cmmapw (fsubsetUl _ (finsupp m2))).
+rewrite [cmmap m2](cmmapw (fsubsetUr (finsupp m1) _)) /cmmap mdomD.
+elim: (enum_fset _) => [|m ms IHms]; first by rewrite !big_nil mul1r.
+rewrite !big_cons cmM exprD {}IHms !mulrA; congr GRing.mul.
+rewrite -!mulrA; congr GRing.mul.
+elim: ms => [|m' ms IHms]; first by rewrite !big_nil mulr1 mul1r.
+rewrite !big_cons -mulrA -IHms !mulrA; congr GRing.mul.
+by apply/commrX/commr_sym/commrX.
+Qed.
+
+End CMMap.
+
+Section CMMap.
+
+Context (I : choiceType) (R : comPzSemiRingType) (f : I -> R).
+
+Fact cmmap_is_mmorphism : mmorphism (cmmap f).
+Proof.
+split=> [|x y]; first by rewrite /cmmap mdom1 big_seq_fset0.
+by rewrite cmmapM// => i j; apply: mulrC.
+Qed.
+
+HB.instance Definition _ :=
+  isMultiplicative.Build _ _ (cmmap f) cmmap_is_mmorphism.
+
+End CMMap.
+
 (* -------------------------------------------------------------------- *)
 Section FmonomDef.
 
@@ -1842,3 +1887,19 @@ Lemma fm1_eq1 i : (U_(i) == 1)%M = false.
 Proof. by rewrite -fdeg_eq0 fdegU. Qed.
 
 End FmonomTheory.
+
+Section FMMap.
+
+Context (I : choiceType) (R : pzSemiRingType) (f : I -> R).
+
+Definition fmmap (m : fmonom I) := \prod_(k <- m) f k.
+
+Fact fmmap_is_mmorphism : mmorphism fmmap.
+Proof.
+split=> [|x y]; first by rewrite /fmmap [1%M]fmoneE/= big_nil.
+by rewrite /fmmap [(x * y)%M]fmmulE/= big_cat/=.
+Qed.
+
+HB.instance Definition _ := isMultiplicative.Build _ _ fmmap fmmap_is_mmorphism.
+
+End FMMap.
