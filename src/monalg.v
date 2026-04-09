@@ -1651,6 +1651,33 @@ End MSize.
 Definition msizeN (I : choiceType) (G : zmodType) :=
   @mmeasureN (cmonom I) G mdeg.
 
+Section CMMap.
+
+Definition cmmap
+  {I : choiceType} {R : pzSemiRingType} (f : I -> R) (m : cmonom I) :=
+  \prod_(k <- finsupp m) f k ^+ m k.
+
+Context (I : choiceType) (R : comPzSemiRingType) (f : I -> R).
+
+Lemma cmmapw (d : {fset I}) (m : {cmonom I}) :
+  finsupp m `<=` d -> cmmap f m = \prod_(k <- d) f k ^+ m k.
+Proof.
+by move=> md; apply: big_fset_incl md _ => x xd; rewrite -cmE_eq0 => /eqP->.
+Qed.
+
+Fact cmmap_is_mmorphism : mmorphism (cmmap f).
+Proof.
+split=> [|x y]; first by rewrite /cmmap mdom1 big_seq_fset0.
+rewrite [cmmap f x](cmmapw (fsubsetUl _ (finsupp y))).
+rewrite [cmmap f y](cmmapw (fsubsetUr (finsupp x) _)).
+by rewrite -big_split/= /cmmap mdomD; apply/eq_bigr => i _; rewrite cmM exprD.
+Qed.
+
+HB.instance Definition _ :=
+  isMultiplicative.Build _ _ (cmmap f) cmmap_is_mmorphism.
+
+End CMMap.
+
 (* -------------------------------------------------------------------- *)
 Section FmonomDef.
 
@@ -1779,3 +1806,19 @@ Lemma fm1_eq1 i : (U_(i) == 1)%M = false.
 Proof. by rewrite -fdeg_eq0 fdegU. Qed.
 
 End FmonomTheory.
+
+Section FMMap.
+
+Context (I : choiceType) (R : pzSemiRingType) (f : I -> R).
+
+Definition fmmap (m : fmonom I) := \prod_(k <- m) f k.
+
+Fact fmmap_is_mmorphism : mmorphism fmmap.
+Proof.
+split=> [|x y]; first by rewrite /fmmap [1%M]fmoneE/= big_nil.
+by rewrite /fmmap [(x * y)%M]fmmulE/= big_cat/=.
+Qed.
+
+HB.instance Definition _ := isMultiplicative.Build _ _ fmmap fmmap_is_mmorphism.
+
+End FMMap.
