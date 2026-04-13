@@ -166,12 +166,6 @@ HB.structure Definition MMorphism (M : monomType) (S : pzSemiRingType) :=
 
 Module MMorphismExports.
 Notation "{ 'mmorphism' M -> S }" := (@MMorphism.type M S) : type_scope.
-#[deprecated(since="multinomials 2.2.0", note="Use MMorphism.clone instead.")]
-Notation "[ 'mmorphism' 'of' f 'as' g ]" := (MMorphism.clone _ _ f g)
-  (at level 0, only parsing) : form_scope.
-#[deprecated(since="multinomials 2.2.0", note="Use MMorphism.clone instead.")]
-Notation "[ 'mmorphism' 'of' f ]" := (MMorphism.clone _ _ f _)
-  (at level 0, only parsing) : form_scope.
 End MMorphismExports.
 Export MMorphismExports.
 
@@ -197,7 +191,7 @@ Record malg : predArgType := Malg { malg_val : {fsfun K -> G with 0} }.
 
 Fact malg_key : unit. Proof. by []. Qed.
 
-#[deprecated(since="multinomials 2.5.0", note="Use Malg instead")]
+#[deprecated(since="multinomials 2.5.0", use=Malg)]
 Definition malg_of_fsfun   k := locked_with k Malg.
 #[warning="-deprecated-reference"]
 Canonical  malg_unlockable k := [unlockable fun malg_of_fsfun k].
@@ -223,7 +217,7 @@ Context {K : choiceType} {G : nmodType}.
 
 Definition mcoeff (x : K) (g : {malg G[K]}) : G := malg_val g x.
 
-#[deprecated(since="multinomials 2.5.0", note="Use Malg instead")]
+#[deprecated(since="multinomials 2.5.0", use=Malg)]
 Definition mkmalg : {fsfun K -> G with 0} -> {malg G[K]} := @Malg K G.
 
 Definition mkmalgU (k : K) (x : G) := [malg y in [fset k] => x].
@@ -1370,7 +1364,7 @@ Coercion cmonom_val : cmonom >-> fsfun.
 
 Fact cmonom_key : unit. Proof. by []. Qed.
 
-#[deprecated(since="multinomials 2.5.0", note="Use CMonom instead")]
+#[deprecated(since="multinomials 2.5.0", use=CMonom)]
 Definition cmonom_of_fsfun   k := locked_with k CMonom.
 #[warning="-deprecated-reference"]
 Canonical  cmonom_unlockable k := [unlockable fun cmonom_of_fsfun k].
@@ -1381,7 +1375,7 @@ Notation "{ 'cmonom' I }" := (cmonom I) : type_scope.
 Notation "''X_{1..' n '}'" :=  (cmonom 'I_n) : type_scope.
 Notation "{ 'mpoly' R [ n ] }" := {malg R['X_{1..n}]} : type_scope.
 
-#[deprecated(since="multinomials 2.5.0", note="Use CMonom instead"),
+#[deprecated(since="multinomials 2.5.0", use=CMonom),
   warning="-deprecated-reference"]
 Notation mkcmonom := (cmonom_of_fsfun cmonom_key).
 Notation "[ 'cmonom' E | i 'in' P ]" :=

@@ -959,10 +959,6 @@ HB.mixin Record isMeasure (n : nat) (mf : 'X_{1..n} -> nat) := {
 #[short(type="measure")]
 HB.structure Definition Measure (n : nat) := {mf of isMeasure n mf}.
 
-#[deprecated(since="multinomials 2.2.0", note="Use Measure.clone instead.")]
-Notation "[ 'measure' 'of' f ]" := (Measure.clone _ f _)
-  (at level 0, only parsing) : form_scope.
-
 (* -------------------------------------------------------------------- *)
 #[hnf] HB.instance Definition _ n := isMeasure.Build n mdeg mdeg0 mdegD.
 
@@ -1624,7 +1620,7 @@ Canonical mpolyX_unlockable m := [unlockable of (mpolyX m)].
 
 End MPolyVar.
 
-#[deprecated(since="multinomials 2.5.0", note="Use mnm1 instead.")]
+#[deprecated(since="multinomials 2.5.0", use=mnm1)]
 Notation mX := mnm1.
 
 Notation "'X_[ R , m ]" := (@mpolyX _ R m).
