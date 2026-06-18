@@ -77,6 +77,31 @@ Local Notation "1" := (@mone _) : monom_scope.
 Local Notation "*%M" := (@mmul _) : function_scope.
 Local Notation "x * y" := (mmul x y) : monom_scope.
 
+Notation "\prod_ ( i <- r | P ) F" :=
+  (\big[*%M/1%M]_(i <- r | P%B) F%M) : monom_scope.
+Notation "\prod_ ( i <- r ) F" :=
+  (\big[*%M/1%M]_(i <- r) F%M) : monom_scope.
+Notation "\prod_ ( m <= i < n | P ) F" :=
+  (\big[*%M/1%M]_(m <= i < n | P%B) F%M) : monom_scope.
+Notation "\prod_ ( m <= i < n ) F" :=
+  (\big[*%M/1%M]_(m <= i < n) F%M) : monom_scope.
+Notation "\prod_ ( i | P ) F" :=
+  (\big[*%M/1%M]_(i | P%B) F%M) : monom_scope.
+Notation "\prod_ i F" :=
+  (\big[*%M/1%M]_i F%M) : monom_scope.
+Notation "\prod_ ( i : t | P ) F" :=
+  (\big[*%M/1%M]_(i : t | P%B) F%M) (only parsing) : monom_scope.
+Notation "\prod_ ( i : t ) F" :=
+  (\big[*%M/1%M]_(i : t) F%M) (only parsing) : monom_scope.
+Notation "\prod_ ( i < n | P ) F" :=
+  (\big[*%M/1%M]_(i < n | P%B) F%M) : monom_scope.
+Notation "\prod_ ( i < n ) F" :=
+  (\big[*%M/1%M]_(i < n) F%M) : monom_scope.
+Notation "\prod_ ( i 'in' A | P ) F" :=
+  (\big[*%M/1%M]_(i in A | P%B) F%M) : monom_scope.
+Notation "\prod_ ( i 'in' A ) F" :=
+  (\big[*%M/1%M]_(i in A) F%M) : monom_scope.
+
 (* -------------------------------------------------------------------- *)
 HB.mixin Record MonomialDef_isConomialDef V & MonomialDef V := {
   mulmC : commutative (@mul V)
@@ -196,8 +221,17 @@ Context {M : monomType} {S : pzSemiRingType} (f : {mmorphism M -> S}).
 Lemma mmorph1 : f 1%M = 1.
 Proof. exact: mmorphism_subproof.1. Qed.
 
-Lemma mmorphM : {morph f : x y / (x * y)%M >-> (x * y)%R}.
+Lemma mmorphM : {morph f : x y / (x * y)%M >-> x * y}.
 Proof. exact: mmorphism_subproof.2. Qed.
+
+Lemma mmorphXn n : {morph f : x / expmn x n >-> x ^+ n}.
+Proof.
+by elim: n => [|n IHn] x; rewrite ?mmorph1 // expmnS exprS mmorphM IHn.
+Qed.
+
+Lemma mmorph_prod (I : Type) r (P : pred I) E :
+  f (\prod_(i <- r | P i) E i)%M = \prod_(i <- r | P i) f (E i).
+Proof. exact: (big_morph f mmorphM mmorph1). Qed.
 
 End MMorphismTheory.
 
@@ -333,7 +367,7 @@ Lemma malgD_def g1 g2 : g1 + g2 = fgadd g1 g2.
 Proof. by []. Qed.
 
 (* `mcoeff k` is semi-additive *)
-Lemma mcoeff_is_semi_additive k: semi_additive (mcoeff k).
+Fact mcoeff_is_semi_additive k: semi_additive (mcoeff k).
 Proof. by split=> [|g1 g2] /=; rewrite (fgzeroE, fgaddE). Qed.
 
 HB.instance Definition _ k :=
@@ -353,7 +387,7 @@ Proof. by rewrite mcoeffU eqxx. Qed.
 Let mcoeffsE := (mcoeff0, mcoeffU, mcoeffD, mcoeffMn).
 
 (* `mkmalgU k` is semi-additive *)
-Lemma monalgU_is_semi_additive k : semi_additive (mkmalgU k).
+Fact monalgU_is_semi_additive k : semi_additive (mkmalgU k).
 Proof.
 by split=> [|x1 x2] /=; apply/malgP=> k'; rewrite !mcoeffsE (mul0rn, mulrnDl).
 Qed.
@@ -889,7 +923,7 @@ apply/fsubsetP => k /msuppM_le [k1 [k2 [k1g1 k2g2 ->]]].
 by apply/imfset2P; exists k1; last exists k2.
 Qed.
 
-Lemma malgC_is_multiplicative : multiplicative (@malgC K R).
+Fact malgC_is_multiplicative : multiplicative (@malgC K R).
 Proof.
 by split=> // g1 g2; apply/malgP=> k; rewrite mcoeffCM !mcoeffC mulrnAr.
 Qed.
@@ -907,7 +941,7 @@ Proof. exact: rmorph_nat. Qed.
 Lemma mpolyCM : {morph @malgC K R : p q / p * q}.
 Proof. exact: rmorphM. Qed.
 
-Lemma mcoeff1g_is_multiplicative :
+Fact mcoeff1g_is_multiplicative :
   multiplicative (mcoeff 1%M : {malg R[K]} -> R).
 Proof.
 split=> [g1 g2|]; rewrite ?malgCK //; pose_big_fset K E.
@@ -980,6 +1014,9 @@ HB.instance Definition _ :=
 
 HB.instance Definition _ :=
   GRing.LSemiModule_isLSemiAlgebra.Build R {malg R[K]} (@fgscaleAl K R).
+
+(* TODO: remove when requiring MC >= 2.6 *)
+HB.instance Definition _ := GRing.RMorphism.on (mcoeff 1 : {malg R[K]} -> R).
 
 End MalgNzSemiRingTheory.
 
@@ -1067,7 +1104,7 @@ Proof. by rewrite (mmapEw msuppU_le) big_seq_fset1 mcoeffUU. Qed.
 
 Context (f : {additive G -> S}) (h : K -> S).
 
-Lemma mmap_is_semi_additive : semi_additive (mmap f h).
+Fact mmap_is_semi_additive : semi_additive (mmap f h).
 Proof.
 split=> [|g1 g2]; first by rewrite /mmap msupp0 big_seq_fset0.
 pose_big_fset K E.
@@ -1133,12 +1170,11 @@ Section Multiplicative.
 Context {K : monomType} {R : pzSemiRingType} {S : comPzSemiRingType}.
 Context (f : {rmorphism R -> S}) (h : {mmorphism K -> S}).
 
-Lemma mmap_is_multiplicative : multiplicative (mmap f h).
+Fact mmap_is_multiplicative : multiplicative (mmap f h).
 Proof. by apply/commr_mmap_is_multiplicative=> g m m'; apply/mulrC. Qed.
 
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build {malg R[K]} S (mmap f h)
-    mmap_is_multiplicative.
+  GRing.isMultiplicative.Build {malg R[K]} S (mmap f h) mmap_is_multiplicative.
 
 End Multiplicative.
 
@@ -1147,15 +1183,18 @@ Section Linear.
 
 Context {K : monomType} {R : comPzSemiRingType} (h : {mmorphism K -> R}).
 
-Lemma mmap_is_linear : scalable_for *%R (mmap idfun h).
+Fact mmap_is_linear : scalable_for *%R (mmap idfun h).
 Proof. by move=> /= c g; rewrite -mul_malgC rmorphM /= mmapC. Qed.
 
 HB.instance Definition _ :=
-  GRing.isScalable.Build R {malg R[K]} R *%R (mmap idfun h)
-    mmap_is_linear.
+  GRing.isScalable.Build R {malg R[K]} R *%R (mmap idfun h) mmap_is_linear.
 
 End Linear.
 End MalgMorphism.
+
+(* TODO: remove when requiring MC >= 2.6 *)
+HB.instance Definition _ K (R : comNzSemiRingType) (h : {mmorphism K -> R}) :=
+  GRing.Linear.on (mmap idfun h).
 
 (* -------------------------------------------------------------------- *)
 Section MonalgOver.
@@ -1213,7 +1252,7 @@ apply: (iffP allP)=> /= h k; last by rewrite h.
 by case: msuppP=> [kg|]; rewrite ?rpred0 // (h k).
 Qed.
 
-Lemma monalgOver_addr_closed : addr_closed (monalgOver S).
+Fact monalgOver_addr_closed : addr_closed (monalgOver S).
 Proof.
 split=> [|g1 g2 Sg1 Sg2]; rewrite ?monalgOver0 //.
 by apply/monalgOverP=> m; rewrite mcoeffD rpredD ?(monalgOverP _).
@@ -1231,7 +1270,7 @@ Context (K : choiceType) (G : zmodType) (zmodS : zmodClosed G).
 
 Local Notation monalgOver := (@monalgOver K G).
 
-Lemma monalgOver_oppr_closed : oppr_closed (monalgOver zmodS).
+Fact monalgOver_oppr_closed : oppr_closed (monalgOver zmodS).
 Proof.
 move=> g Sg; apply/monalgOverP=> n; rewrite mcoeffN.
 by rewrite rpredN; apply/(monalgOverP zmodS).
@@ -1255,7 +1294,7 @@ Proof. by rewrite monalgOverU; case: eqP=> // ->; rewrite rpred0. Qed.
 Lemma monalgOver1 : 1 \in monalgOver S.
 Proof. by rewrite monalgOverC rpred1. Qed.
 
-Lemma monalgOver_mulr_closed : mulr_closed (monalgOver S).
+Fact monalgOver_mulr_closed : mulr_closed (monalgOver S).
 Proof.
 split=> [|g1 g2 /monalgOverP Sg1 /monalgOverP sS2].
   by rewrite monalgOver1.
@@ -1337,11 +1376,9 @@ Qed.
 Lemma mmeasureD_le g1 g2 :
   (mmeasure (g1 + g2) <= maxn (mmeasure g1) (mmeasure g2))%N.
 Proof.
-rewrite {1}mmeasureE big_seq_fsetE /=.
-(* Going briefly through finType as lemmas about max apply only to them *)
-apply/bigmax_leqP=> [[i ki]] _ /=.
-have /fsubsetP /(_ i ki) := (msuppD_le g1 g2); rewrite in_fsetU.
-by rewrite leq_max; case/orP=> /mmeasure_mnm_lt->; rewrite ?orbT.
+rewrite {1}mmeasureE; apply/bigmax_leqP_seq => [i ki] _ /=.
+have /fsubsetP /(_ i ki) := msuppD_le g1 g2; rewrite in_fsetU leq_max.
+by case/orP=> /mmeasure_mnm_lt->; rewrite ?orbT.
 Qed.
 
 Lemma mmeasure_sum (T : Type) (r : seq _) (F : T -> {malg G[M]}) (P : pred T) :
@@ -1390,6 +1427,9 @@ Canonical  cmonom_unlockable k := [unlockable fun cmonom_of_fsfun k].
 
 End CmonomDef.
 
+Arguments cmonom_val : simpl never.
+Bind Scope monom_scope with cmonom.
+
 Notation "{ 'cmonom' I }" := (cmonom I) : type_scope.
 Notation "''X_{1..' n '}'" :=  (cmonom 'I_n) : type_scope.
 Notation "{ 'mpoly' R [ n ] }" := {malg R['X_{1..n}]} : type_scope.
@@ -1421,7 +1461,7 @@ Proof.
 by rewrite [mkcmonom]unlock.
 Qed.
 
-Lemma cmP m1 m2 : reflect (forall i, m1 i = m2 i) (m1 == m2).
+Lemma cmP m1 m2 : reflect (m1 =1 m2) (m1 == m2).
 Proof. by apply: (iffP eqP) => [->//|eq]; apply/val_inj/fsfunP. Qed.
 
 Definition onecm : cmonom I := CMonom [fsfun of _ => 0%N].
@@ -1475,6 +1515,8 @@ HB.instance Definition _ := MonomialDef_isConomialDef.Build (cmonom I) mulcmC.
 Definition expcmn m n : cmonom I := expmn m n.
 
 End CmonomCanonicals.
+
+HB.instance Definition _ (I : countType) := [Countable of cmonom I by <:].
 
 (* -------------------------------------------------------------------- *)
 Definition mdeg {I : choiceType} (m : cmonom I) :=
@@ -1674,6 +1716,9 @@ Canonical  fmonom_unlockable k := [unlockable fun fmonom_of_seq k].
 
 End FmonomDef.
 
+Arguments fmonom_val : simpl never.
+Bind Scope monom_scope with fmonom.
+
 Notation "{ 'fmonom' I }" := (fmonom I) : type_scope.
 
 Local Notation mkfmonom s := (fmonom_of_seq fmonom_key s).
@@ -1729,6 +1774,8 @@ HB.instance Definition _ := Choice_isMonomialDef.Build (fmonom I)
   fmmulA fmmul1m fmmulm1 fmmul_eq1.
 
 End FmonomCanonicals.
+
+HB.instance Definition _ (I : countType) := [Countable of fmonom I by <:].
 
 (* -------------------------------------------------------------------- *)
 Definition fdeg (I : choiceType) (m : fmonom I) := size m.
