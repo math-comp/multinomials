@@ -43,6 +43,8 @@ tested_coq_opam_versions:
   repo: 'mathcomp/mathcomp-dev'
 - version: 'rocq-prover-9.1'
   repo: 'mathcomp/mathcomp-dev'
+- version: 'rocq-prover-9.2'
+  repo: 'mathcomp/mathcomp-dev'
 - version: 'rocq-prover-dev'
   repo: 'mathcomp/mathcomp-dev'
 
