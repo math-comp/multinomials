@@ -3,6 +3,7 @@ src/monalg.v
 src/mpoly.v
 src/ssrcomplements.v
 src/xfinmap.v
+src/Pol_mpoly.v
 
 -R src mathcomp.multinomials
 -arg -w -arg -ambiguous-paths
