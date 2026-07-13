@@ -23,7 +23,7 @@ coefficients range over commutative rings and integral domains.
 - License: [CeCILL-B Free Software License Agreement](CeCILL-B)
 - Compatible Rocq/Coq versions: 9.0 or later
 - Additional dependencies:
-  - [MathComp](https://math-comp.github.io) ssreflect 2.4 or later
+  - [MathComp](https://math-comp.github.io) ssreflect 2.5 or later
   - [MathComp](https://math-comp.github.io) algebra
   - [MathComp bigenough](https://github.com/math-comp/bigenough)
   - [MathComp finmap](https://github.com/math-comp/finmap)

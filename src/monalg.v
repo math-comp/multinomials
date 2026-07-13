@@ -367,12 +367,12 @@ Lemma malgD_def g1 g2 : g1 + g2 = fgadd g1 g2.
 Proof. by []. Qed.
 
 (* `mcoeff k` is semi-additive *)
-Fact mcoeff_is_semi_additive k: semi_additive (mcoeff k).
+Fact mcoeff_is_nmod_morphism k: nmod_morphism (mcoeff k).
 Proof. by split=> [|g1 g2] /=; rewrite (fgzeroE, fgaddE). Qed.
 
 HB.instance Definition _ k :=
-  GRing.isSemiAdditive.Build {malg G[K]} G (mcoeff k)
-    (mcoeff_is_semi_additive k).
+  GRing.isNmodMorphism.Build {malg G[K]} G (mcoeff k)
+    (mcoeff_is_nmod_morphism k).
 
 Lemma mcoeff0   k   : 0@_k = 0 :> G                . Proof. exact: raddf0. Qed.
 Lemma mcoeffD   k   : {morph mcoeff k: x y / x + y}. Proof. exact: raddfD. Qed.
@@ -387,14 +387,14 @@ Proof. by rewrite mcoeffU eqxx. Qed.
 Let mcoeffsE := (mcoeff0, mcoeffU, mcoeffD, mcoeffMn).
 
 (* `mkmalgU k` is semi-additive *)
-Fact monalgU_is_semi_additive k : semi_additive (mkmalgU k).
+Fact monalgU_is_nmod_morphism k : nmod_morphism (mkmalgU k).
 Proof.
 by split=> [|x1 x2] /=; apply/malgP=> k'; rewrite !mcoeffsE (mul0rn, mulrnDl).
 Qed.
 
 HB.instance Definition _ k :=
-  GRing.isSemiAdditive.Build G {malg G[K]} (mkmalgU k)
-    (monalgU_is_semi_additive k).
+  GRing.isNmodMorphism.Build G {malg G[K]} (mkmalgU k)
+    (monalgU_is_nmod_morphism k).
 
 Lemma monalgU0   k   : << 0 *g k >> = 0              . Proof. exact: raddf0. Qed.
 Lemma monalgUD   k   : {morph mkmalgU k: x y / x + y}. Proof. exact: raddfD. Qed.
@@ -529,7 +529,7 @@ Proof.
 by move=> g; apply/malgP => k1; apply/malgP => k2; rewrite mcurryE muncurryE.
 Qed.
 
-Fact mcurry_is_semi_additive : semi_additive mcurry.
+Fact mcurry_is_nmod_morphism : nmod_morphism mcurry.
 Proof.
 split => [|g1 g2]; apply/malgP => k1; apply/malgP => k2.
   by rewrite mcurryE !mcoeff0.
@@ -537,10 +537,10 @@ by rewrite !(mcurryE, mcoeffD).
 Qed.
 
 HB.instance Definition _ :=
-  GRing.isSemiAdditive.Build {malg G[K1 * K2]} {malg {malg G[K2]}[K1]} mcurry
-    mcurry_is_semi_additive.
+  GRing.isNmodMorphism.Build {malg G[K1 * K2]} {malg {malg G[K2]}[K1]} mcurry
+    mcurry_is_nmod_morphism.
 
-Fact muncurry_is_semi_additive : semi_additive muncurry.
+Fact muncurry_is_nmod_morphism : nmod_morphism muncurry.
 Proof.
 split => [|g1 g2]; apply/malgP => k.
   by rewrite muncurryE !mcoeff0.
@@ -548,8 +548,8 @@ by rewrite !(muncurryE, mcoeffD).
 Qed.
 
 HB.instance Definition _ :=
-  GRing.isSemiAdditive.Build {malg {malg G[K2]}[K1]} {malg G[K1 * K2]} muncurry
-    muncurry_is_semi_additive.
+  GRing.isNmodMorphism.Build {malg {malg G[K2]}[K1]} {malg G[K1 * K2]} muncurry
+    muncurry_is_nmod_morphism.
 
 End MalgProdNmodTheory.
 
@@ -816,7 +816,7 @@ Qed.
 (* FIXME: the instance below is not declared as canonical, seemingly because  *)
 (* of the #[local] attribute?                                                 *)
 #[local] HB.instance Definition _ g :=
-  GRing.isSemiAdditive.Build _ _ (fgmul g) (fgmulg0 g, fgmulgDr g).
+  GRing.isNmodMorphism.Build _ _ (fgmul g) (fgmulg0 g, fgmulgDr g).
 
 Lemma fgmulA : associative fgmul.
 Proof.
@@ -923,14 +923,14 @@ apply/fsubsetP => k /msuppM_le [k1 [k2 [k1g1 k2g2 ->]]].
 by apply/imfset2P; exists k1; last exists k2.
 Qed.
 
-Fact malgC_is_multiplicative : multiplicative (@malgC K R).
+Fact malgC_is_monoid_morphism : monoid_morphism (@malgC K R).
 Proof.
 by split=> // g1 g2; apply/malgP=> k; rewrite mcoeffCM !mcoeffC mulrnAr.
 Qed.
 
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build R {malg R[K]} (@malgC K R)
-    malgC_is_multiplicative.
+  GRing.isMonoidMorphism.Build R {malg R[K]} (@malgC K R)
+    malgC_is_monoid_morphism.
 
 Lemma mpolyC1E : 1%:MP = 1 :> {malg R[K]}.
 Proof. exact: rmorph1. Qed.
@@ -941,10 +941,10 @@ Proof. exact: rmorph_nat. Qed.
 Lemma mpolyCM : {morph @malgC K R : p q / p * q}.
 Proof. exact: rmorphM. Qed.
 
-Fact mcoeff1g_is_multiplicative :
-  multiplicative (mcoeff 1%M : {malg R[K]} -> R).
+Fact mcoeff1g_is_monoid_morphism :
+  monoid_morphism (mcoeff 1%M : {malg R[K]} -> R).
 Proof.
-split=> [g1 g2|]; rewrite ?malgCK //; pose_big_fset K E.
+split=> [|g1 g2]; rewrite ?malgCK //; pose_big_fset K E.
 have E1: 1%M \in E by rewrite -fsub1set.
 rewrite (@malgMEw E E) // (big_fsetD1 1%M) //=. 2: by close.
 rewrite (big_fsetD1 1%M) //= mulm1 2!mcoeffD mcoeffUU.
@@ -956,8 +956,8 @@ by case: eqP=> // /eqP /unitmP []; rewrite (negbTE ne1_k).
 Qed.
 
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build {malg R[K]} R (mcoeff 1%M)
-    mcoeff1g_is_multiplicative.
+  GRing.isMonoidMorphism.Build {malg R[K]} R (mcoeff 1%M)
+    mcoeff1g_is_monoid_morphism.
 
 End MalgSemiRingTheory.
 
@@ -966,9 +966,9 @@ Section MalgProdMonomSemiRingTheory.
 
 Context {K1 K2 : monomType} {G : pzSemiRingType}.
 
-Fact mcurry_is_multiplicative : multiplicative (@mcurry K1 K2 G).
+Fact mcurry_is_monoid_morphism : monoid_morphism (@mcurry K1 K2 G).
 Proof.
-split => /=[g1 g2|]; apply/malgP => k1; apply/malgP => k2; last first.
+split => /=[|g1 g2]; apply/malgP => k1; apply/malgP => k2.
   rewrite mcurryE !mcoeff1 -pair_eqE/=.
   by case: eqP => //=; rewrite (mcoeff1, mcoeff0).
 rewrite mcurryE !mcoeffMl raddf_sum/=.
@@ -985,19 +985,19 @@ by rewrite !mcurryE -mulrnA mulnb andbC.
 Qed.
 
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build {malg G[K1 * K2]} {malg {malg G[K2]}[K1]}
-    (@mcurry K1 K2 G) mcurry_is_multiplicative.
+  GRing.isMonoidMorphism.Build {malg G[K1 * K2]} {malg {malg G[K2]}[K1]}
+    (@mcurry K1 K2 G) mcurry_is_monoid_morphism.
 
-Fact muncurry_is_multiplicative : multiplicative (@muncurry K1 K2 G).
+Fact muncurry_is_monoid_morphism : monoid_morphism (@muncurry K1 K2 G).
 Proof.
-split => /=[g1 g2|]; apply/eqP; rewrite (can2_eq muncurryK mcurryK); apply/eqP.
-  by rewrite rmorphM/= !muncurryK.
-by rewrite rmorph1.
+split => /=[|g1 g2]; apply/eqP; rewrite (can2_eq muncurryK mcurryK); apply/eqP.
+  by rewrite rmorph1.
+by rewrite rmorphM/= !muncurryK.
 Qed.
 
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build {malg {malg G[K2]}[K1]} {malg G[K1 * K2]}
-    (@muncurry K1 K2 G) muncurry_is_multiplicative.
+  GRing.isMonoidMorphism.Build {malg {malg G[K2]}[K1]} {malg G[K1 * K2]}
+    (@muncurry K1 K2 G) muncurry_is_monoid_morphism.
 
 End MalgProdMonomSemiRingTheory.
 
@@ -1086,7 +1086,7 @@ End Defs.
 
 Local Notation "g ^[ f , h ]" := (mmap f h g).
 
-Section SemiAdditive.
+Section NmodMorphism.
 
 Context {K : choiceType} {G : nmodType} {S : pzSemiRingType}.
 
@@ -1104,7 +1104,7 @@ Proof. by rewrite (mmapEw msuppU_le) big_seq_fset1 mcoeffUU. Qed.
 
 Context (f : {additive G -> S}) (h : K -> S).
 
-Fact mmap_is_semi_additive : semi_additive (mmap f h).
+Fact mmap_is_nmod_morphism : nmod_morphism (mmap f h).
 Proof.
 split=> [|g1 g2]; first by rewrite /mmap msupp0 big_seq_fset0.
 pose_big_fset K E.
@@ -1113,16 +1113,16 @@ pose_big_fset K E.
 by close.
 Qed.
 
-HB.instance Definition _ := GRing.isSemiAdditive.Build {malg G[K]} S (mmap f h)
-  mmap_is_semi_additive.
+HB.instance Definition _ := GRing.isNmodMorphism.Build {malg G[K]} S (mmap f h)
+  mmap_is_nmod_morphism.
 
 Lemma mmap0     : mmap f h 0 = 0               . Proof. exact: raddf0. Qed.
 Lemma mmapD     : {morph mmap f h: x y / x + y}. Proof. exact: raddfD. Qed.
 Lemma mmapMn  n : {morph mmap f h: x / x *+ n} . Proof. exact: raddfMn. Qed.
 
-End SemiAdditive.
+End NmodMorphism.
 
-Section Additive.
+Section ZmodMorphism.
 
 Context {K : choiceType} {G : zmodType} {S : pzRingType}.
 Context (f : {additive G -> S}) (h : K -> S).
@@ -1131,9 +1131,9 @@ Lemma mmapN     : {morph mmap f h: x / - x}    . Proof. exact: raddfN. Qed.
 Lemma mmapB     : {morph mmap f h: x y / x - y}. Proof. exact: raddfB. Qed.
 Lemma mmapMNn n : {morph mmap f h: x / x *- n} . Proof. exact: raddfMNn. Qed.
 
-End Additive.
+End ZmodMorphism.
 
-Section CommrMultiplicative.
+Section CommrMonoidMorphism.
 
 Context {K : monomType} {R S : pzSemiRingType}.
 Context (f : {rmorphism R -> S}) (h : {mmorphism K -> S}).
@@ -1154,29 +1154,29 @@ Proof. by rewrite mmapC rmorph1. Qed.
 
 Hypothesis commr_f: forall g m m', GRing.comm (f g@_m) (h m').
 
-Lemma commr_mmap_is_multiplicative: multiplicative (mmap f h).
+Lemma commr_mmap_is_monoid_morphism : monoid_morphism (mmap f h).
 Proof.
-split => [g1 g2|]; last by rewrite mmap1.
+split => [|g1 g2]; first by rewrite mmap1.
 rewrite malgME raddf_sum mulr_suml /=; apply: eq_bigr=> i _.
 rewrite raddf_sum mulr_sumr /=; apply: eq_bigr=> j _.
 by rewrite mmapU /= rmorphM mmorphM -mulrA [X in _*X=_]mulrA commr_f !mulrA.
 Qed.
 
-End CommrMultiplicative.
+End CommrMonoidMorphism.
 
 (* -------------------------------------------------------------------- *)
-Section Multiplicative.
+Section MonoidMorphism.
 
 Context {K : monomType} {R : pzSemiRingType} {S : comPzSemiRingType}.
 Context (f : {rmorphism R -> S}) (h : {mmorphism K -> S}).
 
-Fact mmap_is_multiplicative : multiplicative (mmap f h).
-Proof. by apply/commr_mmap_is_multiplicative=> g m m'; apply/mulrC. Qed.
+Fact mmap_is_monoid_morphism : monoid_morphism (mmap f h).
+Proof. by apply/commr_mmap_is_monoid_morphism=> g m m'; apply/mulrC. Qed.
 
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build {malg R[K]} S (mmap f h) mmap_is_multiplicative.
+  GRing.isMonoidMorphism.Build {malg R[K]} S (mmap f h) mmap_is_monoid_morphism.
 
-End Multiplicative.
+End MonoidMorphism.
 
 (* -------------------------------------------------------------------- *)
 Section Linear.
