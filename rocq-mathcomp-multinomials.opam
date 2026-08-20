@@ -22,8 +22,8 @@ depends: [
   "rocq-core" {>= "9.0"}
   "rocq-mathcomp-ssreflect" {>= "2.4"}
   "rocq-mathcomp-algebra" 
-  "coq-mathcomp-bigenough" 
-  "coq-mathcomp-finmap" 
+  "rocq-mathcomp-bigenough" 
+  "rocq-mathcomp-finmap" 
 ]
 conflicts: [ "coq-mathcomp-multinomials" {<= "2.4.0"} ]
 

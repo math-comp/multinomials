@@ -59,11 +59,11 @@ dependencies:
   description: |-
     [MathComp](https://math-comp.github.io) algebra
 - opam:
-    name: coq-mathcomp-bigenough
+    name: rocq-mathcomp-bigenough
   description: |-
     [MathComp bigenough](https://github.com/math-comp/bigenough)
 - opam:
-    name: coq-mathcomp-finmap
+    name: rocq-mathcomp-finmap
   description: |-
     [MathComp finmap](https://github.com/math-comp/finmap)
 
