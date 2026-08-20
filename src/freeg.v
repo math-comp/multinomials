@@ -570,7 +570,7 @@ Section FreegZmodTypeTheory.
   Section Lift.
     Context (M : lmodType R) (f : K -> M).
 
-    Lemma lift_is_additive : additive (fglift f).
+    Lemma lift_is_zmod_morphism : zmod_morphism (fglift f).
     Proof.
       elim/quotW=> [[D1 /= H1]]; elim/quotW=> [[D2 /= H2]].
       unlock fglift; rewrite ?piE [_ + _]piE /lift /=.
@@ -580,12 +580,12 @@ Section FreegZmodTypeTheory.
   End Lift.
 
   (* -------------------------------------------------------------------- *)
-  Lemma coeff_is_additive x : additive (coeff x).
-  Proof. exact: lift_is_additive R^o _. Qed.
+  Lemma coeff_is_zmod_morphism x : zmod_morphism (coeff x).
+  Proof. exact: lift_is_zmod_morphism R^o _. Qed.
 
   #[export] HB.instance Definition _ x :=
-    GRing.isAdditive.Build {freeg K / R} R (coeff x)
-      (coeff_is_additive x).
+    GRing.isZmodMorphism.Build {freeg K / R} R (coeff x)
+      (coeff_is_zmod_morphism x).
 
   Lemma coeff0   z   : coeff z 0 = 0               . Proof. exact: raddf0. Qed.
   Lemma coeffN   z   : {morph coeff z: x / - x}    . Proof. exact: raddfN. Qed.
@@ -827,12 +827,12 @@ Section Deg.
 
   Definition predeg (D : seq (int * K)) := \sum_(kx <- D) kx.1.
 
-  Lemma deg_is_additive: additive deg.
-  Proof. exact: (@lift_is_additive _ K int^o). Qed.
+  Lemma deg_is_zmod_morphism: zmod_morphism deg.
+  Proof. exact: (@lift_is_zmod_morphism _ K int^o). Qed.
 
   #[export] HB.instance Definition _ :=
-    GRing.isAdditive.Build {freeg K / int} int deg
-      deg_is_additive.
+    GRing.isZmodMorphism.Build {freeg K / int} int deg
+      deg_is_zmod_morphism.
 
   Lemma deg0     : deg 0 = 0               . Proof. exact: raddf0. Qed.
   Lemma degN     : {morph deg: x / - x}    . Proof. exact: raddfN. Qed.

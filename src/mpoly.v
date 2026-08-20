@@ -898,11 +898,11 @@ HB.instance Definition _ := GRing.Lmodule.on {mpoly R[n]}.
 
 Local Notation mcoeff := (@mcoeff n R).
 
-Lemma mcoeff_is_additive m : additive (mcoeff m).
+Lemma mcoeff_is_zmod_morphism m : zmod_morphism (mcoeff m).
 Proof. by move=> p q /=; rewrite /mcoeff raddfB. Qed.
 
-HB.instance Definition _ m := GRing.isAdditive.Build {mpoly R[n]} R (mcoeff m)
-  (mcoeff_is_additive m).
+HB.instance Definition _ m := GRing.isZmodMorphism.Build {mpoly R[n]} R (mcoeff m)
+  (mcoeff_is_zmod_morphism m).
 
 Lemma mcoeff0   m   : mcoeff m 0 = 0               . Proof. exact: raddf0. Qed.
 Lemma mcoeffN   m   : {morph mcoeff m: x / - x}    . Proof. exact: raddfN. Qed.
@@ -920,11 +920,11 @@ HB.instance Definition _ m :=
 
 Local Notation mpolyC := (@mpolyC n R).
 
-Lemma mpolyC_is_additive : additive mpolyC.
+Lemma mpolyC_is_zmod_morphism : zmod_morphism mpolyC.
 Proof. by move=> p q; apply/mpoly_eqP; rewrite /= freegUB. Qed.
 
-HB.instance Definition _ := GRing.isAdditive.Build R {mpoly R[n]} mpolyC
-  mpolyC_is_additive.
+HB.instance Definition _ := GRing.isZmodMorphism.Build R {mpoly R[n]} mpolyC
+  mpolyC_is_zmod_morphism.
 
 Lemma mpolyC0     : mpolyC 0 = 0               . Proof. exact: raddf0. Qed.
 Lemma mpolyCN     : {morph mpolyC: x / - x}    . Proof. exact: raddfN. Qed.
@@ -1183,31 +1183,31 @@ Fixpoint inject n m (p : {ipoly R[n]}) : {ipoly R[m + n]} :=
 Lemma inject_inj n m : injective (@inject n m).
 Proof. by elim: m=> [|m ih] p q //= /polyC_inj /ih. Qed.
 
-Lemma inject_is_additive n m : additive (@inject n m).
+Lemma inject_is_zmod_morphism n m : zmod_morphism (@inject n m).
 Proof.
 elim: m => [|m ih] //=; rewrite -/(_ \o _).
-pose iaM := GRing.isAdditive.Build _ _ _ ih.
+pose iaM := GRing.isZmodMorphism.Build _ _ _ ih.
 pose iA : GRing.Additive.type _ _ := HB.pack (@inject n m) iaM.
 have ->: inject m = iA by [].
 exact: raddfB.
 Qed.
 
 HB.instance Definition _ n m :=
-  GRing.isAdditive.Build {ipoly R[n]} {ipoly R[m+n]} (@inject n m)
-    (@inject_is_additive n m).
+  GRing.isZmodMorphism.Build {ipoly R[n]} {ipoly R[m+n]} (@inject n m)
+    (@inject_is_zmod_morphism n m).
 
-Lemma inject_is_multiplicative n m : multiplicative (@inject n m).
+Lemma inject_is_monoid_morphism n m : monoid_morphism (@inject n m).
 Proof.
 elim: m => [|m ih] //=; rewrite -/(_ \o _).
-pose imM := GRing.isMultiplicative.Build _ _ _ ih.
+pose imM := GRing.isMonoidMorphism.Build _ _ _ ih.
 pose iM : GRing.RMorphism.type _ _ := HB.pack (@inject n m) imM.
 have ->: inject m = iM by [].
-exact: (rmorphM _, rmorph1 _).
+exact: (rmorph1 _, rmorphM _).
 Qed.
 
 HB.instance Definition _ n m :=
-  GRing.isMultiplicative.Build {ipoly R[n]} {ipoly R[m+n]} (@inject n m)
-    (@inject_is_multiplicative n m).
+  GRing.isMonoidMorphism.Build {ipoly R[n]} {ipoly R[m+n]} (@inject n m)
+    (@inject_is_monoid_morphism n m).
 
 Definition inject_cast n m k E : {ipoly R[n]} -> {ipoly R[k]} :=
   ecast k (_ -> {ipoly R[k]}) E (@inject n m).
@@ -1216,22 +1216,22 @@ Lemma inject_cast_inj n m k E :
   injective (@inject_cast n m k E).
 Proof. by case: k / E; apply/inject_inj. Qed.
 
-Lemma inject_cast_is_additive n m k E : additive (@inject_cast n m k E).
+Lemma inject_cast_is_zmod_morphism n m k E : zmod_morphism (@inject_cast n m k E).
 Proof. case: k /E; exact: raddfB. Qed.
 
-Lemma inject_cast_is_multiplicative n m k E :
-  multiplicative (@inject_cast n m k E).
-Proof. case: k / E; exact: (rmorphM _, rmorph1 _). Qed.
+Lemma inject_cast_is_monoid_morphism n m k E :
+  monoid_morphism (@inject_cast n m k E).
+Proof. case: k / E; exact: (rmorph1 _, rmorphM _). Qed.
 
 HB.instance Definition _ n m k e :=
-  GRing.isAdditive.Build
+  GRing.isZmodMorphism.Build
     {ipoly R[n]} {ipoly R[k]} (@inject_cast n m k e)
-    (inject_cast_is_additive e).
+    (inject_cast_is_zmod_morphism e).
 
 HB.instance Definition _ n m k e :=
-  GRing.isMultiplicative.Build
+  GRing.isMonoidMorphism.Build
     {ipoly R[n]} {ipoly R[k]} (@inject_cast n m k e)
-    (inject_cast_is_multiplicative e).
+    (inject_cast_is_monoid_morphism e).
 
 Lemma inject1_proof n (i : 'I_n.+1) : (n - i + i = n)%N.
 Proof. by rewrite subnK // -ltnS. Qed.
@@ -1526,15 +1526,15 @@ rewrite mcoeffCM; have [->|//] := eqVneq p@_m 0.
 by rewrite mulr0 eqxx.
 Qed.
 
-Lemma mpolyC_is_multiplicative : multiplicative (mpolyC n (R := R)).
+Lemma mpolyC_is_monoid_morphism : monoid_morphism (mpolyC n (R := R)).
 Proof.
 split=> // p q; apply/mpolyP=> m.
 by rewrite mcoeffCM !mcoeffC mulrA.
 Qed.
 
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build R {mpoly R[n]} (@mpolyC n R)
-    mpolyC_is_multiplicative.
+  GRing.isMonoidMorphism.Build R {mpoly R[n]} (@mpolyC n R)
+    mpolyC_is_monoid_morphism.
 
 Lemma mpolyC1 : mpolyC n 1 = 1.
 Proof. exact: rmorph1. Qed.
@@ -1587,10 +1587,10 @@ HB.instance Definition _ := GRing.Lalgebra.on {mpoly R[n]}.
 Lemma alg_mpolyC c : c%:A = c%:MP :> {mpoly R[n]}.
 Proof. by rewrite -mul_mpolyC mulr1. Qed.
 
-Lemma mcoeff0_is_multiplicative :
-  multiplicative (mcoeff 0%MM : {mpoly R[n]} -> R).
+Lemma mcoeff0_is_monoid_morphism :
+  monoid_morphism (mcoeff 0%MM : {mpoly R[n]} -> R).
 Proof.
-split=> [p q|]; rewrite ?mpolyCK //.
+split=> [|p q]; rewrite ?mpolyCK //.
 rewrite (mcoeff_poly_mul _ _ (k := 1)) ?mdeg0 //.
 rewrite (bigD1 (bm0, bm0)) ?simpm //=; last first.
 rewrite [X in _+X]big1 ?addr0 // => i /andP [] h.
@@ -1600,8 +1600,8 @@ by rewrite !mdeg_eq0=> /andP [/eqP->/eqP->]; rewrite !eqxx.
 Qed.
 
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build {mpoly R[n]} R (mcoeff 0)
-    mcoeff0_is_multiplicative.
+  GRing.isMonoidMorphism.Build {mpoly R[n]} R (mcoeff 0)
+    mcoeff0_is_monoid_morphism.
 
 End MPolyRing.
 
@@ -2611,7 +2611,7 @@ Qed.
 Local Notation "m ^[ h ]"     := (mmap1 h m).
 Local Notation "p ^[ f , h ]" := (mmap f h p).
 
-Section Additive.
+Section ZmodMorphism.
 Context (h : 'I_n -> S) (f : {additive R -> S}).
 
 Lemma mmapE p i : msize p <= i ->
@@ -2625,7 +2625,7 @@ by rewrite raddf0 mul0r.
 Qed.
 Arguments mmapE [p].
 
-Lemma mmap_is_additive : additive (mmap f h).
+Lemma mmap_is_zmod_morphism : zmod_morphism (mmap f h).
 Proof.
 move=> p q /=; pose_big_enough i.
   rewrite !(mmapE i) // -sumrB; apply/eq_bigr.
@@ -2633,8 +2633,8 @@ move=> p q /=; pose_big_enough i.
 by close.
 Qed.
 
-HB.instance Definition _ := GRing.isAdditive.Build {mpoly R[n]} S (mmap f h)
-  mmap_is_additive.
+HB.instance Definition _ := GRing.isZmodMorphism.Build {mpoly R[n]} S (mmap f h)
+  mmap_is_zmod_morphism.
 
 Local Notation mmap := (mmap f h).
 
@@ -2652,11 +2652,11 @@ rewrite /mmap msuppC (negbTE nz_c) big_seq1 mmap11 mulr1.
 by rewrite mcoeffC eqxx mulr1.
 Qed.
 
-End Additive.
+End ZmodMorphism.
 
 Arguments mmapE [h f p].
 
-Section Multiplicative.
+Section MonoidMorphism.
 Context (h : 'I_n -> S) (f : {rmorphism R -> S}).
 
 Lemma mmapX m : ('X_[m])^[f,h] = m^[h].
@@ -2673,9 +2673,9 @@ Qed.
 Hypothesis commr_h: forall i x, GRing.comm x (h i).
 Hypothesis commr_f: forall p m m', GRing.comm (f p@_m) (m'^[h]).
 
-Lemma commr_mmap_is_multiplicative: multiplicative (mmap f h).
+Lemma commr_mmap_is_monoid_morphism: monoid_morphism (mmap f h).
 Proof.
-split=> //= [p q|]; last first.
+split=> //= [|p q].
   by rewrite /mmap msupp1 big_seq1 mpolyCK rmorph1 mul1r mmap11.
 pose_big_enough i.
   rewrite (mpolywME (k := i)) // raddf_sum /= !(mmapE i) //.
@@ -2686,7 +2686,7 @@ pose_big_enough i.
 by close.
 Qed.
 
-End Multiplicative.
+End MonoidMorphism.
 End MPolyMorphism.
 
 Arguments mmapE [n R S h f p].
@@ -2709,16 +2709,16 @@ Context (n : nat) (R : nzRingType) (S : comNzRingType).
 Context (h : 'I_n -> S) (f : {rmorphism R -> S}).
 Implicit Types (p q r : {mpoly R[n]}).
 
-Lemma mmap_is_multiplicative : multiplicative (mmap f h).
+Lemma mmap_is_monoid_morphism : monoid_morphism (mmap f h).
 Proof.
-  apply/commr_mmap_is_multiplicative.
+  apply/commr_mmap_is_monoid_morphism.
   + by move=> i x; apply/mulrC.
   + by move=> p m m'; apply/mulrC.
 Qed.
 
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build {mpoly R[n]} S (mmap f h)
-    mmap_is_multiplicative.
+  GRing.isMonoidMorphism.Build {mpoly R[n]} S (mmap f h)
+    mmap_is_monoid_morphism.
 
 End MPolyMorphismComm.
 
@@ -2764,11 +2764,11 @@ move=> le_szp_w; rewrite /comp_mpoly (mmapE w) //=.
 by apply/eq_bigr=> m _; rewrite mul_mpolyC.
 Qed.
 
-Lemma comp_mpoly_is_additive lq : additive (comp_mpoly lq).
+Lemma comp_mpoly_is_zmod_morphism lq : zmod_morphism (comp_mpoly lq).
 Proof. by move=> p q; rewrite /comp_mpoly -mmapB. Qed.
 
-HB.instance Definition _ lq := GRing.isAdditive.Build {mpoly R[n]} {mpoly R[k]}
-  (comp_mpoly lq) (comp_mpoly_is_additive lq).
+HB.instance Definition _ lq := GRing.isZmodMorphism.Build {mpoly R[n]} {mpoly R[k]}
+  (comp_mpoly lq) (comp_mpoly_is_zmod_morphism lq).
 
 Lemma comp_mpoly0   lq   : 0 \mPo lq = 0                     . Proof. exact: raddf0. Qed.
 Lemma comp_mpolyN   lq   : {morph comp_mpoly lq: x / - x}    . Proof. exact: raddfN. Qed.
@@ -2810,12 +2810,12 @@ Notation "p \mPo lq" := (@comp_mpoly _ _ _ lq p).
 Section MPolyCompComm.
 Context (n : nat) (R : comNzRingType) (k : nat) (lp : n.-tuple {mpoly R[k]}).
 
-Lemma comp_mpoly_is_multiplicative : multiplicative (comp_mpoly lp).
-Proof. exact: mmap_is_multiplicative. Qed.
+Lemma comp_mpoly_is_monoid_morphism : monoid_morphism (comp_mpoly lp).
+Proof. exact: mmap_is_monoid_morphism. Qed.
 
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build {mpoly R[n]} {mpoly R[k]} (comp_mpoly lp)
-    comp_mpoly_is_multiplicative.
+  GRing.isMonoidMorphism.Build {mpoly R[n]} {mpoly R[k]} (comp_mpoly lp)
+    comp_mpoly_is_monoid_morphism.
 
 End MPolyCompComm.
 
@@ -2844,11 +2844,11 @@ Definition meval v p := mmap idfun v p.
 Lemma mevalE v p : meval v p = \sum_(m <- msupp p) p@_m * \prod_i v i ^+ m i.
 Proof. by []. Qed.
 
-Lemma meval_is_additive v : additive (meval v).
-Proof. exact/mmap_is_additive. Qed.
+Lemma meval_is_zmod_morphism v : zmod_morphism (meval v).
+Proof. exact/mmap_is_zmod_morphism. Qed.
 
-HB.instance Definition _ v := GRing.isAdditive.Build {mpoly R[n]} R (meval v)
-  (meval_is_additive v).
+HB.instance Definition _ v := GRing.isZmodMorphism.Build {mpoly R[n]} R (meval v)
+  (meval_is_zmod_morphism v).
 
 Lemma meval0   v   : meval v 0 = 0               . Proof. exact: raddf0. Qed.
 Lemma mevalN   v   : {morph meval v: x / - x}    . Proof. exact: raddfN. Qed.
@@ -2928,16 +2928,16 @@ Implicit Types (p q r : {mpoly R[n]}).
 Definition map_mpoly (f : R -> S) p : {mpoly S[n]} :=
   mmap ((@mpolyC n _) \o f) (fun i => 'X_i) p.
 
-Section Additive.
+Section ZmodMorphism.
 Context (f : {additive R -> S}).
 
 Local Notation "p ^f" := (map_mpoly f p).
 
-Lemma map_mpoly_is_additive : additive (map_mpoly f).
-Proof. exact/mmap_is_additive. Qed.
+Lemma map_mpoly_is_zmod_morphism : zmod_morphism (map_mpoly f).
+Proof. exact/mmap_is_zmod_morphism. Qed.
 
-HB.instance Definition _ := GRing.isAdditive.Build {mpoly R[n]} {mpoly S[n]}
-  (map_mpoly f) map_mpoly_is_additive.
+HB.instance Definition _ := GRing.isZmodMorphism.Build {mpoly R[n]} {mpoly S[n]}
+  (map_mpoly f) map_mpoly_is_zmod_morphism.
 
 Lemma map_mpolyC c : map_mpoly f c%:MP_[n] = (f c)%:MP_[n].
 Proof. by rewrite [LHS]mmapC. Qed.
@@ -2957,23 +2957,23 @@ pose_big_enough i; first rewrite (map_mpolyE i) //.
 by close.
 Qed.
 
-End Additive.
+End ZmodMorphism.
 
-Section Multiplicative.
+Section MonoidMorphism.
 Context (f : {rmorphism R -> S}).
 
 Local Notation "p ^f" := (map_mpoly f p).
 
-Lemma map_mpoly_is_multiplicative : multiplicative (map_mpoly f).
+Lemma map_mpoly_is_monoid_morphism : monoid_morphism (map_mpoly f).
 Proof.
-apply/commr_mmap_is_multiplicative => /=.
+apply/commr_mmap_is_monoid_morphism => /=.
 + by move=> i x; apply/commr_mpolyX.
 + by move=> p m m'; rewrite mmap1_id; apply/commr_mpolyX.
 Qed.
 
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build {mpoly R[n]} {mpoly S[n]} (map_mpoly f)
-    map_mpoly_is_multiplicative.
+  GRing.isMonoidMorphism.Build {mpoly R[n]} {mpoly S[n]} (map_mpoly f)
+    map_mpoly_is_monoid_morphism.
 
 Lemma map_mpolyX (m : 'X_{1..n}) :
   map_mpoly f 'X_[m] = 'X_[m].
@@ -2990,7 +2990,7 @@ move=> inj_f; apply/uniq_perm; rewrite ?msupp_uniq //=.
 by move=> m; rewrite !mcoeff_msupp mcoeff_map_mpoly raddf_eq0.
 Qed.
 
-End Multiplicative.
+End MonoidMorphism.
 End MPolyMap.
 
 (* -------------------------------------------------------------------- *)
@@ -3333,12 +3333,12 @@ congr (_ : bool)%:R; apply/eqP/eqP=> [->|<-].
 + by apply/mnmP=> i; rewrite !mnmE permK.
 Qed.
 
-Lemma msym_is_additive s: additive (msym s).
-Proof. exact/mmap_is_additive. Qed.
+Lemma msym_is_zmod_morphism s: zmod_morphism (msym s).
+Proof. exact/mmap_is_zmod_morphism. Qed.
 
 HB.instance Definition _ s :=
-  GRing.isAdditive.Build {mpoly R[n]} {mpoly R[n]} (msym s)
-    (msym_is_additive s).
+  GRing.isZmodMorphism.Build {mpoly R[n]} {mpoly R[n]} (msym s)
+    (msym_is_zmod_morphism s).
 
 Lemma msym0   s   : msym s 0 = 0               . Proof. exact: raddf0. Qed.
 Lemma msymN   s   : {morph msym s: x / - x}    . Proof. exact: raddfN. Qed.
@@ -3347,16 +3347,16 @@ Lemma msymB   s   : {morph msym s: x y / x - y}. Proof. exact: raddfB. Qed.
 Lemma msymMn  s k : {morph msym s: x / x *+ k} . Proof. exact: raddfMn. Qed.
 Lemma msymMNn s k : {morph msym s: x / x *- k} . Proof. exact: raddfMNn. Qed.
 
-Lemma msym_is_multiplicative s : multiplicative (msym s).
+Lemma msym_is_monoid_morphism s : monoid_morphism (msym s).
 Proof.
-apply/commr_mmap_is_multiplicative => [i x|p m1 m2]; first exact/commr_mpolyX.
+apply/commr_mmap_is_monoid_morphism => [i x|p m1 m2]; first exact/commr_mpolyX.
 rewrite /= /mmap1; elim/big_rec: _ => [|i q _]; first exact/commr1.
 exact/commrM/commrX/commr_mpolyX.
 Qed.
 
 HB.instance Definition _ s :=
-  GRing.isMultiplicative.Build {mpoly R[n]} {mpoly R[n]} (msym s)
-    (msym_is_multiplicative s).
+  GRing.isMonoidMorphism.Build {mpoly R[n]} {mpoly R[n]} (msym s)
+    (msym_is_monoid_morphism s).
 
 Lemma msym1 s : msym s 1 = 1.
 Proof. exact: rmorph1. Qed.
@@ -3899,8 +3899,8 @@ move=> m1 m2 /mnmP h; apply/mnmP=> i; move: (h (widen i)).
 by rewrite !mnmwiden_widen.
 Qed.
 
-Lemma mwiden_is_additive : additive mwiden.
-Proof. exact/mmap_is_additive. Qed.
+Lemma mwiden_is_zmod_morphism : zmod_morphism mwiden.
+Proof. exact/mmap_is_zmod_morphism. Qed.
 
 Lemma mwiden0     : mwiden 0 = 0               . Proof. exact: raddf0. Qed.
 Lemma mwidenN     : {morph mwiden: x / - x}    . Proof. exact: raddfN. Qed.
@@ -3910,19 +3910,19 @@ Lemma mwidenMn  k : {morph mwiden: x / x *+ k} . Proof. exact: raddfMn. Qed.
 Lemma mwidenMNn k : {morph mwiden: x / x *- k} . Proof. exact: raddfMNn. Qed.
 
 HB.instance Definition _ :=
-  GRing.isAdditive.Build {mpoly R[n]} {mpoly R[n.+1]} mwiden
-    mwiden_is_additive.
+  GRing.isZmodMorphism.Build {mpoly R[n]} {mpoly R[n.+1]} mwiden
+    mwiden_is_zmod_morphism.
 
-Lemma mwiden_is_multiplicative : multiplicative mwiden.
+Lemma mwiden_is_monoid_morphism : monoid_morphism mwiden.
 Proof.
-apply/commr_mmap_is_multiplicative=> [i p|p m m']; first exact/commr_mpolyX.
+apply/commr_mmap_is_monoid_morphism=> [i p|p m m']; first exact/commr_mpolyX.
 rewrite /= /mmap1; elim/big_rec: _ => /= [|i q _]; first exact/commr1.
 exact/commrM/commrX/commr_mpolyX.
 Qed.
 
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build {mpoly R[n]} {mpoly R[n.+1]} mwiden
-    mwiden_is_multiplicative.
+  GRing.isMonoidMorphism.Build {mpoly R[n]} {mpoly R[n.+1]} mwiden
+    mwiden_is_monoid_morphism.
 
 Lemma mwiden1 : mwiden 1 = 1.
 Proof. exact: rmorph1. Qed.
@@ -3973,19 +3973,19 @@ Qed.
 Definition mpwiden (p : {poly {mpoly R[n]}}) : {poly {mpoly R[n.+1]}} :=
   map_poly mwiden p.
 
-Lemma mpwiden_is_additive : additive mpwiden.
-Proof. exact: map_poly_is_additive. Qed.
+Lemma mpwiden_is_zmod_morphism : zmod_morphism mpwiden.
+Proof. exact: map_poly_is_zmod_morphism. Qed.
 
 HB.instance Definition _ :=
-  GRing.isAdditive.Build {poly {mpoly R[n]}} {poly {mpoly R[n.+1]}}
-    mpwiden mpwiden_is_additive.
+  GRing.isZmodMorphism.Build {poly {mpoly R[n]}} {poly {mpoly R[n.+1]}}
+    mpwiden mpwiden_is_zmod_morphism.
 
-Lemma mpwiden_is_multiplicative : multiplicative mpwiden.
-Proof. exact: map_poly_is_multiplicative. Qed.
+Lemma mpwiden_is_monoid_morphism : monoid_morphism mpwiden.
+Proof. exact: map_poly_is_monoid_morphism. Qed.
 
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build {poly {mpoly R[n]}} {poly {mpoly R[n.+1]}}
-    mpwiden mpwiden_is_multiplicative.
+  GRing.isMonoidMorphism.Build {poly {mpoly R[n]}} {poly {mpoly R[n.+1]}}
+    mpwiden mpwiden_is_monoid_morphism.
 
 Lemma mpwidenX : mpwiden 'X = 'X.
 Proof. by rewrite /mpwiden map_polyX. Qed.
@@ -4039,11 +4039,11 @@ Qed.
 Definition mmulti (p : {poly {mpoly R[n]}}) : {mpoly R[n.+1]} :=
   \sum_(i < size p) ((mwiden p`_i) * ('X_ord_max) ^+ i).
 
-Lemma muni_is_additive : additive muni. Proof. exact/mmap_is_additive. Qed.
+Lemma muni_is_zmod_morphism : zmod_morphism muni. Proof. exact/mmap_is_zmod_morphism. Qed.
 
 HB.instance Definition _ :=
-  GRing.isAdditive.Build {mpoly R[n.+1]} {poly {mpoly R[n]}} muni
-    muni_is_additive.
+  GRing.isZmodMorphism.Build {mpoly R[n.+1]} {poly {mpoly R[n]}} muni
+    muni_is_zmod_morphism.
 
 Lemma muni0     : muni 0 = 0               . Proof. exact: raddf0. Qed.
 Lemma muniN     : {morph muni: x / - x}    . Proof. exact: raddfN. Qed.
@@ -4052,9 +4052,9 @@ Lemma muniB     : {morph muni: x y / x - y}. Proof. exact: raddfB. Qed.
 Lemma muniMn  k : {morph muni: x / x *+ k} . Proof. exact: raddfMn. Qed.
 Lemma muniMNn k : {morph muni: x / x *- k} . Proof. exact: raddfMNn. Qed.
 
-Lemma muni_is_multiplicative : multiplicative muni.
+Lemma muni_is_monoid_morphism : monoid_morphism muni.
 Proof.
-apply/commr_mmap_is_multiplicative=> /= [i p|p m1 m2].
+apply/commr_mmap_is_monoid_morphism=> /= [i p|p m1 m2].
   rewrite /X; case: splitP=> j _; last exact/commr_polyX.
   by apply/polyP=> k; rewrite coefCM coefMC; apply/commr_mpolyX.
 apply/polyP=> k; rewrite coefCM coefMC XE coefZ coefXn.
@@ -4063,8 +4063,8 @@ exact/commr_mpolyX.
 Qed.
 
 HB.instance Definition _ :=
-  GRing.isMultiplicative.Build {mpoly R[n.+1]} {poly {mpoly R[n]}} muni
-    muni_is_multiplicative.
+  GRing.isMonoidMorphism.Build {mpoly R[n.+1]} {poly {mpoly R[n]}} muni
+    muni_is_monoid_morphism.
 
 Lemma muni1 : muni 1 = 1.
 Proof. exact: rmorph1. Qed.
