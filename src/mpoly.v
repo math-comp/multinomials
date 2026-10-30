@@ -101,11 +101,11 @@ Declare Scope multi_scope.
 Delimit Scope mpoly_scope with MP.
 Delimit Scope multi_scope with MM.
 
-Local Notation simpm := Monoid.simpm.
+Local Abbreviation simpm := Monoid.simpm.
 
 Local Infix "@@" := (allpairs pair) (at level 60, right associativity).
 
-Local Notation widen := (widen_ord (leqnSn _)).
+Local Abbreviation widen := (widen_ord (leqnSn _)).
 
 Import Order.DefaultProdLexiOrder.
 Import Order.DefaultSeqLexiOrder.
@@ -896,7 +896,7 @@ HB.instance Definition _ := GRing.Zmodule_isLmodule.Build R (mpoly n R)
  scale_mpolyA scale_mpoly1m scale_mpolyDr scale_mpolyDl.
 HB.instance Definition _ := GRing.Lmodule.on {mpoly R[n]}.
 
-Local Notation mcoeff := (@mcoeff n R).
+Local Abbreviation mcoeff := (@mcoeff n R).
 
 Lemma mcoeff_is_zmod_morphism m : zmod_morphism (mcoeff m).
 Proof. by move=> p q /=; rewrite /mcoeff raddfB. Qed.
@@ -918,7 +918,7 @@ HB.instance Definition _ m :=
   GRing.isScalable.Build R {mpoly R[n]} R *%R (mcoeff m)
     (fun c => (mcoeffZ c)^~ m).
 
-Local Notation mpolyC := (@mpolyC n R).
+Local Abbreviation mpolyC := (@mpolyC n R).
 
 Lemma mpolyC_is_zmod_morphism : zmod_morphism mpolyC.
 Proof. by move=> p q; apply/mpoly_eqP; rewrite /= freegUB. Qed.
@@ -1044,7 +1044,7 @@ Qed.
 End MSuppZMod.
 
 (* -------------------------------------------------------------------- *)
-Notation msize p := (@mmeasure _ _ mdeg p).
+Abbreviation msize p := (@mmeasure _ _ mdeg p).
 
 (* -------------------------------------------------------------------- *)
 Section MWeight.
@@ -1075,7 +1075,7 @@ End MWeight.
 
 (* -------------------------------------------------------------------- *)
 (* FIXME: removing Measure.clone below breaks the proof of mweight_XLS *)
-Notation mweight p := (@mmeasure _ _ (Measure.clone _ mnmwgt _) p).
+Abbreviation mweight p := (@mmeasure _ _ (Measure.clone _ mnmwgt _) p).
 
 Section MSize.
 Context (n : nat) (R : pzRingType).
@@ -1099,7 +1099,7 @@ Section MMeasureZMod.
 Context (n : nat) (R : pzRingType) (mf : measure n).
 Implicit Types (c : R) (m : 'X_{1..n}) (p q : {mpoly R[n]}).
 
-Local Notation mmeasure := (@mmeasure n R mf).
+Local Abbreviation mmeasure := (@mmeasure n R mf).
 
 Lemma mmeasureC c : mmeasure c%:MP = (c != 0%R) :> nat.
 Proof.
@@ -1389,7 +1389,7 @@ rewrite -(pair_big_dep xpredT P F) (bigID Q) /= addrC.
 Qed.
 Arguments mcoeff_poly_mul_lin [p q m].
 
-Local Notation mcoeff_pml := mcoeff_poly_mul_lin.
+Local Abbreviation mcoeff_pml := mcoeff_poly_mul_lin.
 
 Lemma mcoeff_poly_mul_lin_rev p q m k : !|m| < k ->
   (p *M q)@_m = \sum_(k : 'X_{1..n < k} | (k <= m)%MM) p@_(m-k) * q@_k.
@@ -1406,7 +1406,7 @@ by apply/eqP/idP => [<-|/inv_F //]; apply/mnm_lepP=> i; rewrite !mnmBE leq_subr.
 Qed.
 Arguments mcoeff_poly_mul_lin_rev [p q m].
 
-Local Notation mcoeff_pmlr := mcoeff_poly_mul_lin_rev.
+Local Abbreviation mcoeff_pmlr := mcoeff_poly_mul_lin_rev.
 
 Lemma poly_mulA : associative mpoly_mul.
 Proof.
@@ -1580,9 +1580,9 @@ Qed.
 Lemma mpoly_scaleAl c p q : c *: (p * q) = (c *: p) * q.
 Proof. by rewrite -!mul_mpolyC mulrA. Qed.
 
-HB.instance Definition _ := GRing.Lmodule_isLalgebra.Build R (mpoly n R)
-  mpoly_scaleAl.
-HB.instance Definition _ := GRing.Lalgebra.on {mpoly R[n]}.
+HB.instance Definition _ :=
+  GRing.LSemiModule_isLSemiAlgebra.Build R (mpoly n R) mpoly_scaleAl.
+HB.instance Definition _ := GRing.NzLalgebra.on {mpoly R[n]}.
 
 Lemma alg_mpolyC c : c%:A = c%:MP :> {mpoly R[n]}.
 Proof. by rewrite -mul_mpolyC mulr1. Qed.
@@ -1621,7 +1621,7 @@ Canonical mpolyX_unlockable m := [unlockable of (mpolyX m)].
 End MPolyVar.
 
 #[deprecated(since="multinomials 2.5.0", use=mnm1)]
-Notation mX := mnm1.
+Abbreviation mX := mnm1.
 
 Notation "'X_[ R , m ]" := (@mpolyX _ R m).
 Notation "'X_[ m ]"     := (@mpolyX _ _ m).
@@ -1973,7 +1973,7 @@ elim/big_rec2: _ => /= [|x m p Px ih]; first by rewrite mlead1.
 by apply/(le_trans (mleadM_le (F x) p)); apply/lem_add.
 Qed.
 
-Notation mleadc p := (p@_(mlead p)).
+Abbreviation mleadc p := (p@_(mlead p)).
 
 Lemma mleadcC (c : R) : mleadc c%:MP_[n] = c.
 Proof. by rewrite mleadC mcoeffC eqxx mulr1. Qed.
@@ -2169,7 +2169,7 @@ Qed.
 
 End MPolyLead.
 
-Notation mleadc p := (p@_(mlead p)).
+Abbreviation mleadc p := (p@_(mlead p)).
 
 (* -------------------------------------------------------------------- *)
 Section MPolyLast.
@@ -2636,7 +2636,7 @@ Qed.
 HB.instance Definition _ := GRing.isZmodMorphism.Build {mpoly R[n]} S (mmap f h)
   mmap_is_zmod_morphism.
 
-Local Notation mmap := (mmap f h).
+Local Abbreviation mmap := (mmap f h).
 
 Lemma mmap0     : mmap 0 = 0               . Proof. exact: raddf0. Qed.
 Lemma mmapN     : {morph mmap: x / - x}    . Proof. exact: raddfN. Qed.
@@ -2733,14 +2733,16 @@ apply/mpolyP=> /= m; rewrite mcoeffM mcoeffMr.
 by apply: eq_bigr=> /= i _; rewrite mulrC.
 Qed.
 
-HB.instance Definition _ := GRing.PzRing_hasCommutativeMul.Build (mpoly n R)
+HB.instance Definition _ := GRing.SemiRing_hasCommutativeMul.Build (mpoly n R)
   mpoly_mulC.
 HB.instance Definition _ := GRing.ComNzRing.on {mpoly R[n]}.
 
 #[hnf]
-HB.instance Definition _ := GRing.Lalgebra_isComAlgebra.Build R {mpoly R[n]}.
+HB.instance Definition _ :=
+  GRing.LSemiAlgebra_isComSemiAlgebra.Build R {mpoly R[n]}.
 #[hnf]
-HB.instance Definition _ := GRing.Lalgebra_isComAlgebra.Build R (mpoly n R).
+HB.instance Definition _ :=
+  GRing.LSemiAlgebra_isComSemiAlgebra.Build R (mpoly n R).
 
 End MPolyComRing.
 
@@ -3057,7 +3059,7 @@ rewrite [LHS]qualifE /= msuppC; case: eqP=> [->|] //=;
 by rewrite ?rpred0 // andbT mcoeffC eqxx mulr1.
 Qed.
 
-Lemma mpolyOver_addr_closed : addr_closed (mpolyOver S).
+Lemma mpolyOver_addr_closed : nmod_closed (mpolyOver S).
 Proof.
 split=> [|p q Sp Sq]; first exact: mpolyOver0.
 by apply/mpolyOverP=> i; rewrite mcoeffD rpredD ?(mpolyOverP _).
@@ -3659,7 +3661,7 @@ rewrite mesymE raddf_sum big1 //= => h cardh; have := ne h.
 by rewrite cardh andbT mcoeffX; case: eqVneq.
 Qed.
 
-Lemma mem_msupp_mesym k m : m \in msupp 's_k = mechar k m.
+Lemma mem_msupp_mesym k m : (m \in msupp 's_k) = mechar k m.
 Proof.
 rewrite mcoeff_msupp mcoeff_mesym.
 by case: (mechar _ _); rewrite ?eqxx // oner_eq0.
@@ -3973,12 +3975,9 @@ Qed.
 Definition mpwiden (p : {poly {mpoly R[n]}}) : {poly {mpoly R[n.+1]}} :=
   map_poly mwiden p.
 
-Lemma mpwiden_is_zmod_morphism : zmod_morphism mpwiden.
-Proof. exact: map_poly_is_zmod_morphism. Qed.
-
 HB.instance Definition _ :=
   GRing.isZmodMorphism.Build {poly {mpoly R[n]}} {poly {mpoly R[n.+1]}}
-    mpwiden mpwiden_is_zmod_morphism.
+    mpwiden (raddfB _).
 
 Lemma mpwiden_is_monoid_morphism : monoid_morphism mpwiden.
 Proof. exact: map_poly_is_monoid_morphism. Qed.
@@ -4087,18 +4086,18 @@ Arguments muni : simpl never.
 
 (* -------------------------------------------------------------------- *)
 Section MESymViete.
-Local Notation mw  := mwiden.
-Local Notation mpw := mpwiden.
+Local Abbreviation mw  := mwiden.
+Local Abbreviation mpw := mpwiden.
 
-Local Notation swiden h :=
+Local Abbreviation swiden h :=
   [set widen x | x in h : {set 'I__}]
   (only parsing).
 
-Local Notation S1 n k :=
+Local Abbreviation S1 n k :=
   [set swiden h | h in {set 'I_n} & #|h| == k.+1]
   (only parsing).
 
-Local Notation S2 n k :=
+Local Abbreviation S2 n k :=
   [set ord_max |: swiden h | h in {set 'I_n} & #|h| == k]
   (only parsing).
 
@@ -4123,7 +4122,7 @@ Proof.
 move=> h1 h2 /= /setP eq; apply/inj_swiden.
 apply/setP => /= x; have {eq} := (eq x).
 rewrite !inE; case: eqP=> [-> _|//].
-have E (h : {set 'I_n}): ord_max \in swiden h = false.
+have E (h : {set 'I_n}): (ord_max \in swiden h) = false.
   apply/negP; case/imsetP=> /= y _ /eqP.
   by rewrite eqE /= eq_sym ltn_eqF.
 by rewrite !E.
@@ -4263,7 +4262,7 @@ Implicit Types (m : 'X_{1..n}).
 Local Notation "m # s" := [multinom m (s i) | i < n]
   (at level 40, left associativity, format "m # s").
 
-Local Notation S := [tuple 's_(R, n, i.+1) | i < n].
+Local Abbreviation S := [tuple 's_(R, n, i.+1) | i < n].
 
 Let mlead_XS m :
   mlead ('X_[R, m] \mPo S) = [multinom \sum_(j : 'I_n | i <= j) (m j) | i < n].
@@ -4478,7 +4477,7 @@ Lemma sym_fundamental (p : {mpoly R[n]}) : p \is symmetric ->
 Proof. by exists (symf p); rewrite {2}[p]symfP ?symfn_wgle. Qed.
 
 (* -------------------------------------------------------------------- *)
-Local Notation XS m := ('X_[R, m] \mPo S) (only parsing).
+Local Abbreviation XS m := ('X_[R, m] \mPo S) (only parsing).
 
 Lemma msym_fundamental_un0 (t : {mpoly R[n]}) : t \mPo S = 0 -> t = 0.
 Proof.
@@ -4539,7 +4538,7 @@ Implicit Types (p q : {mpoly R[n]}).
 Local Notation "d .-homog" := (@ishomog1 _ _ d mf)
   (at level 1, format "d .-homog") : form_scope.
 
-Local Notation homog := (@ishomog _ _ mf).
+Local Abbreviation homog := (@ishomog _ _ mf).
 
 Local Notation "[ 'in' R [ n ] , d .-homog ]" := (@ishomog1 n R d mf)
   (at level 0, R, n at level 2, d at level 0,
@@ -4597,7 +4596,7 @@ Proof. exact/rpredN. Qed.
 Lemma dhomogZ d c p: p \in d.-homog -> (c *: p) \in d.-homog.
 Proof. exact/rpredZ. Qed.
 
-Local Notation mfsize p := (@mmeasure _ _ mf p).
+Local Abbreviation mfsize p := (@mmeasure _ _ mf p).
 
 Lemma homog_msize p : (p \is homog) = (p \is (mfsize p).-1.-homog).
 Proof. by []. Qed.
@@ -4692,7 +4691,7 @@ Section ProjHomog.
 Context (n : nat) (R : nzRingType) (mf : measure n).
 Implicit Types (p q r : {mpoly R[n]}) (m : 'X_{1..n}).
 
-Local Notation mfsize p := (@mmeasure _ _ mf p).
+Local Abbreviation mfsize p := (@mmeasure _ _ mf p).
 
 Section Def.
 Variable (d : nat).
@@ -4759,7 +4758,7 @@ Qed.
 Lemma pihomog_id p : pihomog (pihomog p) = pihomog p.
 Proof. by rewrite pihomog_dE; first exact: pihomogP. Qed.
 
-Lemma homog_piE p : p \is d.-homog for mf = (pihomog p == p).
+Lemma homog_piE p : (p \is d.-homog for mf) = (pihomog p == p).
 Proof.
 apply: (sameP idP); apply: (iffP idP); last by move /pihomog_dE ->.
 by move=> /eqP <-; apply/pihomogP.
@@ -4824,7 +4823,7 @@ Notation "[ ''dhomog_' d p ]" := (@indhomog _ _ d p)
 
 (* -------------------------------------------------------------------- *)
 Section MPolyHomogVec.
-Local Notation isorted s := (sorted leq [seq val i | i <- s]).
+Local Abbreviation isorted s := (sorted leq [seq val i | i <- s]).
 
 Definition basis n d : {set (d.-tuple 'I_n)} :=
   [set t in {: d.-tuple 'I_n } | isorted t].
@@ -4889,7 +4888,7 @@ rewrite add0n big1 ?addn0 // => j ne_ji; apply/count_memPn.
 by apply/negP=> /nseqP [/esym/eqP]; rewrite (negbTE ne_ji).
 Qed.
 
-Local Notation sbasis n d :=
+Local Abbreviation sbasis n d :=
   [seq s2m t | t : d.-tuple 'I_n <- enum (basis n d)].
 
 Lemma basis_cover n d (m : 'X_{1..n}): (mdeg m == d) = (m \in sbasis n d).
@@ -4996,7 +4995,7 @@ End MSymHomog.
 Section MESymFundamentalHomog.
 Context (n : nat) (R : comNzRingType).
 
-Local Notation S := [tuple mesym n R i.+1  | i < n].
+Local Abbreviation S := [tuple mesym n R i.+1  | i < n].
 
 Lemma dhomog_mesym d : mesym n R d \is d.-homog.
 Proof.

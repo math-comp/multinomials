@@ -170,8 +170,7 @@ Proof. by move=> [? ?] [? ?]. Qed.
 Lemma in_allpairs (S T R : eqType) (f : S -> T -> R)
   (s : seq S) (t : seq T) x y :
   injective (uncurry f) ->
-  f x y \in [seq f x0 y0 | x0 <- s, y0 <- t] =
-  (x \in s) && (y \in t).
+  (f x y \in [seq f x0 y0 | x0 <- s, y0 <- t]) = (x \in s) && (y \in t).
 Proof.
 move=> f_inj; apply/allpairsP/andP => [|[]]; last by exists (x, y).
 by case=> -[/= x' y'] [x's y't] /(f_inj (x, y) (x',y')) [-> ->].

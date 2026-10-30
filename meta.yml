@@ -25,28 +25,16 @@ license:
   file: CeCILL-B
 
 supported_coq_versions:
-  text: 9.0 or later
-  opam: '{>= "9.0"}'
+  text: 9.2 or later
+  opam: '{>= "9.2"}'
 
 tested_coq_nix_versions:
 
 tested_coq_opam_versions:
-- version: '2.5.0-rocq-prover-9.0'
-  repo: 'mathcomp/mathcomp'
-- version: '2.5.0-rocq-prover-9.1'
-  repo: 'mathcomp/mathcomp'
-- version: '2.6.0-rocq-prover-9.0'
-  repo: 'mathcomp/mathcomp'
-- version: '2.6.0-rocq-prover-9.1'
-  repo: 'mathcomp/mathcomp'
 - version: '2.6.0-rocq-prover-9.2'
   repo: 'mathcomp/mathcomp'
 - version: '2.6.0-rocq-prover-9.3'
   repo: 'mathcomp/mathcomp'
-- version: 'rocq-prover-9.0'
-  repo: 'mathcomp/mathcomp-dev'
-- version: 'rocq-prover-9.1'
-  repo: 'mathcomp/mathcomp-dev'
 - version: 'rocq-prover-9.2'
   repo: 'mathcomp/mathcomp-dev'
 - version: 'rocq-prover-9.3'
@@ -56,10 +44,14 @@ tested_coq_opam_versions:
 
 dependencies:
 - opam:
-    name: rocq-mathcomp-ssreflect
-    version: '{>= "2.5"}'
+    name: rocq-mathcomp-boot
+    version: '{>= "2.6"}'
   description: |-
-    [MathComp](https://math-comp.github.io) ssreflect 2.5 or later
+    [MathComp](https://math-comp.github.io) boot 2.6 or later
+- opam:
+    name: rocq-mathcomp-order
+  description: |-
+    [MathComp](https://math-comp.github.io) order
 - opam:
     name: rocq-mathcomp-algebra
   description: |-

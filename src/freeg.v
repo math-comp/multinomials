@@ -39,7 +39,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 (* -------------------------------------------------------------------- *)
-Local Notation simpm := Monoid.simpm.
+Local Abbreviation simpm := Monoid.simpm.
 
 (* -------------------------------------------------------------------- *)
 Reserved Notation "{ 'freeg' K / G }" (K at level 2, format "{ 'freeg'  K  /  G }").
@@ -116,11 +116,11 @@ Module FreegDefs.
 
     HB.reexport.
 
-    Notation prefreeg   := prefreeg.
-    Notation fgequiv    := equiv.
-    Notation mkPrefreeg := mkPrefreeg.
+    Abbreviation prefreeg   := prefreeg.
+    Abbreviation fgequiv    := equiv.
+    Abbreviation mkPrefreeg := mkPrefreeg.
 
-    Notation reduced := reduced.
+    Abbreviation reduced := reduced.
 
     Notation "{ 'freeg' T / G }" := (type_of (Phant G) (Phant T)).
     Notation "{ 'freeg' T  }" := (type_of (Phant int) (Phant T)).
@@ -138,7 +138,7 @@ Section FreegTheory.
   Implicit Types (rD : prefreeg G K) (D : {freeg K / G}) (s : seq (G * K)).
   Implicit Types (z k : G) (x y : K).
 
-  Local Notation freeg := {freeg K / G}.
+  Local Abbreviation freeg := {freeg K / G}.
 
   Lemma perm_eq_fgrepr rD : perm_eq (repr (\pi_freeg rD)) rD.
   Proof. by rewrite -/(fgequiv _ _); apply/eqmodP; rewrite reprK. Qed.
@@ -481,7 +481,7 @@ Module FreegZmodType.
     Implicit Types (rD : prefreeg R K) (D : {freeg K / R}) (s : seq (R * K)).
     Implicit Types (z k : R) (x y : K).
 
-    Local Notation zero := [freeg [::]].
+    Local Abbreviation zero := [freeg [::]].
 
     Lemma reprfg0 : repr zero = Prefreeg [::] :> prefreeg R K.
     Proof.
@@ -564,7 +564,7 @@ Section FreegZmodTypeTheory.
   Context (R : pzRingType) (K : choiceType).
   Implicit Types (x y z : K) (k : R) (D: {freeg K / R}).
 
-  Local Notation coeff := (@coeff R K).
+  Local Abbreviation coeff := (@coeff R K).
 
   (* -------------------------------------------------------------------- *)
   Section Lift.
@@ -753,7 +753,7 @@ Section FreeglModType.
   Context (R : pzRingType) (K : choiceType).
   Implicit Types (x y z : K) (c k : R) (D: {freeg K / R}).
 
-  Local Notation coeff := (@coeff R K).
+  Local Abbreviation coeff := (@coeff R K).
 
   Definition fgscale c D := \sum_(x <- dom D) << c * (coeff x D) *g x >>.
 
@@ -791,7 +791,7 @@ Section FreeglModTheory.
   Context (R : pzRingType) (K : choiceType).
   Implicit Types (x y z : K) (c k : R) (D : {freeg K / R}).
 
-  Local Notation coeff := (@coeff R K).
+  Local Abbreviation coeff := (@coeff R K).
 
   Lemma coeffZ c D x : coeff x (c *: D) = c * coeff x D.
   Proof. by rewrite coeff_fgscale. Qed.
@@ -808,7 +808,7 @@ Section FreeglModTheoryId.
   Context (R : idomainType) (K : choiceType).
   Implicit Types (x y z : K) (c k : R) (D: {freeg K / R}).
 
-  Local Notation coeff := (@coeff R K).
+  Local Abbreviation coeff := (@coeff R K).
 
   Lemma domZ c D : c != 0 -> dom (c *: D) =i dom D.
   Proof. by move=> nz_c x; rewrite !mem_dom coeffZ mulf_eq0 negb_or nz_c. Qed.
