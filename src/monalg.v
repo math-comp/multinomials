@@ -70,8 +70,8 @@ Bind Scope monom_scope with MonomialDef.sort.
 Bind Scope type_scope with monomType.
 
 (* -------------------------------------------------------------------- *)
-Notation mone := one.
-Notation mmul := mul.
+Abbreviation mone := one.
+Abbreviation mmul := mul.
 
 Local Notation "1" := (@mone _) : monom_scope.
 Local Notation "*%M" := (@mmul _) : function_scope.
@@ -204,7 +204,6 @@ HB.mixin Record isMultiplicative
   mmorphism_subproof : mmorphism apply;
 }.
 
-#[mathcomp(axiom="multiplicative")]
 HB.structure Definition MMorphism (M : monomType) (S : pzSemiRingType) :=
   {f of isMultiplicative M S f}.
 
@@ -292,7 +291,7 @@ Notation "[ 'malg' g ]" := (Malg g) : ring_scope.
 Notation "<< z *g k >>" := (mkmalgU k z) : ring_scope.
 Notation "<< k >>" := << 1 *g k >> : ring_scope.
 
-Notation malgC := (mkmalgU 1).
+Abbreviation malgC := (mkmalgU 1).
 Notation "@ 'malgC' K G" := (@mkmalgU K G 1)
   (at level 10, K at level 8, G at level 8, only parsing) : function_scope.
 Notation "c %:MP" := (malgC c) : ring_scope.
@@ -1051,7 +1050,7 @@ by rewrite mulrC [X in X==k]mulmC.
 Qed.
 
 HB.instance Definition _ :=
-  GRing.PzSemiRing_hasCommutativeMul.Build {malg R[K]} fgmulC.
+  GRing.SemiRing_hasCommutativeMul.Build {malg R[K]} fgmulC.
 
 End MalgComPzSemiRingTheory.
 
@@ -1215,7 +1214,7 @@ Section Theory.
 
 Context (K : choiceType) (G : nmodType).
 
-Local Notation monalgOver := (@monalgOver K G).
+Local Abbreviation monalgOver := (@monalgOver K G).
 
 Lemma monalgOverS (S1 S2 : {pred G}) :
   {subset S1 <= S2} -> {subset monalgOver S1 <= monalgOver S2}.
@@ -1225,7 +1224,7 @@ exact/le_S1S2/S1g.
 Qed.
 
 Lemma monalgOverU c k S :
-  << c *g k >> \in monalgOver S = (c == 0) || (c \in S).
+  (<< c *g k >> \in monalgOver S) = (c == 0) || (c \in S).
 Proof.
 rewrite qualifE /= msuppU; have [->|nz_c] //= := eqVneq c 0.
 apply/allP/idP => [h|h x]; last by rewrite in_fset1=> /eqP->; rewrite mcoeffUU.
@@ -1244,7 +1243,7 @@ Context (K : choiceType) (G : nmodType) (S : addrClosed G).
 
 Implicit Types (g : {malg G[K]}).
 
-Local Notation monalgOver := (@monalgOver K G).
+Local Abbreviation monalgOver := (@monalgOver K G).
 
 Lemma monalgOverP {g} : reflect (forall m, g@_m \in S) (g \in monalgOver S).
 Proof.
@@ -1252,7 +1251,7 @@ apply: (iffP allP)=> /= h k; last by rewrite h.
 by case: msuppP=> [kg|]; rewrite ?rpred0 // (h k).
 Qed.
 
-Fact monalgOver_addr_closed : addr_closed (monalgOver S).
+Fact monalgOver_addr_closed : nmod_closed (monalgOver S).
 Proof.
 split=> [|g1 g2 Sg1 Sg2]; rewrite ?monalgOver0 //.
 by apply/monalgOverP=> m; rewrite mcoeffD rpredD ?(monalgOverP _).
@@ -1268,7 +1267,7 @@ Section MonalgOverOpp.
 
 Context (K : choiceType) (G : zmodType) (zmodS : zmodClosed G).
 
-Local Notation monalgOver := (@monalgOver K G).
+Local Abbreviation monalgOver := (@monalgOver K G).
 
 Fact monalgOver_oppr_closed : oppr_closed (monalgOver zmodS).
 Proof.
@@ -1286,7 +1285,7 @@ Section MonalgOverSemiring.
 
 Context (K : monomType) (R : pzSemiRingType) (S : semiringClosed R).
 
-Local Notation monalgOver := (@monalgOver K R).
+Local Abbreviation monalgOver := (@monalgOver K R).
 
 Lemma monalgOverC c : (c%:MP \in monalgOver S) = (c \in S).
 Proof. by rewrite monalgOverU; case: eqP=> // ->; rewrite rpred0. Qed.
@@ -1436,7 +1435,7 @@ Notation "{ 'mpoly' R [ n ] }" := {malg R['X_{1..n}]} : type_scope.
 
 #[deprecated(since="multinomials 2.5.0", use=CMonom),
   warning="-deprecated-reference"]
-Notation mkcmonom := (cmonom_of_fsfun cmonom_key).
+Abbreviation mkcmonom := (cmonom_of_fsfun cmonom_key).
 Notation "[ 'cmonom' E | i 'in' P ]" :=
   (CMonom [fsfun[cmonom_key] i in P%fset => E%N | 0%N]) : monom_scope.
 Notation "[ 'cmonom' E | i : P ]" :=
@@ -1533,7 +1532,7 @@ Context {I : choiceType}.
 Implicit Types (m : cmonom I) (i : I).
 
 Local Notation "'U_(' i )" := (@ucm I i) : monom_scope.
-Local Notation mdeg := (@mdeg I).
+Local Abbreviation mdeg := (@mdeg I).
 
 Lemma cm1 i : (1%M : cmonom I) i = 0%N.
 Proof. exact/onecmE. Qed.
@@ -1630,7 +1629,7 @@ Context (n : nat).
 
 Implicit Types (m : 'X_{1..n}).
 
-Local Notation mnmwgt := (@mnmwgt n).
+Local Abbreviation mnmwgt := (@mnmwgt n).
 Local Notation "'U_(' i )" := (@ucm 'I_n i).
 
 Lemma mnmwgtE m : mnmwgt m = (\sum_i m i * i.+1)%N.
@@ -1668,8 +1667,8 @@ Proof. exact/mf_eq0. Qed.
 End MWeight.
 
 (* -------------------------------------------------------------------- *)
-Notation msize := (@mmeasure _ _ mdeg).
-Notation mweight := (@mmeasure _ _ mnmwgt).
+Abbreviation msize := (@mmeasure _ _ mdeg).
+Abbreviation mweight := (@mmeasure _ _ mnmwgt).
 
 Section MSize.
 
@@ -1677,7 +1676,7 @@ Context (I : choiceType) (G : nmodType).
 
 Implicit Types (m : cmonom I) (g : {malg G[cmonom I]}).
 
-Local Notation mdeg := (@mdeg I).
+Local Abbreviation mdeg := (@mdeg I).
 
 Lemma msizeE g : msize g = (\max_(m <- msupp g) (mdeg m).+1)%N.
 Proof. exact/mmeasureE. Qed.
@@ -1721,7 +1720,7 @@ Bind Scope monom_scope with fmonom.
 
 Notation "{ 'fmonom' I }" := (fmonom I) : type_scope.
 
-Local Notation mkfmonom s := (fmonom_of_seq fmonom_key s).
+Local Abbreviation mkfmonom s := (fmonom_of_seq fmonom_key s).
 
 (* -------------------------------------------------------------------- *)
 Section FmonomCanonicals.
@@ -1788,7 +1787,7 @@ Context {I : choiceType}.
 Implicit Types (m : fmonom I).
 
 Local Notation "'U_(' i )" := (@fmu I i).
-Local Notation fdeg := (@fdeg I).
+Local Abbreviation fdeg := (@fdeg I).
 
 Lemma fm1 : (1%M : fmonom I) = [::] :> seq I.
 Proof. by rewrite /mone /one /= fmoneE. Qed.
