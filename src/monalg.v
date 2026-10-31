@@ -45,7 +45,7 @@ Reserved Notation "<< k >>" (format "<< k >>").
 Reserved Notation "g @_ k"
   (at level 3, k at level 2, left associativity, format "g @_ k").
 Reserved Notation "c %:MP" (format "c %:MP").
-Reserved Notation "''X_{1..' n '}'".
+Reserved Notation "''X_{1..' n '}'" (n at level 2).
 Reserved Notation "'U_(' n )" (format "'U_(' n )").
 Reserved Notation "x ^[ f , g ]" (at level 1, format "x ^[ f , g ]").
 
@@ -278,6 +278,10 @@ End MalgBaseOp.
 
 HB.lock Definition mkmalgU (K : choiceType) (G : nmodType) (k : K) (x : G) :=
   [malg y in [fset k] => x].
+
+(* FIXME *)
+Definition mkmalgU' (K : choiceType) (G : nmodType) (x : G) (k : K) :=
+  mkmalgU k x.
 
 Arguments mcoeff  {K G} x%_monom_scope g%_ring_scope.
 #[warning="-deprecated-reference"]
@@ -935,6 +939,12 @@ HB.instance Definition _ :=
   GRing.isMonoidMorphism.Build R {malg R[K]} (@malgC K R)
     malgC_is_monoid_morphism.
 
+Fact mkmalgU'_is_mmorphism : mmorphism (@mkmalgU' K R 1).
+Proof. by split => // x y; rewrite [RHS]fgmulUU mul1r. Qed.
+
+HB.instance Definition _ :=
+  isMultiplicative.Build _ _ (@mkmalgU' K R 1) mkmalgU'_is_mmorphism.
+
 Lemma mpolyC1E : 1%:MP = 1 :> {malg R[K]}.
 Proof. exact: rmorph1. Qed.
 
@@ -1324,22 +1334,18 @@ End MonalgOver.
 Arguments monalgOver_pred _ _ _ _ /.
 
 (* -------------------------------------------------------------------- *)
-HB.mixin Record isMeasure (M : monomType) (mf : M -> nat) := {
+HB.mixin Record isWeakMeasure (M : monomType) (mf : M -> nat) := {
   mfM : {morph mf : m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N};
-  mf_eq0I : forall m, mf m = 0%N -> m = 1%M
 }.
 
-#[short(type="measure")]
-HB.structure Definition Measure (M : monomType) := {mf of isMeasure M mf}.
-
-#[deprecated(since="multinomials 2.5.0", note="Use Measure.clone instead.")]
-Notation "[ 'measure' 'of' f ]" := (Measure.clone _ f _)
-  (at level 0, only parsing) : form_scope.
+#[short(type="weakMeasure")]
+HB.structure Definition WeakMeasure (M : monomType) :=
+  {mf of isWeakMeasure M mf}.
 
 (* -------------------------------------------------------------------- *)
-Section MMeasure.
+Section WeakMeasure.
 
-Context (M : monomType) (G : nmodType) (mf : measure M).
+Context (M : monomType) (G : nmodType) (mf : weakMeasure M).
 
 Implicit Types (g : {malg G[M]}).
 
@@ -1355,9 +1361,6 @@ Proof. by elim: n => [|n IHn]; rewrite ?mf1// expmnS mfM IHn. Qed.
 Lemma mf_prod (T : Type) (r : seq T) P (F : T -> M) :
   mf (\prod_(x <- r | P x) F x)%M = (\sum_(x <- r | P x) mf (F x))%N.
 Proof. exact/big_morph/mf1/mfM. Qed.
-
-Lemma mf_eq0 m : (mf m == 0%N) = (m == 1%M).
-Proof. by apply/eqP/eqP=> [|->]; rewrite ?mf1 // => /mf_eq0I. Qed.
 
 Definition mmeasure g := (\max_(m <- msupp g) (mf m).+1)%N.
 
@@ -1412,11 +1415,46 @@ Proof. by rewrite -mmeasure_eq0 -lt0n => /prednK. Qed.
 Lemma mmeasure_msupp0 g : (mmeasure g == 0%N) = (msupp g == fset0).
 Proof. by rewrite mmeasure_eq0 msupp_eq0. Qed.
 
-End MMeasure.
+End WeakMeasure.
 
-Lemma mmeasureN M (G : zmodType) (mf : measure M) (g : {malg G[M]}) :
+Lemma mmeasureN M (G : zmodType) (mf : weakMeasure M) (g : {malg G[M]}) :
   mmeasure mf (- g) = mmeasure mf g.
 Proof. by rewrite mmeasureE msuppN. Qed.
+
+(* -------------------------------------------------------------------- *)
+HB.mixin Record WeakMeasure_isMeasure (M : monomType) (mf : M -> nat) := {
+  mf_eq0I : forall m, mf m = 0%N -> m = 1%M
+}.
+
+#[short(type="measure")]
+HB.structure Definition Measure (M : monomType) :=
+  {mf of WeakMeasure M mf & WeakMeasure_isMeasure M mf}.
+
+HB.factory Record isMeasure (M : monomType) (mf : M -> nat) := {
+  mfM : {morph mf : m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N};
+  mf_eq0I : forall m, mf m = 0%N -> m = 1%M
+}.
+
+HB.builders Context M mf & isMeasure M mf.
+HB.instance Definition _ := isWeakMeasure.Build M mf mfM.
+HB.instance Definition _ := WeakMeasure_isMeasure.Build M mf mf_eq0I.
+HB.end.
+
+#[deprecated(since="multinomials 2.5.0", note="Use Measure.clone instead.")]
+Notation "[ 'measure' 'of' f ]" := (Measure.clone _ f _)
+  (at level 0, only parsing) : form_scope.
+
+(* -------------------------------------------------------------------- *)
+Section Measure.
+
+Context (M : monomType) (G : nmodType) (mf : measure M).
+
+Implicit Types (g : {malg G[M]}).
+
+Lemma mf_eq0 m : (mf m == 0%N) = (m == 1%M).
+Proof. by apply/eqP/eqP=> [|->]; rewrite ?mf1 // => /mf_eq0I. Qed.
+
+End Measure.
 
 (* -------------------------------------------------------------------- *)
 Section CmonomDef.
@@ -1426,6 +1464,8 @@ Context (I : choiceType).
 Record cmonom : predArgType := CMonom { cmonom_val : {fsfun of _ : I => 0%N} }.
 
 Coercion cmonom_val : cmonom >-> fsfun.
+
+Definition exp_of_cmonom (i : I) (m : cmonom) : nat := cmonom_val m i.
 
 Fact cmonom_key : unit. Proof. by []. Qed.
 
@@ -1523,6 +1563,9 @@ HB.instance Definition _ := MonomialDef_isConomialDef.Build (cmonom I) mulcmC.
 #[deprecated(since="multinomials 2.5.0", use=expmn)]
 Definition expcmn m n : cmonom I := expmn m n.
 
+HB.instance Definition _ i :=
+  isWeakMeasure.Build _ (exp_of_cmonom i) (fun m1 m2 => mulcmE m1 m2 i).
+
 End CmonomCanonicals.
 
 HB.instance Definition _ (I : countType) := [Countable of cmonom I by <:].
@@ -1555,6 +1598,9 @@ Proof. by rewrite cmU eqxx. Qed.
 
 Lemma cmM i m1 m2 : (m1 * m2)%M i = (m1 i + m2 i)%N.
 Proof. exact/mulcmE. Qed.
+
+Lemma cmX i m n : expmn m n i = (n * m i)%N.
+Proof. exact: (mfX (exp_of_cmonom _)). Qed.
 
 Lemma cmE_eq0 m i : (m i == 0%N) = (i \notin finsupp m).
 Proof. by rewrite memNfinsupp. Qed.
@@ -1608,7 +1654,6 @@ move=> h; apply/eqP/cmP=> i; move: h; rewrite mdegE cm1.
 by case: mdomP=> // ki /eqP; rewrite (big_fsetD1 i) //= addn_eq0 => /andP[/eqP].
 Qed.
 
-(* -------------------------------------------------------------------- *)
 #[hnf] HB.instance Definition _ := isMeasure.Build (cmonom I)
   mdeg mdegM mdeg_eq0I.
 
@@ -1629,6 +1674,21 @@ Proof. exact: mulm_eq1. Qed.
 
 Lemma cm1_eq1 i : (U_(i) == 1)%M = false.
 Proof. by rewrite -mdeg_eq0 mdegU. Qed.
+
+Lemma cm_prodEw m (d : {fset I}) : finsupp m `<=` d ->
+  m = (\prod_(i <- d) expmn U_(i) (m i))%M.
+Proof.
+move=> le; apply/eqP/cmP => i; rewrite [RHS](mf_prod (exp_of_cmonom _)).
+case: mdomP=> im; last first.
+  apply/esym/big1_fset => /= j jd _; rewrite [LHS]cmX cmU mulnC.
+  by case: eqP im => // <-; case: mdomP.
+rewrite (big_fsetD1 i) /=; first exact: (fsubsetP le).
+rewrite /exp_of_cmonom cmX cmUU muln1 big1_fset; last by rewrite addn0.
+by move=> j; rewrite !inE => /andP[ji jd] _; rewrite cmX mulnC cmU (negbTE ji).
+Qed.
+
+Lemma cm_prodE m : m = (\prod_(i <- finsupp m) expmn U_(i) (m i))%M.
+Proof. exact/cm_prodEw. Qed.
 
 End CmonomTheory.
 
@@ -1664,15 +1724,13 @@ rewrite sum_nat_eq0 => /forallP /(_ i) /implyP.
 by rewrite muln_eq0 orbF => z_mi; apply/eqP/z_mi.
 Qed.
 
-(* -------------------------------------------------------------------- *)
 #[hnf] HB.instance Definition _ := isMeasure.Build 'X_{1..n}
   mnmwgt mnmwgtM mnmwgt_eq0I.
 
 #[deprecated(since="multinomials 2.6.0", use=mf1)]
 Lemma mnmwgt1 : mnmwgt 1%M = 0%N. Proof. exact/mf1. Qed.
 
-Lemma mnmwgt_eq0 m : (mnmwgt m == 0%N) = (m == 1%M).
-Proof. exact/mf_eq0. Qed.
+Lemma mnmwgt_eq0 m : (mnmwgt m == 0%N) = (m == 1%M). Proof. exact/mf_eq0. Qed.
 
 End MWeight.
 
@@ -1708,6 +1766,33 @@ End MSize.
 
 Definition msizeN (I : choiceType) (G : zmodType) :=
   @mmeasureN (cmonom I) G mdeg.
+
+Section CMMap.
+
+Definition cmmap
+  {I : choiceType} {R : pzSemiRingType} (f : I -> R) (m : cmonom I) :=
+  \prod_(k <- finsupp m) f k ^+ m k.
+
+Context (I : choiceType) (R : comPzSemiRingType) (f : I -> R).
+
+Lemma cmmapw (d : {fset I}) (m : {cmonom I}) :
+  finsupp m `<=` d -> cmmap f m = \prod_(k <- d) f k ^+ m k.
+Proof.
+by move=> md; apply: big_fset_incl md _ => x xd; rewrite -cmE_eq0 => /eqP->.
+Qed.
+
+Fact cmmap_is_mmorphism : mmorphism (cmmap f).
+Proof.
+split=> [|x y]; first by rewrite /cmmap mdom1 big_seq_fset0.
+rewrite [cmmap f x](cmmapw (fsubsetUl _ (finsupp y))).
+rewrite [cmmap f y](cmmapw (fsubsetUr (finsupp x) _)).
+by rewrite -big_split/= /cmmap mdomD; apply/eq_bigr => i _; rewrite cmM exprD.
+Qed.
+
+HB.instance Definition _ :=
+  isMultiplicative.Build _ _ (cmmap f) cmmap_is_mmorphism.
+
+End CMMap.
 
 (* -------------------------------------------------------------------- *)
 Section FmonomDef.
@@ -1846,3 +1931,19 @@ Lemma fm1_eq1 i : (U_(i) == 1)%M = false.
 Proof. by rewrite -fdeg_eq0 fdegU. Qed.
 
 End FmonomTheory.
+
+Section FMMap.
+
+Context (I : choiceType) (R : pzSemiRingType) (f : I -> R).
+
+Definition fmmap (m : fmonom I) := \prod_(k <- m) f k.
+
+Fact fmmap_is_mmorphism : mmorphism fmmap.
+Proof.
+split=> [|x y]; first by rewrite /fmmap [1%M]fmoneE/= big_nil.
+by rewrite /fmmap [(x * y)%M]fmmulE/= big_cat/=.
+Qed.
+
+HB.instance Definition _ := isMultiplicative.Build _ _ fmmap fmmap_is_mmorphism.
+
+End FMMap.
