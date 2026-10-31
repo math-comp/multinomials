@@ -272,11 +272,12 @@ Definition mcoeff (x : K) (g : {malg G[K]}) : G := malg_val g x.
 #[deprecated(since="multinomials 2.5.0", use=Malg)]
 Definition mkmalg : {fsfun K -> G with 0} -> {malg G[K]} := @Malg K G.
 
-Definition mkmalgU (k : K) (x : G) := [malg y in [fset k] => x].
-
 Definition msupp (g : {malg G[K]}) : {fset K} := finsupp (malg_val g).
 
 End MalgBaseOp.
+
+HB.lock Definition mkmalgU (K : choiceType) (G : nmodType) (k : K) (x : G) :=
+  [malg y in [fset k] => x].
 
 Arguments mcoeff  {K G} x%_monom_scope g%_ring_scope.
 #[warning="-deprecated-reference"]
@@ -378,7 +379,7 @@ Lemma mcoeffD   k   : {morph mcoeff k: x y / x + y}. Proof. exact: raddfD. Qed.
 Lemma mcoeffMn  k n : {morph mcoeff k: x / x *+ n} . Proof. exact: raddfMn. Qed.
 
 Lemma mcoeffU k x k' : << x *g k >>@_k' = x *+ (k == k').
-Proof. by rewrite [LHS]fsfunE inE mulrb eq_sym. Qed.
+Proof. by rewrite unlock [LHS]fsfunE inE mulrb eq_sym. Qed.
 
 Lemma mcoeffUU k x : << x *g k >>@_k = x.
 Proof. by rewrite mcoeffU eqxx. Qed.
@@ -977,7 +978,7 @@ rewrite mcurryE !mcoeffMl raddf_sum/=.
 rewrite (partition_big_imfset _ fst)/= msupp_curryl; apply/eq_bigr => k1l _.
 rewrite exchange_big (partition_big_imfset _ fst) raddf_sum msupp_curryl/=.
 apply/eq_bigr => k1r _; rewrite exchange_big raddfMn/= mcoeffMl -sumrMnl.
-rewrite (* SLOW *)msupp_curryr big_imfset/=.
+rewrite msupp_curryr big_imfset/=.
   by move=> [? ?] [? ?] /andP[/= _ /eqP ->] /andP[/= _ /eqP ->] ->.
 rewrite big_filter; apply/eq_bigr => -[_ k2l]/= /eqP ->.
 rewrite -sumrMnl msupp_curryr big_imfset/=.
