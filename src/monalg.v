@@ -1325,7 +1325,6 @@ Arguments monalgOver_pred _ _ _ _ /.
 
 (* -------------------------------------------------------------------- *)
 HB.mixin Record isMeasure (M : monomType) (mf : M -> nat) := {
-  mf0 : mf 1%M = 0%N;
   mfM : {morph mf : m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N};
   mf_eq0I : forall m, mf m = 0%N -> m = 1%M
 }.
@@ -1344,8 +1343,21 @@ Context (M : monomType) (G : nmodType) (mf : measure M).
 
 Implicit Types (g : {malg G[M]}).
 
+Lemma mf1 : mf 1%M = 0%N.
+Proof. by apply/(@addIn (mf 1%M)); rewrite add0n -mfM mul1m. Qed.
+
+#[deprecated(since="multinomials 2.6.0", use=mf1)]
+Definition mf0 := mf1.
+
+Lemma mfX m n : mf (expmn m n) = (n * mf m)%N.
+Proof. by elim: n => [|n IHn]; rewrite ?mf1// expmnS mfM IHn. Qed.
+
+Lemma mf_prod (T : Type) (r : seq T) P (F : T -> M) :
+  mf (\prod_(x <- r | P x) F x)%M = (\sum_(x <- r | P x) mf (F x))%N.
+Proof. exact/big_morph/mf1/mfM. Qed.
+
 Lemma mf_eq0 m : (mf m == 0%N) = (m == 1%M).
-Proof. by apply/eqP/eqP=> [|->]; rewrite ?mf0 // => /mf_eq0I. Qed.
+Proof. by apply/eqP/eqP=> [|->]; rewrite ?mf1 // => /mf_eq0I. Qed.
 
 Definition mmeasure g := (\max_(m <- msupp g) (mf m).+1)%N.
 
@@ -1367,7 +1379,7 @@ Proof. by apply/contraTN=> /mmeasure_mnm_lt; rewrite leqNgt ltnS. Qed.
 Lemma mmeasureC c : mmeasure c%:MP = (c != 0%R) :> nat.
 Proof.
 rewrite mmeasureE msuppC; case: (_ == 0)=> /=.
-by rewrite big_nil. by rewrite big_seq_fset1 mf0.
+by rewrite big_nil. by rewrite big_seq_fset1 mf1.
 Qed.
 
 Lemma mmeasureD_le g1 g2 :
@@ -1578,13 +1590,10 @@ move=> le; rewrite mdegE (big_fset_incl _ le) //.
 by move=> i i_in_d; rewrite -cmE_neq0 negbK => /eqP.
 Qed.
 
-Lemma mdeg1 : mdeg 1%M = 0%N.
-Proof. by rewrite mdegE mdom1 big_seq_fset0. Qed.
-
 Lemma mdegU k : mdeg U_(k)%M = 1%N.
 Proof. by rewrite mdegE mdomU big_seq_fset1 cmUU. Qed.
 
-Lemma mdegM : {morph mdeg: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N }.
+Fact mdegM : {morph mdeg: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N }.
 Proof.
 move=> m1 m2 /=; rewrite mdegE mdomD.
 rewrite
@@ -1593,12 +1602,7 @@ rewrite
 by rewrite -big_split /=; apply/eq_bigr=> /= i _; rewrite cmM.
 Qed.
 
-Lemma mdeg_prod (T : Type) r P (F : T -> cmonom I) :
-    mdeg (\big[mmul/1%M]_(x <- r | P x) (F x))
-  = (\sum_(x <- r | P x) (mdeg (F x)))%N.
-Proof. exact/big_morph/mdeg1/mdegM. Qed.
-
-Lemma mdeg_eq0I m : mdeg m = 0%N -> m = 1%M.
+Fact mdeg_eq0I m : mdeg m = 0%N -> m = 1%M.
 Proof.
 move=> h; apply/eqP/cmP=> i; move: h; rewrite mdegE cm1.
 by case: mdomP=> // ki /eqP; rewrite (big_fsetD1 i) //= addn_eq0 => /andP[/eqP].
@@ -1606,7 +1610,15 @@ Qed.
 
 (* -------------------------------------------------------------------- *)
 #[hnf] HB.instance Definition _ := isMeasure.Build (cmonom I)
-  mdeg mdeg1 mdegM mdeg_eq0I.
+  mdeg mdegM mdeg_eq0I.
+
+#[deprecated(since="multinomials 2.6.0", use=mf_prod)]
+Lemma mdeg_prod (T : Type) r P (F : T -> cmonom I) :
+  mdeg (\prod_(x <- r | P x) (F x)) = (\sum_(x <- r | P x) (mdeg (F x)))%N.
+Proof. exact: mf_prod. Qed.
+
+#[deprecated(since="multinomials 2.6.0", use=mf1)]
+Lemma mdeg1 : mdeg 1%M = 0%N. Proof. exact: mf1. Qed.
 
 Lemma mdeg_eq0 m : (mdeg m == 0%N) = (m == 1%M).
 Proof. exact/mf_eq0. Qed.
@@ -1633,22 +1645,19 @@ Local Notation "'U_(' i )" := (@ucm 'I_n i).
 Lemma mnmwgtE m : mnmwgt m = (\sum_i m i * i.+1)%N.
 Proof. by []. Qed.
 
-Lemma mnmwgt1 : mnmwgt 1%M = 0%N.
-Proof. by rewrite mnmwgtE big1 // => /= i _; rewrite cm1. Qed.
-
 Lemma mnmwgtU i : mnmwgt U_(i) = i.+1.
 Proof.
 rewrite mnmwgtE (bigD1 i) //= cmUU mul1n big1 ?addn0 //.
 by move=> j ne_ij; rewrite cmU eq_sym (negbTE ne_ij).
 Qed.
 
-Lemma mnmwgtM : {morph mnmwgt: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N}.
+Fact mnmwgtM : {morph mnmwgt: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N}.
 Proof.
 move=> m1 m2 /=; rewrite !mnmwgtE -big_split /=.
 by apply/eq_bigr=> i _; rewrite cmM mulnDl.
 Qed.
 
-Lemma mnmwgt_eq0I m : mnmwgt m = 0%N -> m = 1%M.
+Fact mnmwgt_eq0I m : mnmwgt m = 0%N -> m = 1%M.
 Proof.
 move=> h; apply/eqP/cmP=> /= i; move: h; rewrite mnmwgtE cm1 => /eqP.
 rewrite sum_nat_eq0 => /forallP /(_ i) /implyP.
@@ -1657,7 +1666,10 @@ Qed.
 
 (* -------------------------------------------------------------------- *)
 #[hnf] HB.instance Definition _ := isMeasure.Build 'X_{1..n}
-  mnmwgt mnmwgt1 mnmwgtM mnmwgt_eq0I.
+  mnmwgt mnmwgtM mnmwgt_eq0I.
+
+#[deprecated(since="multinomials 2.6.0", use=mf1)]
+Lemma mnmwgt1 : mnmwgt 1%M = 0%N. Proof. exact/mf1. Qed.
 
 Lemma mnmwgt_eq0 m : (mnmwgt m == 0%N) = (m == 1%M).
 Proof. exact/mf_eq0. Qed.
@@ -1799,21 +1811,13 @@ Proof. by rewrite /mmul /mul /= fmmulE. Qed.
 Lemma fdegE m : fdeg m = size m.
 Proof. by []. Qed.
 
-Lemma fdeg1 : fdeg 1%M = 0%N.
-Proof. by rewrite fdegE fm1. Qed.
-
 Lemma fdegU k : fdeg U_(k) = 1%N.
 Proof. by rewrite fdegE fmU. Qed.
 
-Lemma fdegM : {morph fdeg: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N }.
+Fact fdegM : {morph fdeg: m1 m2 / (m1 * m2)%M >-> (m1 + m2)%N }.
 Proof. by move=> m1 m2; rewrite !fdegE fmM size_cat. Qed.
 
-Lemma fdeg_prod (T : Type) r P (F : T -> fmonom I) :
-    fdeg (\big[mmul/1%M]_(x <- r | P x) (F x))
-  = (\sum_(x <- r | P x) (fdeg (F x)))%N.
-Proof. by apply/big_morph; [apply/fdegM|apply/fdeg1]. Qed.
-
-Lemma fdeg_eq0I m : fdeg m = 0%N -> m = 1%M.
+Fact fdeg_eq0I m : fdeg m = 0%N -> m = 1%M.
 Proof.
 rewrite fdegE => /size0nil z_m; apply/eqP.
 by rewrite -val_eqE /= z_m fm1.
@@ -1821,7 +1825,15 @@ Qed.
 
 (* -------------------------------------------------------------------- *)
 #[hnf] HB.instance Definition _ := isMeasure.Build (fmonom I)
-  fdeg fdeg1 fdegM fdeg_eq0I.
+  fdeg fdegM fdeg_eq0I.
+
+#[deprecated(since="multinomials 2.6.0", use=mf1)]
+Lemma fdeg1 : fdeg 1%M = 0%N. Proof. exact: mf1. Qed.
+
+#[deprecated(since="multinomials 2.6.0", use=mf_prod)]
+Lemma fdeg_prod (T : Type) r P (F : T -> fmonom I) :
+  fdeg (\prod_(x <- r | P x) (F x)) = (\sum_(x <- r | P x) (fdeg (F x)))%N.
+Proof. exact: mf_prod. Qed.
 
 Lemma fdeg_eq0 m : (fdeg m == 0%N) = (m == 1%M).
 Proof. exact/mf_eq0. Qed.
