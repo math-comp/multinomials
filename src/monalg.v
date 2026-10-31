@@ -846,6 +846,9 @@ Qed.
 Lemma fgscaleAl c g1 g2 : c *: (g1 * g2) = (c *: g1) * g2.
 Proof. by rewrite -!mul_malgC mulrA. Qed.
 
+HB.instance Definition _ :=
+  GRing.LSemiModule_isLSemiAlgebra.Build R {malg R[K]} fgscaleAl.
+
 Lemma mcoeffU1 k k' : (<< k >> : {malg R[K]})@_k' = (k == k')%:R.
 Proof. by rewrite mcoeffU. Qed.
 
@@ -1011,18 +1014,12 @@ Proof. by apply/eqP/malgP=> /(_ 1%M) /eqP; rewrite !mcoeffsE oner_eq0. Qed.
 HB.instance Definition _ :=
   GRing.PzSemiRing_isNonZero.Build {malg R[K]} fgoner_eq0.
 
-HB.instance Definition _ :=
-  GRing.LSemiModule_isLSemiAlgebra.Build R {malg R[K]} (@fgscaleAl K R).
-
-(* TODO: remove when requiring MC >= 2.6 *)
-HB.instance Definition _ := GRing.RMorphism.on (mcoeff 1 : {malg R[K]} -> R).
-
 End MalgNzSemiRingTheory.
 
 (* -------------------------------------------------------------------- *)
-Section MalgComNzSemiRingTheory.
+Section MalgComPzSemiRingTheory.
 
-Context (K : monomType) (R : comNzSemiRingType).
+Context (K : monomType) (R : comPzSemiRingType).
 
 Fact fgscaleAr c (g1 g2 : {malg R[K]}) : c *: (g1 * g2) = g1 * (c *: g2).
 Proof.
@@ -1035,7 +1032,7 @@ Qed.
 HB.instance Definition _ :=
   GRing.LSemiAlgebra_isSemiAlgebra.Build R {malg R[K]} fgscaleAr.
 
-End MalgComNzSemiRingTheory.
+End MalgComPzSemiRingTheory.
 
 (* -------------------------------------------------------------------- *)
 Section MalgComPzSemiRingTheory.
@@ -1055,12 +1052,16 @@ HB.instance Definition _ :=
 End MalgComPzSemiRingTheory.
 
 (* FIXME: HB.saturate *)
+HB.instance Definition _ (K : monomType) (R : comNzSemiRingType) :=
+  GRing.NzSemiRing.on {malg R[K]}.
 HB.instance Definition _ (K : conomType) (R : comNzSemiRingType) :=
   GRing.NzSemiRing.on {malg R[K]}.
 HB.instance Definition _ (K : monomType) (R : pzRingType) :=
   GRing.PzSemiRing.on {malg R[K]}.
 HB.instance Definition _ (K : monomType) (R : nzRingType) :=
   GRing.NzSemiRing.on {malg R[K]}.
+HB.instance Definition _ (K : monomType) (R : comPzRingType) :=
+  GRing.PzSemiRing.on {malg R[K]}.
 HB.instance Definition _ (K : conomType) (R : comPzRingType) :=
   GRing.PzSemiRing.on {malg R[K]}.
 HB.instance Definition _ (K : monomType) (R : comNzRingType) :=
@@ -1190,10 +1191,6 @@ HB.instance Definition _ :=
 
 End Linear.
 End MalgMorphism.
-
-(* TODO: remove when requiring MC >= 2.6 *)
-HB.instance Definition _ K (R : comNzSemiRingType) (h : {mmorphism K -> R}) :=
-  GRing.Linear.on (mmap idfun h).
 
 (* -------------------------------------------------------------------- *)
 Section MonalgOver.
