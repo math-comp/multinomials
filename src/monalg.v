@@ -1225,7 +1225,7 @@ exact/le_S1S2/S1g.
 Qed.
 
 Lemma monalgOverU c k S :
-  << c *g k >> \in monalgOver S = (c == 0) || (c \in S).
+  (<< c *g k >> \in monalgOver S) = (c == 0) || (c \in S).
 Proof.
 rewrite qualifE /= msuppU; have [->|nz_c] //= := eqVneq c 0.
 apply/allP/idP => [h|h x]; last by rewrite in_fset1=> /eqP->; rewrite mcoeffUU.

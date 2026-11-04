@@ -3659,7 +3659,7 @@ rewrite mesymE raddf_sum big1 //= => h cardh; have := ne h.
 by rewrite cardh andbT mcoeffX; case: eqVneq.
 Qed.
 
-Lemma mem_msupp_mesym k m : m \in msupp 's_k = mechar k m.
+Lemma mem_msupp_mesym k m : (m \in msupp 's_k) = mechar k m.
 Proof.
 rewrite mcoeff_msupp mcoeff_mesym.
 by case: (mechar _ _); rewrite ?eqxx // oner_eq0.
@@ -4123,7 +4123,7 @@ Proof.
 move=> h1 h2 /= /setP eq; apply/inj_swiden.
 apply/setP => /= x; have {eq} := (eq x).
 rewrite !inE; case: eqP=> [-> _|//].
-have E (h : {set 'I_n}): ord_max \in swiden h = false.
+have E (h : {set 'I_n}) : (ord_max \in swiden h) = false.
   apply/negP; case/imsetP=> /= y _ /eqP.
   by rewrite eqE /= eq_sym ltn_eqF.
 by rewrite !E.
@@ -4759,7 +4759,7 @@ Qed.
 Lemma pihomog_id p : pihomog (pihomog p) = pihomog p.
 Proof. by rewrite pihomog_dE; first exact: pihomogP. Qed.
 
-Lemma homog_piE p : p \is d.-homog for mf = (pihomog p == p).
+Lemma homog_piE p : (p \is d.-homog for mf) = (pihomog p == p).
 Proof.
 apply: (sameP idP); apply: (iffP idP); last by move /pihomog_dE ->.
 by move=> /eqP <-; apply/pihomogP.
