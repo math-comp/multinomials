@@ -17,7 +17,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import GRing.Theory Num.Theory BigEnoughFSet.
+Import GRing.Theory Num.Theory.
 
 Local Open Scope fset.
 Local Open Scope fmap.
@@ -947,15 +947,12 @@ Proof. exact: rmorphM. Qed.
 Fact mcoeff1g_is_monoid_morphism :
   monoid_morphism (mcoeff 1%M : {malg R[K]} -> R).
 Proof.
-split=> [|g1 g2]; rewrite ?malgCK //; pose_big_fset K E.
-have E1: 1%M \in E by rewrite -fsub1set.
-rewrite (@malgMEw E E) // (big_fsetD1 1%M) //=. 2: by close.
-rewrite (big_fsetD1 1%M) //= mulm1 2!mcoeffD mcoeffUU.
-rewrite ![\sum_(i <- E `\ 1%M) _]big_seq.
-rewrite !raddf_sum !big1 ?addr0 //= => k; rewrite in_fsetD1 => /andP [ne1_k _].
-  by rewrite mcoeffU mul1m (negbTE ne1_k).
-rewrite raddf_sum big1 ?mcoeff0 //= => k'; rewrite mcoeffU.
-by case: eqP=> // /eqP /unitmP []; rewrite (negbTE ne1_k).
+split=> [|g1 g2]; rewrite ?malgCK//.
+rewrite (mcoeffMlw 1 (fsubsetUr [fset 1%M] _) (fsubsetUr [fset 1%M] _)).
+rewrite (big_fsetD1 1%M)/= 1?(big_fsetD1 1%M) ?inE ?eqxx//= mul1m eqxx mulr1n.
+rewrite 2?big1_fset ?addr0// => i /[!inE]; first by rewrite mul1m; case: eqVneq.
+case: eqVneq => //= i_neq1; rewrite big1_fset => // j.
+by rewrite mulm_eq1 (negbTE i_neq1).
 Qed.
 
 HB.instance Definition _ :=
@@ -1108,10 +1105,9 @@ Context (f : {additive G -> S}) (h : K -> S).
 Fact mmap_is_nmod_morphism : nmod_morphism (mmap f h).
 Proof.
 split=> [|g1 g2]; first by rewrite /mmap msupp0 big_seq_fset0.
-pose_big_fset K E.
-  rewrite 3?(mmapEw (d := E)) //; rewrite -big_split.
-  by apply/eq_bigr=> k _; rewrite !raddfD /= mulrDl.
-by close.
+rewrite (mmapEw (msuppD_le _ _)) (mmapEw (fsubsetUl _ (msupp g2))).
+rewrite (mmapEw (fsubsetUr (msupp g1) _)) -big_split/=.
+by apply/eq_bigr => k _; rewrite 2!raddfD/= mulrDl.
 Qed.
 
 HB.instance Definition _ := GRing.isNmodMorphism.Build {malg G[K]} S (mmap f h)
