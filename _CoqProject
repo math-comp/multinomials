@@ -1,4 +1,3 @@
-src/freeg.v
 src/monalg.v
 src/mpoly.v
 src/ssrcomplements.v
