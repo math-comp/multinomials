@@ -3980,7 +3980,7 @@ HB.instance Definition _ :=
     mpwiden (raddfB _).
 
 Lemma mpwiden_is_monoid_morphism : monoid_morphism mpwiden.
-Proof. exact: map_poly_is_monoid_morphism. Qed.
+Proof. exact: rmorphism_monoidP. Qed.
 
 HB.instance Definition _ :=
   GRing.isMonoidMorphism.Build {poly {mpoly R[n]}} {poly {mpoly R[n.+1]}}
