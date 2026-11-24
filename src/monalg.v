@@ -1130,18 +1130,34 @@ Lemma mmapMNn n : {morph mmap f h: x / x *- n} . Proof. exact: raddfMNn. Qed.
 
 End ZmodMorphism.
 
+Section Linear.
+
+Context {K : monomType} {R S : pzSemiRingType}.
+Context (f : {rmorphism R -> S}) (h : K -> S).
+
+Lemma mmapZ (c : R) (g : {malg R[K]}) : (c *: g)^[f,h] = f c * g^[f,h].
+Proof.
+rewrite (mmapEw (msuppZ_le _ _)) mmapE big_distrr /=.
+by apply/eq_bigr=> k _; rewrite linearZ rmorphM /= mulrA.
+Qed.
+
+Fact mmap_is_linear : scalable_for (f \; *%R) (mmap f h).
+Proof.
+move=> /= c g; rewrite raddf_sum mulr_sumr/=.
+by apply: eq_bigr => i _; rewrite mmapU/= rmorphM mulrA.
+Qed.
+
+HB.instance Definition _ :=
+  GRing.isScalable.Build R {malg R[K]} S (f \; *%R) (mmap f h) mmap_is_linear.
+
+End Linear.
+
 Section CommrMonoidMorphism.
 
 Context {K : monomType} {R S : pzSemiRingType}.
 Context (f : {rmorphism R -> S}) (h : {mmorphism K -> S}).
 
 Implicit Types (c : R) (g : {malg R[K]}).
-
-Lemma mmapZ c g : (c *: g)^[f,h] = f c * g^[f,h].
-Proof.
-rewrite (mmapEw (msuppZ_le _ _)) mmapE big_distrr /=.
-by apply/eq_bigr=> k _; rewrite linearZ rmorphM /= mulrA.
-Qed.
 
 Lemma mmapC c : c%:MP^[f,h] = f c.
 Proof. by rewrite mmapU mmorph1 mulr1. Qed.
@@ -1174,19 +1190,6 @@ HB.instance Definition _ :=
   GRing.isMonoidMorphism.Build {malg R[K]} S (mmap f h) mmap_is_monoid_morphism.
 
 End MonoidMorphism.
-
-(* -------------------------------------------------------------------- *)
-Section Linear.
-
-Context {K : monomType} {R : comPzSemiRingType} (h : {mmorphism K -> R}).
-
-Fact mmap_is_linear : scalable_for *%R (mmap idfun h).
-Proof. by move=> /= c g; rewrite -mul_malgC rmorphM /= mmapC. Qed.
-
-HB.instance Definition _ :=
-  GRing.isScalable.Build R {malg R[K]} R *%R (mmap idfun h) mmap_is_linear.
-
-End Linear.
 End MalgMorphism.
 
 (* -------------------------------------------------------------------- *)
